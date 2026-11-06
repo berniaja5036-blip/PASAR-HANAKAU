@@ -168,12 +168,6 @@ on public.orders for select to authenticated
 using (
   buyer_id = (select auth.uid())
   or (select public.is_admin())
-  or exists (
-    select 1
-    from public.order_items oi
-    join public.shops s on s.id = oi.shop_id
-    where oi.order_id = orders.id and s.owner_id = (select auth.uid())
-  )
 );
 
 drop policy if exists order_items_buyer_seller_admin_read on public.order_items;
@@ -184,10 +178,6 @@ using (
   or exists (
     select 1 from public.orders o
     where o.id = order_items.order_id and o.buyer_id = (select auth.uid())
-  )
-  or exists (
-    select 1 from public.shops s
-    where s.id = order_items.shop_id and s.owner_id = (select auth.uid())
   )
 );
 
