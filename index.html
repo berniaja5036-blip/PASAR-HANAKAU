@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#176b45"><title>Pasar Hanakau</title>
 <style>
-:root{font-family:system-ui,-apple-system,sans-serif;color:#17251e;background:#f4f7f4}*{box-sizing:border-box}body{margin:0}.top{background:#176b45;color:#fff;padding:22px max(18px,calc((100% - 960px)/2))}.top small{opacity:.85}.top h1{margin:7px 0;font-size:27px}.wrap{max-width:960px;margin:auto;padding:18px}.panel,.tile{background:#fff;border:1px solid #e1e9e3;border-radius:14px;padding:16px;margin:14px 0}.notice{background:#fff6db;border:1px solid #f0dda0;padding:12px;border-radius:10px;font-size:13px;color:#604b12}.authgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{width:100%;padding:12px;border:1px solid #ccd8cf;border-radius:9px;font:inherit;margin:5px 0 10px}.btn{border:0;background:#176b45;color:#fff;padding:12px 16px;border-radius:9px;font:inherit;font-weight:600;cursor:pointer}.btn.secondary{background:#e7efe9;color:#175c3c}.btn:disabled{opacity:.5}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row .field{flex:1;min-width:150px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.tile h3{margin:7px 0 4px;font-size:16px}.muted{color:#66766c;font-size:13px}.status{font-size:13px;margin-top:8px;min-height:18px}.hidden{display:none}.product{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.price{font-weight:700;color:#176b45}.section{margin:22px 0 8px}.formgrid{display:grid;grid-template-columns:1fr;gap:4px}@media(min-width:650px){.formgrid{grid-template-columns:1fr 1fr}}footer{text-align:center;color:#718078;font-size:12px;padding:26px 10px}@media(min-width:650px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}.authgrid{grid-template-columns:1fr 1fr}}
+:root{font-family:system-ui,-apple-system,sans-serif;color:#17251e;background:#f4f7f4}*{box-sizing:border-box}body{margin:0}.top{background:#176b45;color:#fff;padding:22px max(18px,calc((100% - 960px)/2))}.top small{opacity:.85}.top h1{margin:7px 0;font-size:27px}.wrap{max-width:960px;margin:auto;padding:18px}.panel,.tile{background:#fff;border:1px solid #e1e9e3;border-radius:14px;padding:16px;margin:14px 0}.notice{background:#fff6db;border:1px solid #f0dda0;padding:12px;border-radius:10px;font-size:13px;color:#604b12}.authgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{width:100%;padding:12px;border:1px solid #ccd8cf;border-radius:9px;font:inherit;margin:5px 0 10px}.btn{border:0;background:#176b45;color:#fff;padding:12px 16px;border-radius:9px;font:inherit;font-weight:600;cursor:pointer}.btn.secondary{background:#e7efe9;color:#175c3c}.btn:disabled{opacity:.5}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row .field{flex:1;min-width:150px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.tile h3{margin:7px 0 4px;font-size:16px}.muted{color:#66766c;font-size:13px}.status{font-size:13px;margin-top:8px;min-height:18px}.hidden{display:none}.product{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.price{font-weight:700;color:#176b45}.section{margin:22px 0 8px}.formgrid{display:grid;grid-template-columns:1fr;gap:4px}.cartline{display:flex;justify-content:space-between;gap:10px;align-items:center;border-bottom:1px solid #e7eee9;padding:10px 0}.qtybtn{border:0;border-radius:7px;background:#e7efe9;color:#175c3c;padding:7px 11px;font-weight:700}.carttotal{font-size:18px;font-weight:800;color:#176b45}@media(min-width:650px){.formgrid{grid-template-columns:1fr 1fr}}footer{text-align:center;color:#718078;font-size:12px;padding:26px 10px}@media(min-width:650px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}.authgrid{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -17,6 +17,7 @@
 <div class="row"><button class="btn" id="signIn">Masuk</button><button class="btn secondary" id="signUp">Daftar akun</button></div><div id="authMessage" class="status" role="status"></div>
 </section>
 <section id="accountPanel" class="panel hidden"><div class="row"><div style="flex:1"><b id="accountEmail"></b><div class="muted" id="accountRole"></div></div><button class="btn secondary" id="signOut">Keluar</button></div></section>
+<section id="buyerPanel" class="panel hidden"><h2>Keranjang belanja</h2><p class="muted">Periksa barang, jumlah, dan alamat sebelum membuat pesanan. Pembayaran belum diaktifkan.</p><div id="cartItems" class="muted">Keranjang masih kosong.</div><div id="cartTotal" class="carttotal"></div><h3>Alamat pengantaran</h3><textarea id="deliveryAddress" class="field" rows="2" maxlength="500" placeholder="Nama jalan, RT/RW, patokan rumah, Desa Hanakau Jaya"></textarea><label for="orderNotes">Catatan untuk penjual/kurir (opsional)</label><textarea id="orderNotes" class="field" rows="2" maxlength="500" placeholder="Catatan pesanan"></textarea><button id="checkoutButton" class="btn">Buat pesanan</button><div id="checkoutMessage" class="status" role="status"></div><h3>Pesanan saya</h3><div id="buyerOrders" class="muted">Memuat pesanan…</div></section>
 <section id="sellerPanel" class="panel hidden">
 <h2>Buka toko di Pasar Hanakau</h2><p class="muted">Ajukan toko Anda. Toko akan diperiksa admin sebelum dapat berjualan.</p>
 <label for="shopName">Nama toko</label><input class="field" id="shopName" maxlength="100" placeholder="Contoh: Toko Sumber Rezeki">
@@ -49,7 +50,7 @@ function validCredentials(){const email=$('email').value.trim(),password=$('pass
 async function refreshSession(){
  const {data:{session}}=await supabase.auth.getSession();
  $('authPanel').classList.toggle('hidden',!!session);$('accountPanel').classList.toggle('hidden',!session);
- $('sellerPanel').classList.add('hidden');$('sellerProducts').classList.add('hidden');$('adminPanel').classList.add('hidden');
+ $('sellerPanel').classList.add('hidden');$('sellerProducts').classList.add('hidden');$('adminPanel').classList.add('hidden');$('buyerPanel').classList.add('hidden');
  if(!session){sellerShopId=null;return}
  $('accountEmail').textContent=session.user.email||'Akun aktif';
  const {data:profile}=await supabase.from('profiles').select('full_name,role').eq('id',session.user.id).maybeSingle();
@@ -57,6 +58,7 @@ async function refreshSession(){
  if(role==='admin'){
   $('adminPanel').classList.remove('hidden');await loadAdminPanel();
  } else if(role==='buyer'){
+  $('buyerPanel').classList.remove('hidden');activeBuyerId=session.user.id;loadCart();renderCart();await loadBuyerOrders();
   $('sellerPanel').classList.remove('hidden');
   const {data:application,error}=await supabase.from('seller_applications').select('status,shop_name').eq('user_id',session.user.id).maybeSingle();
   if(application){$('sellerMessage').textContent='Pengajuan "'+application.shop_name+'" berstatus: '+application.status+'.';$('submitSeller').disabled=true;}
@@ -110,10 +112,10 @@ $('addProduct').addEventListener('click',async()=>{
 $('signOut').addEventListener('click',async()=>{const {error}=await supabase.auth.signOut();if(error)message('catalogMessage',error.message,true);else{await refreshSession();message('catalogMessage','Anda sudah keluar.')}});
 supabase.auth.onAuthStateChange(()=>refreshSession());
 async function loadCatalog(){
- const {data,error}=await supabase.from('products').select('id,name,description,price,stock,image_path,shops(name)').eq('status','active').gt('stock',0).order('created_at',{ascending:false}).limit(60);
+ const {data,error}=await supabase.from('products').select('id,shop_id,name,description,price,stock,image_path,shops(name)').eq('status','active').gt('stock',0).order('created_at',{ascending:false}).limit(60);
  if(error){$('catalog').innerHTML='<div class="tile muted">Katalog belum dapat dimuat. Pastikan tabel database dan kebijakan akses sudah diterapkan.</div>';message('catalogMessage','Keterangan: '+error.message,true);return}
  if(!data?.length){$('catalog').innerHTML='<div class="tile muted">Belum ada produk aktif. Produk akan muncul setelah toko dan produk disetujui admin.</div>';return}
- $('catalog').innerHTML=data.map(p=>'<article class="tile product"><div>'+productImageHtml(p.image_path)+'<h3>'+escapeHtml(p.name)+'</h3><div class="muted">'+escapeHtml(p.shops?.name||'Toko Pasar Hanakau')+'</div><p class="muted">'+escapeHtml(p.description||'')+'</p><div class="price">Rp '+Number(p.price).toLocaleString('id-ID')+'</div><div class="muted">Stok: '+p.stock+'</div></div></article>').join('');
+ $('catalog').innerHTML=data.map(p=>'<article class="tile product"><div>'+productImageHtml(p.image_path)+'<h3>'+escapeHtml(p.name)+'</h3><div class="muted">'+escapeHtml(p.shops?.name||'Toko Pasar Hanakau')+'</div><p class="muted">'+escapeHtml(p.description||'')+'</p><div class="price">Rp '+Number(p.price).toLocaleString('id-ID')+'</div><div class="muted">Stok: '+p.stock+'</div><button class="btn" data-add-cart="'+p.id+'" data-name="'+escapeHtml(p.name)+'" data-price="'+Number(p.price)+'" data-stock="'+p.stock+'" data-shop="'+p.shop_id+'" data-shop-name="'+escapeHtml(p.shops?.name||'Toko')+'">Tambah ke keranjang</button></div></article>').join('');
 }
 async function loadAdminPanel(){
  $('adminApplications').textContent='Memuat…';$('adminProducts').textContent='Memuat…';
@@ -136,6 +138,59 @@ $('adminProducts').addEventListener('click',async e=>{
  const {error}=await supabase.from('products').update({status:'active'}).eq('id',btn.dataset.approveProduct);
  if(error){message('adminMessage','Gagal menerbitkan produk: '+error.message,true);btn.disabled=false;}else{message('adminMessage','Produk berhasil diterbitkan.');await loadAdminPanel();await loadCatalog();}
 });
+
+let activeBuyerId=null;
+let cart={};
+function cartStorageKey(){return activeBuyerId?'pasar-hanakau-cart-'+activeBuyerId:null;}
+function loadCart(){const key=cartStorageKey();if(!key){cart={};return}try{cart=JSON.parse(localStorage.getItem(key)||'{}')||{};}catch{cart={};}}
+function saveCart(){const key=cartStorageKey();if(key)localStorage.setItem(key,JSON.stringify(cart));}
+function formatRupiah(n){return 'Rp '+Number(n||0).toLocaleString('id-ID');}
+function renderCart(){
+ const entries=Object.values(cart);let total=0;
+ if(!entries.length){$('cartItems').textContent='Keranjang masih kosong. Pilih produk dari katalog.';$('cartTotal').textContent='';$('checkoutButton').disabled=true;return}
+ $('checkoutButton').disabled=false;
+ $('cartItems').innerHTML=entries.map(p=>{const line=p.price*p.quantity;total+=line;return '<div class="cartline"><div style="flex:1"><b>'+escapeHtml(p.name)+'</b><div class="muted">'+escapeHtml(p.shopName)+' • '+formatRupiah(p.price)+'</div><div class="row"><button class="qtybtn" data-cart-minus="'+p.id+'">−</button><b>'+p.quantity+'</b><button class="qtybtn" data-cart-plus="'+p.id+'">+</button><button class="btn secondary" data-cart-remove="'+p.id+'">Hapus</button></div></div><b>'+formatRupiah(line)+'</b></div>'}).join('');
+ $('cartTotal').textContent='Total barang: '+formatRupiah(total)+' (ongkos kirim akan dikonfirmasi terpisah bila ada)';
+}
+$('catalog').addEventListener('click',e=>{
+ const b=e.target.closest('[data-add-cart]');if(!b)return;
+ if(!activeBuyerId){message('catalogMessage','Silakan masuk dengan akun pembeli untuk menggunakan keranjang.',true);return}
+ const id=b.dataset.addCart,stock=Number(b.dataset.stock),existing=cart[id]?.quantity||0;
+ if(existing>=stock){message('catalogMessage','Jumlah di keranjang sudah mencapai stok tersedia.',true);return}
+ cart[id]={id,name:b.dataset.name,price:Number(b.dataset.price),stock,shopId:b.dataset.shop,shopName:b.dataset.shopName,quantity:existing+1};
+ saveCart();renderCart();message('catalogMessage','Produk ditambahkan ke keranjang.');
+});
+$('cartItems').addEventListener('click',e=>{
+ const minus=e.target.closest('[data-cart-minus]'),plus=e.target.closest('[data-cart-plus]'),remove=e.target.closest('[data-cart-remove]');
+ const id=minus?.dataset.cartMinus||plus?.dataset.cartPlus||remove?.dataset.cartRemove;
+ if(!id||!cart[id])return;
+ if(remove){delete cart[id];}
+ else if(minus){cart[id].quantity--;if(cart[id].quantity<1)delete cart[id];}
+ else if(plus){if(cart[id].quantity>=cart[id].stock){message('checkoutMessage','Jumlah melebihi stok yang tersedia.',true);return}cart[id].quantity++;}
+ saveCart();renderCart();
+});
+$('checkoutButton').addEventListener('click',async()=>{
+ if(!activeBuyerId){message('checkoutMessage','Silakan masuk sebagai pembeli.',true);return}
+ const address=$('deliveryAddress').value.trim();if(address.length<8){message('checkoutMessage','Isi alamat pengantaran dengan lengkap.',true);return}
+ const items=Object.values(cart).map(p=>({product_id:p.id,quantity:p.quantity}));
+ if(!items.length){message('checkoutMessage','Keranjang masih kosong.',true);return}
+ $('checkoutButton').disabled=true;message('checkoutMessage','Memeriksa stok dan membuat pesanan…');
+ const {data,error}=await supabase.rpc('checkout_cart',{p_items:items,p_delivery_address:address,p_notes:$('orderNotes').value.trim()});
+ $('checkoutButton').disabled=false;
+ if(error){message('checkoutMessage','Pesanan belum berhasil dibuat: '+error.message,true);return}
+ cart={};saveCart();renderCart();$('orderNotes').value='';
+ const nums=(data||[]).map(o=>o.order_number).join(', ');
+ message('checkoutMessage','Pesanan berhasil dibuat: '+nums+'. Pembayaran belum dilakukan; tunggu konfirmasi admin/penjual.');
+ await loadBuyerOrders();await loadCatalog();
+});
+async function loadBuyerOrders(){
+ if(!activeBuyerId)return;
+ const {data,error}=await supabase.from('orders').select('id,order_number,status,subtotal,total,created_at,order_items(product_name,quantity,line_total)').eq('buyer_id',activeBuyerId).order('created_at',{ascending:false}).limit(20);
+ if(error){$('buyerOrders').textContent='Pesanan belum dapat dimuat: '+error.message;return}
+ if(!data?.length){$('buyerOrders').textContent='Belum ada pesanan.';return}
+ $('buyerOrders').innerHTML=data.map(o=>'<div class="tile"><b>'+escapeHtml(o.order_number)+'</b><div class="muted">'+new Date(o.created_at).toLocaleString('id-ID')+' • Status: '+escapeHtml(o.status)+'</div>'+(o.order_items||[]).map(i=>'<div class="muted">'+escapeHtml(i.product_name)+' × '+i.quantity+' — '+formatRupiah(i.line_total)+'</div>').join('')+'<p class="price">'+formatRupiah(o.total)+'</p></div>').join('');
+}
+
 function productImageHtml(path){if(!path)return '<div class="muted">Belum ada foto produk.</div>';const {data}=supabase.storage.from('product-images').getPublicUrl(path);return '<img src="'+escapeHtml(data.publicUrl)+'" alt="Foto produk" loading="lazy" style="width:100%;max-width:220px;aspect-ratio:1/1;object-fit:cover;border-radius:10px;margin:6px 0">';}
 $('productImage').addEventListener('change',()=>{const file=$('productImage').files?.[0];$('productImagePreview').textContent=file?'Foto dipilih: '+file.name:'Belum ada foto dipilih.';});
 function escapeHtml(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
