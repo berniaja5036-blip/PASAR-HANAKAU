@@ -169,9 +169,22 @@ async function loadAdminOrders(){
  const {data,error}=await supabase.from('orders').select('id,order_number,buyer_id,status,subtotal,delivery_fee,total,delivery_address,notes,created_at,order_items(product_name,quantity,unit_price,line_total)').order('created_at',{ascending:false}).limit(50);
  if(error){box.textContent='Pesanan belum dapat dimuat: '+error.message;return}
  if(!data?.length){box.textContent='Belum ada pesanan yang masuk.';return}
- box.innerHTML=data.map(o=>'<article class="tile"><div class="row" style="justify-content:space-between"><b>'+escapeHtml(o.order_number)+'</b><b class="price">'+formatRupiah(o.total)+'</b></div><div class="muted">'+new Date(o.created_at).toLocaleString('id-ID')+' • Status: '+escapeHtml(o.status)+'</div><p class="muted"><b>Alamat:</b> '+escapeHtml(o.delivery_address)+'</p>'+(o.notes?'<p class="muted"><b>Catatan:</b> '+escapeHtml(o.notes)+'</p>':'')+'<div>'+((o.order_items||[]).map(i=>'<div class="cartline"><span>'+escapeHtml(i.product_name)+' × '+i.quantity+'</span><b>'+formatRupiah(i.line_total)+'</b></div>').join(''))+'</div><p class="muted">Subtotal: '+formatRupiah(o.subtotal)+' • Ongkir: '+formatRupiah(o.delivery_fee)+'</p></article>').join('');
+ const labels={pending:'Menunggu konfirmasi',confirmed:'Dikonfirmasi',ready_for_pickup:'Siap dijemput',picked_up:'Sudah dijemput',delivered:'Terkirim',cancelled:'Dibatalkan'};
+ const next={pending:[['confirmed','Terima pesanan'],['cancelled','Batalkan']],confirmed:[['ready_for_pickup','Siapkan untuk driver'],['cancelled','Batalkan']],ready_for_pickup:[['picked_up','Tandai sudah dijemput']],picked_up:[['delivered','Tandai terkirim']],delivered:[],cancelled:[]};
+ box.innerHTML=data.map(o=>'<article class="tile"><div class="row" style="justify-content:space-between"><b>'+escapeHtml(o.order_number)+'</b><b class="price">'+formatRupiah(o.total)+'</b></div><div class="muted">'+new Date(o.created_at).toLocaleString('id-ID')+' • Status: <b>'+escapeHtml(labels[o.status]||o.status)+'</b></div><p class="muted"><b>Alamat:</b> '+escapeHtml(o.delivery_address)+'</p>'+(o.notes?'<p class="muted"><b>Catatan:</b> '+escapeHtml(o.notes)+'</p>':'')+'<div>'+((o.order_items||[]).map(i=>'<div class="cartline"><span>'+escapeHtml(i.product_name)+' × '+i.quantity+'</span><b>'+formatRupiah(i.line_total)+'</b></div>').join(''))+'</div><p class="muted">Subtotal: '+formatRupiah(o.subtotal)+' • Ongkir: '+formatRupiah(o.delivery_fee)+'</p>'+(next[o.status]||[]).map(([status,label])=>'<button class="btn '+(status==='cancelled'?'secondary':'')+'" data-order-id="'+o.id+'" data-order-status="'+status+'">'+label+'</button>').join(' ')+'</article>').join('');
+
 }
 $('refreshAdminOrders').addEventListener('click',loadAdminOrders);
+$('adminOrders').addEventListener('click',async e=>{
+ const btn=e.target.closest('[data-order-id][data-order-status]');if(!btn)return;
+ const orderId=btn.dataset.orderId,newStatus=btn.dataset.orderStatus;
+ btn.disabled=true;message('adminMessage','Memperbarui status pesanan…');
+ const {error}=await supabase.rpc('admin_update_order_status',{p_order_id:orderId,p_new_status:newStatus});
+ if(error){message('adminMessage','Status belum berubah: '+error.message,true);btn.disabled=false;return}
+ message('adminMessage','Status pesanan berhasil diperbarui.');
+ await loadAdminOrders();
+});
+
 $('adminApplications').addEventListener('click',async e=>{
  const approve=e.target.closest('[data-approve-app]'),reject=e.target.closest('[data-reject-app]');
  if(approve){approve.disabled=true;const {error}=await supabase.rpc('approve_seller_application',{application_id:approve.dataset.approveApp});if(error){message('adminMessage','Gagal menyetujui toko: '+error.message,true);approve.disabled=false;}else{message('adminMessage','Toko berhasil disetujui.');await loadAdminPanel();}}
