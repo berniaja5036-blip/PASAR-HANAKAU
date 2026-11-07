@@ -75,10 +75,10 @@ footer{color:#829087;font-size:12px;padding:30px 10px}
 <button class="btn secondary" id="refreshSellerOrders" type="button">↻ Muat ulang pesanan</button>
 <div id="sellerOrders" class="muted">Memuat pesanan toko…</div>
 </section>
-<div class="section"><h2>🛒 Jelajahi produk</h2><p class="muted">Temukan kebutuhan dari toko-toko sekitar Anda.</p></div>
+<section id="catalogPanel" class="hidden"><div class="section"><h2>🛒 Jelajahi produk</h2><p class="muted">Temukan kebutuhan dari toko-toko sekitar Anda.</p></div>
 <div class="panel" style="margin-top:10px"><label for="catalogSearch">Cari nama barang atau toko</label><input id="catalogSearch" class="field" type="search" placeholder="Contoh: beras, minyak, Toko Sumber Rezeki" autocomplete="off"><div class="row"><label for="catalogSort" class="muted">Urutkan:</label><select id="catalogSort" class="field" style="max-width:230px;margin:0"><option value="newest">Terbaru</option><option value="price-asc">Harga termurah</option><option value="price-desc">Harga termahal</option><option value="name-asc">Nama barang A–Z</option></select></div><div id="catalogCount" class="muted" style="margin-top:8px" aria-live="polite"></div></div>
 <div id="catalog" class="grid"><div class="tile muted">Menghubungkan ke katalog…</div></div>
-<div id="catalogMessage" class="status" role="status"></div>
+<div id="catalogMessage" class="status" role="status"></div></section>
 </main><footer>Pasar Hanakau • Uji coba awal</footer>
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
@@ -95,6 +95,7 @@ async function refreshSession(){
  const {data:{session}}=await supabase.auth.getSession();
  $('rolePanel').classList.toggle('hidden',!!session);$('authPanel').classList.toggle('hidden',!!session || !selectedEntryRole);$('accountPanel').classList.toggle('hidden',!session);
  $('sellerPanel').classList.add('hidden');$('sellerProducts').classList.add('hidden');$('adminPanel').classList.add('hidden');$('buyerPanel').classList.add('hidden');$('driverPanel').classList.add('hidden');$('driverApplyPanel').classList.add('hidden');
+ $('catalogPanel').classList.add('hidden');
  if(!session){sellerShopId=null;activeBuyerId=null;cart={};return}
  activeBuyerId=null;cart={};
  $('accountEmail').textContent=session.user.email||'Akun aktif';
@@ -116,7 +117,7 @@ async function refreshSession(){
   else if(error){$('driverApplyMessage').textContent='Pendaftaran belum dapat dimuat: '+error.message;}
   else{$('driverApplyMessage').textContent='Silakan lengkapi data kendaraan.';$('applyDriver').disabled=false;}
  } else if(role==='buyer'){
-  $('buyerPanel').classList.remove('hidden');activeBuyerId=session.user.id;loadCart();renderCart();await loadBuyerOrders();
+  $('buyerPanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');activeBuyerId=session.user.id;loadCart();renderCart();await loadBuyerOrders();
  } else if(role==='seller'){
   $('sellerProducts').classList.remove('hidden');await loadSellerShop();
  } else if(role==='driver'){
