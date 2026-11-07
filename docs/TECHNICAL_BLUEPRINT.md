@@ -1,37 +1,74 @@
-# Rancangan teknis Pasar Hanakau
+# Rancangan teknis dan status implementasi Pasar Hanakau
 
-## Batas MVP
-Peluncuran terbatas di Desa Hanakau Jaya. Produk bersifat umum dan berasal dari banyak toko.
+## Ruang lingkup
 
-## Arsitektur yang disarankan
-- Antarmuka web responsif/PWA untuk Android.
-- Backend terkelola: Supabase (PostgreSQL, Auth, Storage, dan fungsi server) setelah proyek layanan dibuat.
-- Hosting web dengan HTTPS.
-- Push notification setelah izin pengguna dan service worker tersedia.
-- Pembayaran melalui penyedia yang sesuai; jangan membuat penyimpanan uang elektronik sendiri.
+Marketplace multi-penjual tahap awal untuk Desa Hanakau Jaya, Kecamatan Sungkai Utara, Kabupaten Lampung Utara, Lampung. Aplikasi dibuat responsif agar dapat digunakan melalui browser Android. Pengemasan menjadi APK dapat dipertimbangkan setelah versi web stabil.
 
-## Entitas data inti
-profiles; role_memberships; stores; products; orders; order_items; delivery_tasks; payment_transactions. Wallet_accounts dan wallet_ledger baru ditambahkan setelah model pembayaran dan kepatuhan ditetapkan.
+## Arsitektur yang berjalan
 
-## Aturan bisnis awal
-1. Pembeli dapat mendaftar dan berbelanja.
-2. Toko penjual aktif setelah verifikasi admin.
-3. Driver menerima tugas setelah disetujui admin.
-4. Harga dan nama produk disalin sebagai snapshot saat checkout.
-5. Perubahan status pesanan memiliki riwayat.
-6. Penjual hanya mengelola toko dan produk miliknya.
-7. Driver hanya melihat tugas yang ditugaskan kepadanya.
-8. Hak akses ditegakkan di backend/database (deny by default).
+- Antarmuka: HTML, CSS, dan JavaScript pada `index.html`.
+- Backend: Supabase Auth, PostgreSQL, Row Level Security, Storage, dan fungsi RPC.
+- Hosting: GitHub Pages melalui GitHub Actions.
+- Repositori: `berniaja5036-blip/PASAR-HANAKAU`, branch `main`.
 
-## Keamanan dan uang
-- Gunakan autentikasi terkelola; jangan simpan password dalam tabel profil.
-- Aktifkan Row Level Security untuk semua tabel yang diakses klien.
-- Rahasia server tidak boleh masuk ke browser atau repositori.
-- Verifikasi callback pembayaran di server.
-- Cegah transaksi ganda dengan idempotency.
-- Wallet ledger bersifat append-only dan hanya mencatat transaksi tervalidasi.
-- Siapkan pembatalan, refund, sengketa, dan rekonsiliasi.
-- Top-up uang sungguhan menunggu penilaian legal dan mitra pembayaran.
+## Peran dan alur yang telah diterapkan
 
-## Belum tersedia
-Backend produksi, autentikasi aktif, aturan RLS final, pembayaran, notifikasi, dan APK. Prototipe tidak boleh digunakan untuk transaksi nyata.
+1. Buyer mendaftar/login, melihat produk aktif, menambah ke keranjang, dan checkout.
+2. Seller mengajukan toko; Admin menyetujui atau menolak. Seller yang disetujui dapat mengelola produk dan memproses pesanan tokonya.
+3. Produk baru menunggu persetujuan Admin sebelum tampil pada katalog Buyer.
+4. Checkout dijalankan melalui RPC `checkout_cart`. Fungsi memeriksa akun Buyer, format keranjang, produk aktif, persetujuan toko, dan stok; mengunci baris produk saat transaksi; memisahkan pesanan per toko; lalu mengurangi stok.
+5. Admin memantau pesanan, memperbarui status, menyetujui Driver, dan menugaskan Driver untuk pesanan siap dijemput.
+6. Driver melihat hanya tugas yang ditugaskan kepadanya, lalu memperbarui status penjemputan dan pengantaran.
+7. Perubahan status pesanan direkam di `order_status_history`. Panel pemberitahuan Buyer, Seller, dan Driver membaca status/tugas terbaru dari database.
+
+## Migrasi database
+
+Migrasi berurutan berada di `supabase/migrations/`. Di antaranya:
+- `001_initial_schema.sql`: profil, toko, kategori, produk, pesanan, item, driver, dan pengiriman.
+- `002_row_level_security.sql` dan migrasi perbaikan berikutnya: kebijakan akses.
+- `004`–`008`: pengajuan toko, pengelolaan produk, persetujuan produk, dan penyimpanan gambar.
+- `009_secure_cart_checkout.sql`: checkout transaksional dan pemeriksaan stok.
+- `010_admin_order_status.sql`: kontrol status pesanan oleh Admin.
+- `011_driver_workflow.sql`: pendaftaran, persetujuan, penugasan, dan alur Driver.
+- `012_seller_edit_products.sql` dan `013_seller_order_visibility.sql`: pengelolaan produk serta visibilitas pesanan Seller.
+- `014_order_status_history.sql`: riwayat status otomatis.
+
+Jangan menjalankan ulang migrasi secara sembarang. Periksa terlebih dahulu migrasi mana yang sudah diterapkan pada proyek Supabase aktif.
+
+## Status pengujian yang pernah dikonfirmasi
+
+- Pengajuan dan persetujuan toko serta produk.
+- Buyer menambahkan produk ke keranjang dan membuat pesanan.
+- Admin melihat pesanan dan mengubah status.
+- Driver disetujui, menerima penugasan, mengonfirmasi penjemputan, lalu pengantaran; Admin melihat status terkirim.
+- Seller melihat pesanan tokonya, termasuk rincian barang dan total.
+- Seller mengubah dan menghapus produk.
+- Unggah foto produk.
+- Riwayat status telah dipasang pada database; panel notifikasi Buyer/Seller dan panel pemberitahuan tugas Driver sudah diterapkan di antarmuka. Verifikasi tampilan notifikasi terbaru masih perlu dilakukan oleh pengguna.
+
+## Batasan yang belum selesai
+
+- Pembayaran online, COD terintegrasi, top-up, dan dompet saldo belum tersedia.
+- RPC checkout saat ini menetapkan `delivery_fee = 0`; tarif dan mekanisme pembagian biaya pengiriman belum ditetapkan.
+- Notifikasi belum memakai push notification browser/Android atau WhatsApp.
+- Pembatalan pesanan, refund, sengketa, dan penanganan kegagalan operasional perlu dirancang.
+- Belum ada APK Android.
+- Pengujian keamanan menyeluruh, privasi, pemulihan backup, dan kesiapan produksi belum selesai.
+
+## Prinsip keamanan
+
+- Terapkan prinsip deny-by-default pada RLS.
+- Jangan mengandalkan penyembunyian elemen UI untuk otorisasi.
+- Jangan menyimpan password, service-role key, atau rahasia pembayaran di kode klien/repo.
+- Fungsi `SECURITY DEFINER` harus memakai `search_path` yang aman, memeriksa peran/otorisasi di dalam fungsi, serta memberi EXECUTE hanya ke role yang diperlukan.
+- Pembayaran harus memakai penyedia yang sesuai; verifikasi callback di server, idempotency, rekonsiliasi, refund, dan audit log diperlukan.
+- Ledger saldo harus append-only dan hanya ditulis dari transaksi tervalidasi. Jangan membuat atau mengaktifkan uang elektronik internal sebelum kajian hukum dan kemitraan pembayaran.
+
+## Prioritas pengembangan
+
+1. Verifikasi notifikasi dan pengujian ulang alur lengkap semua peran.
+2. Rancang aturan tarif pengiriman, pembatalan, dan alur kendala pesanan.
+3. Audit RLS, RPC, Storage, validasi input, privasi alamat, serta backup.
+4. Evaluasi PWA/push notification setelah izin pengguna dan service worker dirancang.
+5. Integrasi pembayaran melalui penyedia yang sesuai setelah rancangan keamanan dan kepatuhan disetujui.
+6. Pengemasan Android setelah aplikasi web stabil.
