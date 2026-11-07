@@ -118,7 +118,7 @@ async function refreshSession(){
   else if(error){$('driverApplyMessage').textContent='Pendaftaran belum dapat dimuat: '+error.message;}
   else{$('driverApplyMessage').textContent='Silakan lengkapi data kendaraan.';$('applyDriver').disabled=false;}
  } else if(role==='buyer'){
-  $('buyerPanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');activeBuyerId=session.user.id;loadCart();renderCart();await loadBuyerOrders();
+  $('buyerPanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');activeBuyerId=session.user.id;loadCart();renderCart();await loadCatalog();await loadBuyerOrders();
  } else if(role==='seller'){
   $('sellerProducts').classList.remove('hidden');await loadSellerShop();
  } else if(role==='driver'){
