@@ -30,6 +30,7 @@
 <label for="productName">Nama produk</label><input class="field" id="productName" maxlength="120" placeholder="Contoh: Beras 5 kg">
 <div class="formgrid"><div><label for="productPrice">Harga (Rp)</label><input class="field" id="productPrice" type="number" min="0" step="1" placeholder="25000"></div><div><label for="productStock">Stok</label><input class="field" id="productStock" type="number" min="0" step="1" placeholder="10"></div></div>
 <label for="productDescription">Deskripsi (opsional)</label><textarea class="field" id="productDescription" rows="2" placeholder="Keterangan produk"></textarea>
+<label for="productImage">Foto produk (JPG, PNG, atau WebP; maksimal 5 MB)</label><input class="field" id="productImage" type="file" accept="image/jpeg,image/png,image/webp"><div id="productImagePreview" class="muted">Belum ada foto dipilih.</div>
 <button class="btn" id="addProduct">Simpan produk</button><div id="productMessage" class="status" role="status"></div>
 <div id="sellerProductList"></div>
 </section>
@@ -88,29 +89,31 @@ async function loadSellerShop(){
 }
 async function loadSellerProducts(){
  if(!sellerShopId)return;
- const {data,error}=await supabase.from('products').select('id,name,price,stock,status').eq('shop_id',sellerShopId).order('created_at',{ascending:false});
+ const {data,error}=await supabase.from('products').select('id,name,price,stock,status,image_path').eq('shop_id',sellerShopId).order('created_at',{ascending:false});
  if(error){$('sellerProductList').textContent='Gagal memuat produk: '+error.message;return}
- $('sellerProductList').innerHTML=data.length?data.map(p=>'<div class="tile"><b>'+escapeHtml(p.name)+'</b><div class="muted">Rp '+Number(p.price).toLocaleString('id-ID')+' • Stok '+p.stock+' • '+escapeHtml(p.status)+'</div></div>').join(''):'<p class="muted">Belum ada produk di toko ini.</p>';
+ $('sellerProductList').innerHTML=data.length?data.map(p=>'<div class="tile">'+productImageHtml(p.image_path)+'<b>'+escapeHtml(p.name)+'</b><div class="muted">Rp '+Number(p.price).toLocaleString('id-ID')+' • Stok '+p.stock+' • '+escapeHtml(p.status)+'</div></div>').join(''):'<p class="muted">Belum ada produk di toko ini.</p>';
 }
 $('addProduct').addEventListener('click',async()=>{
  if(!sellerShopId){message('productMessage','Toko belum disetujui admin.',true);return}
- const name=$('productName').value.trim(),price=Number($('productPrice').value),stock=Number($('productStock').value),description=$('productDescription').value.trim();
+ const name=$('productName').value.trim(),price=Number($('productPrice').value),stock=Number($('productStock').value),description=$('productDescription').value.trim(),file=$('productImage').files?.[0];
  if(name.length<2||$('productPrice').value===''||!Number.isFinite(price)||price<0||$('productStock').value===''||!Number.isInteger(stock)||stock<0){message('productMessage','Periksa nama, harga, dan stok produk.',true);return}
- $('addProduct').disabled=true;
- const {error}=await supabase.from('products').insert({shop_id:sellerShopId,name,price,stock,description,status:'draft'});
+ if(file && (!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>5*1024*1024)){message('productMessage','Foto harus JPG, PNG, atau WebP dan maksimal 5 MB.',true);return}
+ $('addProduct').disabled=true;let imagePath=null;
+ if(file){message('productMessage','Mengunggah foto produk…');imagePath=sellerShopId+'/'+crypto.randomUUID()+'-'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');const {error:uploadError}=await supabase.storage.from('product-images').upload(imagePath,file,{contentType:file.type,upsert:false});if(uploadError){$('addProduct').disabled=false;message('productMessage','Foto gagal diunggah: '+uploadError.message,true);return}}
+ const {error}=await supabase.from('products').insert({shop_id:sellerShopId,name,price,stock,description,image_path:imagePath,status:'draft'});
  $('addProduct').disabled=false;
- if(error){message('productMessage','Produk gagal disimpan: '+error.message,true);return}
- $('productName').value='';$('productPrice').value='';$('productStock').value='';$('productDescription').value='';
+ if(error){if(imagePath)await supabase.storage.from('product-images').remove([imagePath]);message('productMessage','Produk gagal disimpan: '+error.message,true);return}
+ $('productName').value='';$('productPrice').value='';$('productStock').value='';$('productDescription').value='';$('productImage').value='';$('productImagePreview').textContent='Belum ada foto dipilih.';
  message('productMessage','Produk tersimpan sebagai draft. Menunggu persetujuan admin.');
  await loadSellerProducts();
 });
 $('signOut').addEventListener('click',async()=>{const {error}=await supabase.auth.signOut();if(error)message('catalogMessage',error.message,true);else{await refreshSession();message('catalogMessage','Anda sudah keluar.')}});
 supabase.auth.onAuthStateChange(()=>refreshSession());
 async function loadCatalog(){
- const {data,error}=await supabase.from('products').select('id,name,description,price,stock,shops(name)').eq('status','active').gt('stock',0).order('created_at',{ascending:false}).limit(60);
+ const {data,error}=await supabase.from('products').select('id,name,description,price,stock,image_path,shops(name)').eq('status','active').gt('stock',0).order('created_at',{ascending:false}).limit(60);
  if(error){$('catalog').innerHTML='<div class="tile muted">Katalog belum dapat dimuat. Pastikan tabel database dan kebijakan akses sudah diterapkan.</div>';message('catalogMessage','Keterangan: '+error.message,true);return}
  if(!data?.length){$('catalog').innerHTML='<div class="tile muted">Belum ada produk aktif. Produk akan muncul setelah toko dan produk disetujui admin.</div>';return}
- $('catalog').innerHTML=data.map(p=>'<article class="tile product"><div><h3>'+escapeHtml(p.name)+'</h3><div class="muted">'+escapeHtml(p.shops?.name||'Toko Pasar Hanakau')+'</div><p class="muted">'+escapeHtml(p.description||'')+'</p><div class="price">Rp '+Number(p.price).toLocaleString('id-ID')+'</div><div class="muted">Stok: '+p.stock+'</div></div></article>').join('');
+ $('catalog').innerHTML=data.map(p=>'<article class="tile product"><div>'+productImageHtml(p.image_path)+'<h3>'+escapeHtml(p.name)+'</h3><div class="muted">'+escapeHtml(p.shops?.name||'Toko Pasar Hanakau')+'</div><p class="muted">'+escapeHtml(p.description||'')+'</p><div class="price">Rp '+Number(p.price).toLocaleString('id-ID')+'</div><div class="muted">Stok: '+p.stock+'</div></div></article>').join('');
 }
 async function loadAdminPanel(){
  $('adminApplications').textContent='Memuat…';$('adminProducts').textContent='Memuat…';
@@ -118,9 +121,9 @@ async function loadAdminPanel(){
  if(appError){$('adminApplications').textContent='Gagal memuat: '+appError.message;}else if(!apps.length){$('adminApplications').textContent='Tidak ada pengajuan toko yang menunggu.';}else{
   $('adminApplications').innerHTML=apps.map(a=>'<div class="tile"><b>'+escapeHtml(a.shop_name)+'</b><p class="muted">'+escapeHtml(a.shop_address)+' • '+escapeHtml(a.contact_phone||'Tanpa nomor')+'</p><p>'+escapeHtml(a.shop_description||'')+'</p><button class="btn" data-approve-app="'+a.id+'">Setujui toko</button> <button class="btn secondary" data-reject-app="'+a.id+'">Tolak</button></div>').join('');
  }
- const {data:products,error:productError}=await supabase.from('products').select('id,name,price,stock,description,shops(name)').eq('status','draft').order('created_at',{ascending:true});
+ const {data:products,error:productError}=await supabase.from('products').select('id,name,price,stock,description,image_path,shops(name)').eq('status','draft').order('created_at',{ascending:true});
  if(productError){$('adminProducts').textContent='Gagal memuat: '+productError.message;}else if(!products.length){$('adminProducts').textContent='Tidak ada produk draft yang menunggu.';}else{
-  $('adminProducts').innerHTML=products.map(p=>'<div class="tile"><b>'+escapeHtml(p.name)+'</b><p class="muted">'+escapeHtml(p.shops?.name||'Toko')+' • Rp '+Number(p.price).toLocaleString('id-ID')+' • Stok '+p.stock+'</p><p>'+escapeHtml(p.description||'')+'</p><button class="btn" data-approve-product="'+p.id+'">Terbitkan produk</button></div>').join('');
+  $('adminProducts').innerHTML=products.map(p=>'<div class="tile">'+productImageHtml(p.image_path)+'<b>'+escapeHtml(p.name)+'</b><p class="muted">'+escapeHtml(p.shops?.name||'Toko')+' • Rp '+Number(p.price).toLocaleString('id-ID')+' • Stok '+p.stock+'</p><p>'+escapeHtml(p.description||'')+'</p><button class="btn" data-approve-product="'+p.id+'">Terbitkan produk</button></div>').join('');
  }
 }
 $('adminApplications').addEventListener('click',async e=>{
@@ -133,6 +136,8 @@ $('adminProducts').addEventListener('click',async e=>{
  const {error}=await supabase.from('products').update({status:'active'}).eq('id',btn.dataset.approveProduct);
  if(error){message('adminMessage','Gagal menerbitkan produk: '+error.message,true);btn.disabled=false;}else{message('adminMessage','Produk berhasil diterbitkan.');await loadAdminPanel();await loadCatalog();}
 });
+function productImageHtml(path){if(!path)return '<div class="muted">Belum ada foto produk.</div>';const {data}=supabase.storage.from('product-images').getPublicUrl(path);return '<img src="'+escapeHtml(data.publicUrl)+'" alt="Foto produk" loading="lazy" style="width:100%;max-width:220px;aspect-ratio:1/1;object-fit:cover;border-radius:10px;margin:6px 0">';}
+$('productImage').addEventListener('change',()=>{const file=$('productImage').files?.[0];$('productImagePreview').textContent=file?'Foto dipilih: '+file.name:'Belum ada foto dipilih.';});
 function escapeHtml(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 await refreshSession();await loadCatalog();
 </script></body></html>
