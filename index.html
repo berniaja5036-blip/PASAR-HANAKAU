@@ -5,10 +5,43 @@
 <meta name="theme-color" content="#176b45"><title>Pasar Hanakau</title>
 <style>
 :root{font-family:system-ui,-apple-system,sans-serif;color:#17251e;background:#f4f7f4}*{box-sizing:border-box}body{margin:0}.top{background:#176b45;color:#fff;padding:22px max(18px,calc((100% - 960px)/2))}.top small{opacity:.85}.top h1{margin:7px 0;font-size:27px}.wrap{max-width:960px;margin:auto;padding:18px}.panel,.tile{background:#fff;border:1px solid #e1e9e3;border-radius:14px;padding:16px;margin:14px 0}.notice{background:#fff6db;border:1px solid #f0dda0;padding:12px;border-radius:10px;font-size:13px;color:#604b12}.authgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{width:100%;padding:12px;border:1px solid #ccd8cf;border-radius:9px;font:inherit;margin:5px 0 10px}.btn{border:0;background:#176b45;color:#fff;padding:12px 16px;border-radius:9px;font:inherit;font-weight:600;cursor:pointer}.btn.secondary{background:#e7efe9;color:#175c3c}.btn:disabled{opacity:.5}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row .field{flex:1;min-width:150px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.tile h3{margin:7px 0 4px;font-size:16px}.muted{color:#66766c;font-size:13px}.status{font-size:13px;margin-top:8px;min-height:18px}.hidden{display:none}.product{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.price{font-weight:700;color:#176b45}.section{margin:22px 0 8px}.formgrid{display:grid;grid-template-columns:1fr;gap:4px}.cartline{display:flex;justify-content:space-between;gap:10px;align-items:center;border-bottom:1px solid #e7eee9;padding:10px 0}.qtybtn{border:0;border-radius:7px;background:#e7efe9;color:#175c3c;padding:7px 11px;font-weight:700}.carttotal{font-size:18px;font-weight:800;color:#176b45}@media(min-width:650px){.formgrid{grid-template-columns:1fr 1fr}}footer{text-align:center;color:#718078;font-size:12px;padding:26px 10px}@media(min-width:650px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}.authgrid{grid-template-columns:1fr 1fr}}
+
+/* Visual refresh Pasar Hanakau */
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#183329;background:#f3f7f2;--green:#176b45;--green-dark:#104d34;--mint:#e9f4eb;--gold:#f2b84b;--ink:#183329;--muted:#6b7d72;--line:#e1eae2}
+body{background:linear-gradient(180deg,#edf5ee 0,#f7f9f6 340px,#f7f9f6 100%);min-height:100vh}
+.top{position:relative;overflow:hidden;background:linear-gradient(120deg,#104d34 0%,#176b45 55%,#23885a 100%);color:#fff;padding:25px max(18px,calc((100% - 960px)/2)) 30px;box-shadow:0 8px 28px #124b3024}
+.top:after{content:"";position:absolute;width:230px;height:230px;border:1px solid #ffffff20;border-radius:50%;right:-55px;top:-115px;box-shadow:0 0 0 25px #ffffff08,0 0 0 55px #ffffff06}
+.brandline{display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.brandmark{width:48px;height:48px;display:grid;place-items:center;border-radius:16px;background:#ffffff18;border:1px solid #ffffff35;font-size:27px;box-shadow:inset 0 1px #ffffff30}
+.top small{letter-spacing:.08em;text-transform:uppercase;font-size:10px;font-weight:700;opacity:.86}
+.top h1{margin:3px 0;font-size:27px;letter-spacing:-.7px}.top .tagline{font-size:13px;color:#e3f3e8;margin-top:3px}
+.wrap{max-width:960px;margin:auto;padding:18px}
+.panel,.tile{background:#fff;border:1px solid var(--line);border-radius:18px;padding:17px;margin:14px 0;box-shadow:0 5px 18px #18332908}
+.panel h2,.section h2{font-size:20px;letter-spacing:-.35px;color:var(--green-dark);margin:3px 0 8px}
+.panel h3{font-size:15px;color:#244d38;margin:18px 0 8px}
+.notice{background:#fff8e8;border:1px solid #f5e4b7;padding:13px 15px;border-radius:14px;font-size:13px;color:#75551a;box-shadow:0 3px 12px #8a681008}
+.field{width:100%;padding:13px 14px;border:1px solid #d5e1d7;border-radius:12px;font:inherit;margin:6px 0 12px;background:#fbfdfb;transition:border-color .15s,box-shadow .15s}
+.field:focus{outline:none;border-color:#399568;box-shadow:0 0 0 3px #39956820;background:#fff}
+.btn{border:0;background:linear-gradient(135deg,#19734b,#125638);color:#fff;padding:12px 17px;border-radius:12px;font:inherit;font-weight:700;cursor:pointer;box-shadow:0 4px 10px #176b4522;transition:transform .15s,filter .15s}
+.btn:active{transform:translateY(1px)}.btn.secondary{background:#eaf3ec;color:#175c3c;box-shadow:none;border:1px solid #dce9df}
+.btn:disabled{opacity:.5;box-shadow:none}
+.grid{gap:12px}.tile{margin:0;padding:13px;border-radius:16px;transition:transform .16s,box-shadow .16s}
+.tile h3{margin:9px 0 4px;font-size:15px;line-height:1.35;color:#1b3b2b}
+.product{display:block}.product .price{font-size:17px;margin:8px 0 10px}.product .btn{width:100%;margin-top:9px}
+.product img,.tile img{width:100%!important;max-width:none!important;aspect-ratio:1/1;object-fit:cover;border-radius:12px!important;background:#f0f5f0}
+.muted{color:var(--muted);font-size:13px;line-height:1.5}
+.price,.carttotal{color:#176b45}.section{margin:24px 0 12px}.section p{margin-top:3px}
+.status{font-size:13px;margin-top:10px;min-height:18px;line-height:1.45}
+.cartline{border-bottom:1px solid #edf1ed;padding:12px 0}.qtybtn{border:0;border-radius:9px;background:#eaf3ec;color:#175c3c;padding:8px 12px;font-weight:800}
+.carttotal{font-size:20px;font-weight:800;padding:12px 0}
+footer{color:#829087;font-size:12px;padding:30px 10px}
+@media(min-width:650px){.tile:hover{transform:translateY(-2px);box-shadow:0 9px 24px #18332912}.product{display:block}}
+@media(max-width:420px){.top h1{font-size:24px}.wrap{padding:13px}.panel{padding:14px}.authgrid{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
-<header class="top"><small>Marketplace warga • Desa Hanakau Jaya</small><h1>Pasar Hanakau</h1><div>Belanja dari toko-toko di sekitar kita.</div></header>
+<header class="top"><div class="brandline"><div class="brandmark" aria-hidden="true">🛍️</div><div><small>Marketplace warga • Desa Hanakau Jaya</small><h1>Pasar Hanakau</h1><div class="tagline">Belanja dekat, mudah, dan nyaman.</div></div></div></header>
 <main class="wrap">
 <div class="notice"><b>Versi uji coba awal.</b> Koneksi akun dan katalog sedang disiapkan. Jangan gunakan untuk transaksi atau pembayaran sungguhan dulu.</div>
 <section id="authPanel" class="panel">
@@ -17,17 +50,17 @@
 <div class="row"><button class="btn" id="signIn">Masuk</button><button class="btn secondary" id="signUp">Daftar akun</button></div><div id="authMessage" class="status" role="status"></div>
 </section>
 <section id="accountPanel" class="panel hidden"><div class="row"><div style="flex:1"><b id="accountEmail"></b><div class="muted" id="accountRole"></div></div><button class="btn secondary" id="signOut">Keluar</button></div></section>
-<section id="buyerPanel" class="panel hidden"><h2>Keranjang belanja</h2><p class="muted">Periksa barang, jumlah, dan alamat sebelum membuat pesanan. Pembayaran belum diaktifkan.</p><div id="cartItems" class="muted">Keranjang masih kosong.</div><div id="cartTotal" class="carttotal"></div><h3>Alamat pengantaran</h3><textarea id="deliveryAddress" class="field" rows="2" maxlength="500" placeholder="Nama jalan, RT/RW, patokan rumah, Desa Hanakau Jaya"></textarea><label for="orderNotes">Catatan untuk penjual/kurir (opsional)</label><textarea id="orderNotes" class="field" rows="2" maxlength="500" placeholder="Catatan pesanan"></textarea><button id="checkoutButton" class="btn">Buat pesanan</button><div id="checkoutMessage" class="status" role="status"></div><h3>Pesanan saya</h3><div id="buyerOrders" class="muted">Memuat pesanan…</div></section>
+<section id="buyerPanel" class="panel hidden"><h2>🧺 Keranjang belanja</h2><p class="muted">Periksa barang, jumlah, dan alamat sebelum membuat pesanan. Pembayaran belum diaktifkan.</p><div id="cartItems" class="muted">Keranjang masih kosong.</div><div id="cartTotal" class="carttotal"></div><h3>Alamat pengantaran</h3><textarea id="deliveryAddress" class="field" rows="2" maxlength="500" placeholder="Nama jalan, RT/RW, patokan rumah, Desa Hanakau Jaya"></textarea><label for="orderNotes">Catatan untuk penjual/kurir (opsional)</label><textarea id="orderNotes" class="field" rows="2" maxlength="500" placeholder="Catatan pesanan"></textarea><button id="checkoutButton" class="btn">Buat pesanan</button><div id="checkoutMessage" class="status" role="status"></div><h3>Pesanan saya</h3><div id="buyerOrders" class="muted">Memuat pesanan…</div></section>
 <section id="sellerPanel" class="panel hidden">
-<h2>Buka toko di Pasar Hanakau</h2><p class="muted">Ajukan toko Anda. Toko akan diperiksa admin sebelum dapat berjualan.</p>
+<h2>🏬 Buka toko di Pasar Hanakau</h2><p class="muted">Ajukan toko Anda. Toko akan diperiksa admin sebelum dapat berjualan.</p>
 <label for="shopName">Nama toko</label><input class="field" id="shopName" maxlength="100" placeholder="Contoh: Toko Sumber Rezeki">
 <div class="formgrid"><div><label for="shopAddress">Alamat toko</label><input class="field" id="shopAddress" maxlength="300" placeholder="Alamat lengkap di Hanakau Jaya"></div><div><label for="shopPhone">Nomor WhatsApp</label><input class="field" id="shopPhone" maxlength="30" placeholder="08xxxxxxxxxx"></div></div>
 <label for="shopDescription">Deskripsi toko (opsional)</label><textarea class="field" id="shopDescription" rows="3" placeholder="Ceritakan barang yang dijual"></textarea>
 <button class="btn" id="submitSeller">Kirim pengajuan toko</button><div id="sellerMessage" class="status" role="status"></div>
 </section>
-<section id="adminPanel" class="panel hidden"><h2>Panel admin</h2><p class="muted">Tinjau pengajuan toko dan produk yang menunggu persetujuan.</p><h3>Pengajuan toko</h3><div id="adminApplications" class="muted">Memuat pengajuan…</div><h3>Produk menunggu persetujuan</h3><div id="adminProducts" class="muted">Memuat produk…</div><div id="adminMessage" class="status" role="status"></div></section>
+<section id="adminPanel" class="panel hidden"><h2>🛡️ Panel admin</h2><p class="muted">Tinjau pengajuan toko dan produk yang menunggu persetujuan.</p><h3>Pengajuan toko</h3><div id="adminApplications" class="muted">Memuat pengajuan…</div><h3>Produk menunggu persetujuan</h3><div id="adminProducts" class="muted">Memuat produk…</div><div id="adminMessage" class="status" role="status"></div></section>
 <section id="sellerProducts" class="panel hidden">
-<h2>Kelola produk toko</h2><p class="muted">Tambahkan barang yang dijual di toko Anda. Produk baru akan berstatus draft dan belum tampil untuk pembeli sampai disetujui admin.</p>
+<h2>🏪 Kelola produk toko</h2><p class="muted">Tambahkan barang yang dijual di toko Anda. Produk baru akan berstatus draft dan belum tampil untuk pembeli sampai disetujui admin.</p>
 <label for="productName">Nama produk</label><input class="field" id="productName" maxlength="120" placeholder="Contoh: Beras 5 kg">
 <div class="formgrid"><div><label for="productPrice">Harga (Rp)</label><input class="field" id="productPrice" type="number" min="0" step="1" placeholder="25000"></div><div><label for="productStock">Stok</label><input class="field" id="productStock" type="number" min="0" step="1" placeholder="10"></div></div>
 <label for="productDescription">Deskripsi (opsional)</label><textarea class="field" id="productDescription" rows="2" placeholder="Keterangan produk"></textarea>
@@ -35,7 +68,7 @@
 <button class="btn" id="addProduct">Simpan produk</button><div id="productMessage" class="status" role="status"></div>
 <div id="sellerProductList"></div>
 </section>
-<div class="section"><h2>Katalog produk</h2><p class="muted">Produk aktif dari toko yang sudah disetujui akan tampil di sini.</p></div>
+<div class="section"><h2>🛒 Jelajahi produk</h2><p class="muted">Temukan kebutuhan dari toko-toko sekitar Anda.</p></div>
 <div id="catalog" class="grid"><div class="tile muted">Menghubungkan ke katalog…</div></div>
 <div id="catalogMessage" class="status" role="status"></div>
 </main><footer>Pasar Hanakau • Uji coba awal</footer>
