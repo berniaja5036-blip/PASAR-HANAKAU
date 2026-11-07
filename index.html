@@ -51,7 +51,7 @@ footer{color:#829087;font-size:12px;padding:30px 10px}
 <div class="row"><button class="btn" id="signIn">Masuk</button><button class="btn secondary" id="signUp">Daftar akun</button></div><div id="authMessage" class="status" role="status"></div>
 </section>
 <section id="accountPanel" class="panel hidden"><div class="row"><div style="flex:1"><b id="accountEmail"></b><div class="muted" id="accountRole"></div></div><button class="btn secondary" id="signOut">Keluar</button></div></section>
-<section id="buyerPanel" class="panel hidden"><h2>🧺 Keranjang belanja</h2><p class="muted">Periksa barang, jumlah, dan alamat sebelum membuat pesanan. Pembayaran belum diaktifkan.</p><div id="cartItems" class="muted">Keranjang masih kosong.</div><div id="cartTotal" class="carttotal"></div><h3>Alamat pengantaran</h3><textarea id="deliveryAddress" class="field" rows="2" maxlength="500" placeholder="Nama jalan, RT/RW, patokan rumah, Desa Hanakau Jaya"></textarea><label for="orderNotes">Catatan untuk penjual/kurir (opsional)</label><textarea id="orderNotes" class="field" rows="2" maxlength="500" placeholder="Catatan pesanan"></textarea><button id="checkoutButton" class="btn">Buat pesanan</button><div id="checkoutMessage" class="status" role="status"></div><div class="row" style="justify-content:space-between;margin-top:18px"><h3 style="margin:0">📦 Riwayat pesanan saya</h3><button class="btn secondary" id="refreshBuyerOrders" type="button">↻ Muat ulang</button></div><p class="muted">Pantau status dan lihat rincian setiap pesanan Anda.</p><div id="buyerOrders" class="muted">Memuat pesanan…</div></section>
+<section id="buyerPanel" class="panel hidden"><h2>🧺 Keranjang belanja</h2><p class="muted">Periksa barang, jumlah, dan alamat sebelum membuat pesanan. Pembayaran belum diaktifkan.</p><div id="cartItems" class="muted">Keranjang masih kosong.</div><div id="cartTotal" class="carttotal"></div><h3>Alamat pengantaran</h3><textarea id="deliveryAddress" class="field" rows="2" maxlength="500" placeholder="Nama jalan, RT/RW, patokan rumah, Desa Hanakau Jaya"></textarea><label for="orderNotes">Catatan untuk penjual/kurir (opsional)</label><textarea id="orderNotes" class="field" rows="2" maxlength="500" placeholder="Catatan pesanan"></textarea><button id="checkoutButton" class="btn">Buat pesanan</button><div id="checkoutMessage" class="status" role="status"></div><div class="row" style="justify-content:space-between;margin-top:18px"><h3 style="margin:0">📦 Riwayat pesanan saya</h3><button class="btn secondary" id="refreshBuyerOrders" type="button">↻ Muat ulang</button></div><p class="muted">Pantau status dan lihat rincian setiap pesanan Anda.</p><div class="notice" style="margin:10px 0"><b>🔔 Pemberitahuan pesanan</b><div id="buyerNotifications" class="muted" style="margin-top:6px">Belum ada pemberitahuan.</div></div><div id="buyerOrders" class="muted">Memuat pesanan…</div></section>
 <section id="sellerPanel" class="panel hidden">
 <h2>🏬 Buka toko di Pasar Hanakau</h2><p class="muted">Ajukan toko Anda. Toko akan diperiksa admin sebelum dapat berjualan.</p>
 <label for="shopName">Nama toko</label><input class="field" id="shopName" maxlength="100" placeholder="Contoh: Toko Sumber Rezeki">
@@ -73,6 +73,7 @@ footer{color:#829087;font-size:12px;padding:30px 10px}
 <h3>📦 Pesanan barang saya</h3>
 <p class="muted">Lihat pesanan pembeli yang berisi barang dari toko Anda.</p>
 <button class="btn secondary" id="refreshSellerOrders" type="button">↻ Muat ulang pesanan</button>
+<div class="notice" style="margin:10px 0"><b>🔔 Pemberitahuan pesanan toko</b><div id="sellerNotifications" class="muted" style="margin-top:6px">Belum ada pemberitahuan.</div></div>
 <div id="sellerOrders" class="muted">Memuat pesanan toko…</div>
 </section>
 <section id="catalogPanel" class="hidden"><div class="section"><h2>🛒 Jelajahi produk</h2><p class="muted">Temukan kebutuhan dari toko-toko sekitar Anda.</p></div>
@@ -161,6 +162,9 @@ async function loadSellerOrders(){
  const {data,error}=await supabase.from('orders').select('id,order_number,status,created_at,notes,order_items(product_name,quantity,unit_price,line_total),order_status_history(from_status,to_status,changed_at)').order('created_at',{ascending:false}).limit(50);
  if(error){box.textContent='Pesanan toko belum dapat dimuat: '+error.message;return}
  const orders=(data||[]).filter(o=>(o.order_items||[]).length>0);
+ const notices=orders.flatMap(o=>(o.order_status_history||[]).map(h=>({order:o.order_number,...h}))).sort((a,b)=>new Date(b.changed_at)-new Date(a.changed_at)).slice(0,5);
+ const noticeBox=$('sellerNotifications');
+ if(noticeBox)noticeBox.innerHTML=notices.length?notices.map(n=>'<div style="padding:6px 0;border-bottom:1px solid #e5eee8"><b>'+escapeHtml(n.order)+'</b> • '+escapeHtml(orderStatusLabel(n.to_status))+'<div class="muted">'+new Date(n.changed_at).toLocaleString('id-ID')+'</div></div>').join(''):'Belum ada perubahan status pesanan.';
  if(!orders.length){box.textContent='Belum ada pesanan yang berisi barang dari toko Anda.';return}
  const labels={pending:'Menunggu konfirmasi admin',confirmed:'Pesanan dikonfirmasi',ready_for_pickup:'Siap dijemput driver',picked_up:'Sudah dijemput driver',delivered:'Terkirim',cancelled:'Dibatalkan'};
  box.innerHTML=orders.map(o=>{
@@ -370,6 +374,9 @@ async function loadBuyerOrders(){
  const box=$('buyerOrders');box.textContent='Memuat riwayat pesanan…';
  const {data,error}=await supabase.from('orders').select('id,order_number,status,subtotal,delivery_fee,total,delivery_address,notes,created_at,order_items(product_name,quantity,line_total),order_status_history(from_status,to_status,changed_at)').eq('buyer_id',activeBuyerId).order('created_at',{ascending:false}).limit(30);
  if(error){box.textContent='Pesanan belum dapat dimuat: '+error.message;return}
+ const noticeBox=$('buyerNotifications');
+ const notices=(data||[]).flatMap(o=>(o.order_status_history||[]).map(h=>({order:o.order_number,...h}))).sort((a,b)=>new Date(b.changed_at)-new Date(a.changed_at)).slice(0,5);
+ if(noticeBox)noticeBox.innerHTML=notices.length?notices.map(n=>'<div style="padding:6px 0;border-bottom:1px solid #e5eee8"><b>'+escapeHtml(n.order)+'</b> • '+escapeHtml(orderStatusLabel(n.to_status))+'<div class="muted">'+new Date(n.changed_at).toLocaleString('id-ID')+'</div></div>').join(''):'Belum ada perubahan status pesanan.';
  if(!data?.length){box.textContent='Belum ada pesanan. Pesanan yang Anda buat akan tampil di sini.';return}
  const labels={pending:'Menunggu konfirmasi',confirmed:'Dikonfirmasi',ready_for_pickup:'Siap dijemput driver',picked_up:'Sedang diantar',delivered:'Terkirim',cancelled:'Dibatalkan'};
  box.innerHTML=data.map(o=>{
