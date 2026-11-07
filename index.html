@@ -140,8 +140,22 @@ async function loadSellerProducts(){
  if(!sellerShopId)return;
  const {data,error}=await supabase.from('products').select('id,name,price,stock,status,image_path').eq('shop_id',sellerShopId).order('created_at',{ascending:false});
  if(error){$('sellerProductList').textContent='Gagal memuat produk: '+error.message;return}
- $('sellerProductList').innerHTML=data.length?data.map(p=>'<div class="tile">'+productImageHtml(p.image_path)+'<b>'+escapeHtml(p.name)+'</b><div class="muted">Rp '+Number(p.price).toLocaleString('id-ID')+' • Stok '+p.stock+' • '+escapeHtml(p.status)+'</div></div>').join(''):'<p class="muted">Belum ada produk di toko ini.</p>';
+ $('sellerProductList').innerHTML=data.length?data.map(p=>'<div class="tile">'+productImageHtml(p.image_path)+'<b>'+escapeHtml(p.name)+'</b><div class="muted">Rp '+Number(p.price).toLocaleString('id-ID')+' • Stok '+p.stock+' • '+escapeHtml(p.status)+'</div><button class="btn secondary" type="button" data-delete-product="'+p.id+'" style="margin-top:10px">Hapus barang</button></div>').join(''):'<p class="muted">Belum ada produk di toko ini.</p>';
 }
+$('sellerProductList').addEventListener('click',async e=>{
+ const btn=e.target.closest('[data-delete-product]');if(!btn)return;
+ const productId=btn.dataset.deleteProduct;
+ if(!confirm('Hapus barang ini dari etalase toko? Tindakan ini tidak dapat dibatalkan.'))return;
+ btn.disabled=true;message('productMessage','Menghapus barang dari etalase…');
+ const {data:product,error:readError}=await supabase.from('products').select('id,image_path').eq('id',productId).eq('shop_id',sellerShopId).maybeSingle();
+ if(readError||!product){message('productMessage','Barang tidak dapat ditemukan atau akses ditolak: '+(readError?.message||'produk tidak ditemukan'),true);btn.disabled=false;return}
+ const {error}=await supabase.from('products').delete().eq('id',productId).eq('shop_id',sellerShopId);
+ if(error){message('productMessage','Barang gagal dihapus: '+error.message,true);btn.disabled=false;return}
+ let imageWarning='';
+ if(product.image_path){const {error:imageError}=await supabase.storage.from('product-images').remove([product.image_path]);if(imageError)imageWarning=' Foto lama belum terhapus dari penyimpanan.'}
+ message('productMessage','Barang berhasil dihapus dari etalase.'+imageWarning,!!imageWarning);
+ await loadSellerProducts();await loadCatalog();
+});
 $('addProduct').addEventListener('click',async()=>{
  if(!sellerShopId){message('productMessage','Toko belum disetujui admin.',true);return}
  const name=$('productName').value.trim(),price=Number($('productPrice').value),stock=Number($('productStock').value),description=$('productDescription').value.trim(),file=$('productImage').files?.[0];
