@@ -221,7 +221,7 @@ $('addProduct').addEventListener('click',async()=>{
  await loadSellerProducts();
 });
 $('signOut').addEventListener('click',async()=>{const {error}=await supabase.auth.signOut();if(error)message('catalogMessage',error.message,true);else{await refreshSession();message('catalogMessage','Anda sudah keluar.')}});
-supabase.auth.onAuthStateChange(()=>refreshSession());
+supabase.auth.onAuthStateChange((event,session)=>{setTimeout(()=>{refreshSession().catch(error=>message('authMessage','Gagal memuat sesi akun: '+(error?.message||'Kesalahan tidak diketahui'),true));},0);});
 let catalogProducts=[];
 function renderCatalog(){
  const query=$('catalogSearch')?.value.trim().toLocaleLowerCase('id-ID')||'';
