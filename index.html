@@ -101,7 +101,7 @@ async function refreshSession(){
  $('accountEmail').textContent=session.user.email||'Akun aktif';
  const {data:profile}=await supabase.from('profiles').select('full_name,role').eq('id',session.user.id).maybeSingle();
  const role=profile?.role||'buyer';$('accountRole').textContent='Peran: '+role;
- if(selectedEntryRole && selectedEntryRole!==role && !(role==='buyer' && ['seller','driver'].includes(selectedEntryRole))){message('authMessage','Akun ini terdaftar sebagai '+role+'. Silakan keluar dan pilih jenis akun yang sesuai.',true);return}
+ if(selectedEntryRole && selectedEntryRole!==role && !(role==='buyer' && ['seller','driver'].includes(selectedEntryRole))){$('accountRole').textContent='Akun ini terdaftar sebagai '+role+'. Silakan keluar dan pilih akses yang sesuai.';return}
  if(role==='admin'){
   $('adminPanel').classList.remove('hidden');await loadAdminPanel();
  } else if(role==='buyer' && selectedEntryRole==='seller'){
