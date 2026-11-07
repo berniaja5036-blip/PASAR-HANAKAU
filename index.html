@@ -1,3 +1,49 @@
-<!doctype html><nhtml lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#176b45"><title>Pasar Hanakau</title><style>
-:root{font-family:system-ui,sans-serif;color:#17251e;background:#f5f7f5}*{box-sizing:border-box}body{margin:0}.top{background:#176b45;color:white;padding:24px max(18px,calc((100% - 960px)/2))}.top small{opacity:.85}.top h1{margin:8px 0 4px;font-size:28px}.wrap{max-width:960px;margin:auto;padding:20px}.notice{background:#fff6db;border:1px solid #f0dda0;padding:13px;border-radius:12px;font-size:13px;color:#604b12}.search{display:flex;gap:8px;margin:18px 0}.search input{flex:1;min-width:0;padding:13px;border:1px solid #d5ded8;border-radius:10px;font:inherit}.search button{border:0;background:#176b45;color:white;padding:12px 16px;border-radius:10px}.grid,.roles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tile,.role{background:white;border:1px solid #e3e9e5;border-radius:14px;padding:16px}.emoji{font-size:26px}.tile h3{margin:9px 0 4px;font-size:16px}.tile p,.role span{color:#607168;font-size:13px}.section{margin:24px 0 12px}.section h2{font-size:19px;margin:0}.role b{display:block;margin-bottom:4px}footer{text-align:center;color:#718078;font-size:12px;padding:28px 10px}@media(min-width:650px){.grid,.roles{grid-template-columns:repeat(4,minmax(0,1fr))}}
-</style></head><body><header class="top"><small>Marketplace warga • Desa Hanakau Jaya</small><h1>Pasar Hanakau</h1><div>Belanja dari toko-toko di sekitar kita.</div></header><main class="wrap"><div class="notice"><b>Prototipe awal.</b> Tampilan ini belum terhubung ke server, akun, pembayaran, atau pesanan sungguhan. Jangan masukkan data pribadi atau uang.</div><form class="search" onsubmit="event.preventDefault();alert('Pencarian akan aktif setelah katalog dan server tersedia.');"><input aria-label="Cari produk" placeholder="Cari barang atau toko…"><button>Cari</button></form><div class="section"><h2>Kategori pilihan</h2></div><div class="grid"><div class="tile"><div class="emoji">🥬</div><h3>Makanan</h3><p>Bahan pangan dan kebutuhan dapur</p></div><div class="tile"><div class="emoji">👕</div><h3>Pakaian</h3><p>Pakaian dan perlengkapan</p></div><div class="tile"><div class="emoji">🏠</div><h3>Rumah tangga</h3><p>Peralatan rumah</p></div><div class="tile"><div class="emoji">🔧</div><h3>Lainnya</h3><p>Berbagai barang</p></div></div><div class="section"><h2>Layanan Pasar Hanakau</h2></div><div class="roles"><div class="role"><b>🛍️ Pembeli</b><span>Jelajahi produk dan buat pesanan.</span></div><div class="role"><b>🏪 Penjual</b><span>Buka toko setelah disetujui admin.</span></div><div class="role"><b>🚚 Driver</b><span>Menjemput dan mengantar pesanan.</span></div><div class="role"><b>🛡️ Admin</b><span>Mengelola anggota dan operasional.</span></div></div></main><footer>Pasar Hanakau • Tahap rancangan dan prototipe</footer></body></html>
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#176b45"><title>Pasar Hanakau</title>
+<style>
+:root{font-family:system-ui,-apple-system,sans-serif;color:#17251e;background:#f4f7f4}*{box-sizing:border-box}body{margin:0}.top{background:#176b45;color:#fff;padding:22px max(18px,calc((100% - 960px)/2))}.top small{opacity:.85}.top h1{margin:7px 0;font-size:27px}.wrap{max-width:960px;margin:auto;padding:18px}.panel,.tile{background:#fff;border:1px solid #e1e9e3;border-radius:14px;padding:16px;margin:14px 0}.notice{background:#fff6db;border:1px solid #f0dda0;padding:12px;border-radius:10px;font-size:13px;color:#604b12}.authgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{width:100%;padding:12px;border:1px solid #ccd8cf;border-radius:9px;font:inherit;margin:5px 0 10px}.btn{border:0;background:#176b45;color:#fff;padding:12px 16px;border-radius:9px;font:inherit;font-weight:600;cursor:pointer}.btn.secondary{background:#e7efe9;color:#175c3c}.btn:disabled{opacity:.5}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row .field{flex:1;min-width:150px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.tile h3{margin:7px 0 4px;font-size:16px}.muted{color:#66766c;font-size:13px}.status{font-size:13px;margin-top:8px;min-height:18px}.hidden{display:none}.product{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.price{font-weight:700;color:#176b45}.section{margin:22px 0 8px}footer{text-align:center;color:#718078;font-size:12px;padding:26px 10px}@media(min-width:650px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}.authgrid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header class="top"><small>Marketplace warga • Desa Hanakau Jaya</small><h1>Pasar Hanakau</h1><div>Belanja dari toko-toko di sekitar kita.</div></header>
+<main class="wrap">
+<div class="notice"><b>Versi uji coba awal.</b> Koneksi akun dan katalog sedang disiapkan. Jangan gunakan untuk transaksi atau pembayaran sungguhan dulu.</div>
+<section id="authPanel" class="panel">
+<h2>Masuk atau daftar</h2><p class="muted">Gunakan email dan kata sandi untuk akun pembeli.</p>
+<div class="authgrid"><div><label for="email">Alamat email</label><input class="field" id="email" type="email" autocomplete="email" placeholder="nama@email.com"></div><div><label for="password">Kata sandi</label><input class="field" id="password" type="password" autocomplete="current-password" placeholder="Minimal 6 karakter"></div></div>
+<div class="row"><button class="btn" id="signIn">Masuk</button><button class="btn secondary" id="signUp">Daftar akun</button></div><div id="authMessage" class="status" role="status"></div>
+</section>
+<section id="accountPanel" class="panel hidden"><div class="row"><div style="flex:1"><b id="accountEmail"></b><div class="muted" id="accountRole"></div></div><button class="btn secondary" id="signOut">Keluar</button></div></section>
+<div class="section"><h2>Katalog produk</h2><p class="muted">Produk aktif dari toko yang sudah disetujui akan tampil di sini.</p></div>
+<div id="catalog" class="grid"><div class="tile muted">Menghubungkan ke katalog…</div></div>
+<div id="catalogMessage" class="status" role="status"></div>
+</main><footer>Pasar Hanakau • Uji coba awal</footer>
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const SUPABASE_URL = 'https://wnnnhiocyyozlkfqupav.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_zbG3DUtwN-jpvWATBhN77g_K6V_YbsI';
+const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+const $ = id => document.getElementById(id);
+function message(id,text,isError=false){$(id).textContent=text;$(id).style.color=isError?'#b42318':'#176b45'}
+function validCredentials(){const email=$('email').value.trim(),password=$('password').value;if(!email||!password){message('authMessage','Isi email dan kata sandi terlebih dahulu.',true);return null}return {email,password}}
+async function refreshSession(){
+ const {data:{session}}=await supabase.auth.getSession();
+ $('authPanel').classList.toggle('hidden',!!session);$('accountPanel').classList.toggle('hidden',!session);
+ if(session){$('accountEmail').textContent=session.user.email||'Akun aktif';const {data:profile}=await supabase.from('profiles').select('full_name,role').eq('id',session.user.id).maybeSingle();$('accountRole').textContent=profile?'Peran: '+profile.role:'Profil sedang disiapkan';}
+}
+$('signIn').addEventListener('click',async()=>{const c=validCredentials();if(!c)return; $('signIn').disabled=true;message('authMessage','Sedang masuk…');const {error}=await supabase.auth.signInWithPassword(c);$('signIn').disabled=false;if(error)message('authMessage',error.message,true);else{message('authMessage','Berhasil masuk.');await refreshSession();}});
+$('signUp').addEventListener('click',async()=>{const c=validCredentials();if(!c)return;if(c.password.length<6){message('authMessage','Kata sandi minimal 6 karakter.',true);return}$('signUp').disabled=true;message('authMessage','Sedang membuat akun…');const {data,error}=await supabase.auth.signUp({email:c.email,password:c.password});$('signUp').disabled=false;if(error)message('authMessage',error.message,true);else if(data.session){message('authMessage','Akun berhasil dibuat.');await refreshSession();}else message('authMessage','Pendaftaran diterima. Periksa email untuk konfirmasi, lalu masuk.');});
+$('signOut').addEventListener('click',async()=>{const {error}=await supabase.auth.signOut();if(error)message('catalogMessage',error.message,true);else{await refreshSession();message('catalogMessage','Anda sudah keluar.')}});
+supabase.auth.onAuthStateChange(()=>refreshSession());
+async function loadCatalog(){
+ const {data,error}=await supabase.from('products').select('id,name,description,price,stock,shops(name)').eq('status','active').gt('stock',0).order('created_at',{ascending:false}).limit(60);
+ if(error){$('catalog').innerHTML='<div class="tile muted">Katalog belum dapat dimuat. Pastikan tabel database dan kebijakan akses sudah diterapkan.</div>';message('catalogMessage','Keterangan: '+error.message,true);return}
+ if(!data?.length){$('catalog').innerHTML='<div class="tile muted">Belum ada produk aktif. Produk akan muncul setelah toko dan produk disetujui admin.</div>';return}
+ $('catalog').innerHTML=data.map(p=>'<article class="tile product"><div><h3>'+escapeHtml(p.name)+'</h3><div class="muted">'+escapeHtml(p.shops?.name||'Toko Pasar Hanakau')+'</div><p class="muted">'+escapeHtml(p.description||'')+'</p><div class="price">Rp '+Number(p.price).toLocaleString('id-ID')+'</div><div class="muted">Stok: '+p.stock+'</div></div></article>').join('');
+}
+function escapeHtml(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+await refreshSession();await loadCatalog();
+</script></body></html>
