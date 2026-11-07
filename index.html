@@ -51,7 +51,8 @@ async function refreshSession(){
  const {data:{session}}=await supabase.auth.getSession();
  $('authPanel').classList.toggle('hidden',!!session);$('accountPanel').classList.toggle('hidden',!session);
  $('sellerPanel').classList.add('hidden');$('sellerProducts').classList.add('hidden');$('adminPanel').classList.add('hidden');$('buyerPanel').classList.add('hidden');
- if(!session){sellerShopId=null;return}
+ if(!session){sellerShopId=null;activeBuyerId=null;cart={};return}
+ activeBuyerId=null;cart={};
  $('accountEmail').textContent=session.user.email||'Akun aktif';
  const {data:profile}=await supabase.from('profiles').select('full_name,role').eq('id',session.user.id).maybeSingle();
  const role=profile?.role||'buyer';$('accountRole').textContent='Peran: '+role;
