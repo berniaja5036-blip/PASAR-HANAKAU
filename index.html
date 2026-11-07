@@ -24,6 +24,7 @@
 <label for="shopDescription">Deskripsi toko (opsional)</label><textarea class="field" id="shopDescription" rows="3" placeholder="Ceritakan barang yang dijual"></textarea>
 <button class="btn" id="submitSeller">Kirim pengajuan toko</button><div id="sellerMessage" class="status" role="status"></div>
 </section>
+<section id="adminPanel" class="panel hidden"><h2>Panel admin</h2><p class="muted">Tinjau pengajuan toko dan produk yang menunggu persetujuan.</p><h3>Pengajuan toko</h3><div id="adminApplications" class="muted">Memuat pengajuan…</div><h3>Produk menunggu persetujuan</h3><div id="adminProducts" class="muted">Memuat produk…</div><div id="adminMessage" class="status" role="status"></div></section>
 <section id="sellerProducts" class="panel hidden">
 <h2>Kelola produk toko</h2><p class="muted">Tambahkan barang yang dijual di toko Anda. Produk baru akan berstatus draft dan belum tampil untuk pembeli sampai disetujui admin.</p>
 <label for="productName">Nama produk</label><input class="field" id="productName" maxlength="120" placeholder="Contoh: Beras 5 kg">
@@ -47,24 +48,22 @@ function validCredentials(){const email=$('email').value.trim(),password=$('pass
 async function refreshSession(){
  const {data:{session}}=await supabase.auth.getSession();
  $('authPanel').classList.toggle('hidden',!!session);$('accountPanel').classList.toggle('hidden',!session);
- $('sellerPanel').classList.add('hidden');
- if(session){
-  $('accountEmail').textContent=session.user.email||'Akun aktif';
-  const {data:profile}=await supabase.from('profiles').select('full_name,role').eq('id',session.user.id).maybeSingle();
-  const role=profile?.role||'buyer';$('accountRole').textContent='Peran: '+role;
-  if(role==='buyer'){
-   $('sellerPanel').classList.remove('hidden');
-   const {data:application,error}=await supabase.from('seller_applications').select('status,shop_name').eq('user_id',session.user.id).maybeSingle();
-   if(application){$('sellerMessage').textContent='Pengajuan "'+application.shop_name+'" berstatus: '+application.status+'.';$('submitSeller').disabled=true;}
-   else if(error){$('sellerMessage').textContent='Aktifkan formulir setelah migrasi pengajuan penjual diterapkan.';}
-   else{$('sellerMessage').textContent='Anda belum mengajukan toko.';$('submitSeller').disabled=false;}
-  } else if(role==='seller') {
-   $('accountRole').textContent='Peran: penjual';
-   $('sellerProducts').classList.remove('hidden');
-   await loadSellerShop();
-  }
- } else { $('sellerProducts').classList.add('hidden'); }
-}
+ $('sellerPanel').classList.add('hidden');$('sellerProducts').classList.add('hidden');$('adminPanel').classList.add('hidden');
+ if(!session){sellerShopId=null;return}
+ $('accountEmail').textContent=session.user.email||'Akun aktif';
+ const {data:profile}=await supabase.from('profiles').select('full_name,role').eq('id',session.user.id).maybeSingle();
+ const role=profile?.role||'buyer';$('accountRole').textContent='Peran: '+role;
+ if(role==='admin'){
+  $('adminPanel').classList.remove('hidden');await loadAdminPanel();
+ } else if(role==='buyer'){
+  $('sellerPanel').classList.remove('hidden');
+  const {data:application,error}=await supabase.from('seller_applications').select('status,shop_name').eq('user_id',session.user.id).maybeSingle();
+  if(application){$('sellerMessage').textContent='Pengajuan "'+application.shop_name+'" berstatus: '+application.status+'.';$('submitSeller').disabled=true;}
+  else if(error){$('sellerMessage').textContent='Pengajuan belum dapat dimuat: '+error.message;}
+  else{$('sellerMessage').textContent='Anda belum mengajukan toko.';$('submitSeller').disabled=false;}
+ } else if(role==='seller'){
+  $('sellerProducts').classList.remove('hidden');await loadSellerShop();
+ }
 }
 $('signIn').addEventListener('click',async()=>{const c=validCredentials();if(!c)return; $('signIn').disabled=true;message('authMessage','Sedang masuk…');const {error}=await supabase.auth.signInWithPassword(c);$('signIn').disabled=false;if(error)message('authMessage',error.message,true);else{message('authMessage','Berhasil masuk.');await refreshSession();}});
 $('signUp').addEventListener('click',async()=>{const c=validCredentials();if(!c)return;if(c.password.length<6){message('authMessage','Kata sandi minimal 6 karakter.',true);return}$('signUp').disabled=true;message('authMessage','Sedang membuat akun…');const {data,error}=await supabase.auth.signUp({email:c.email,password:c.password});$('signUp').disabled=false;if(error)message('authMessage',error.message,true);else if(data.session){message('authMessage','Akun berhasil dibuat.');await refreshSession();}else message('authMessage','Pendaftaran diterima. Periksa email untuk konfirmasi, lalu masuk.');});
@@ -113,6 +112,27 @@ async function loadCatalog(){
  if(!data?.length){$('catalog').innerHTML='<div class="tile muted">Belum ada produk aktif. Produk akan muncul setelah toko dan produk disetujui admin.</div>';return}
  $('catalog').innerHTML=data.map(p=>'<article class="tile product"><div><h3>'+escapeHtml(p.name)+'</h3><div class="muted">'+escapeHtml(p.shops?.name||'Toko Pasar Hanakau')+'</div><p class="muted">'+escapeHtml(p.description||'')+'</p><div class="price">Rp '+Number(p.price).toLocaleString('id-ID')+'</div><div class="muted">Stok: '+p.stock+'</div></div></article>').join('');
 }
+async function loadAdminPanel(){
+ $('adminApplications').textContent='Memuat…';$('adminProducts').textContent='Memuat…';
+ const {data:apps,error:appError}=await supabase.from('seller_applications').select('id,shop_name,shop_address,contact_phone,shop_description,created_at').eq('status','pending').order('created_at',{ascending:true});
+ if(appError){$('adminApplications').textContent='Gagal memuat: '+appError.message;}else if(!apps.length){$('adminApplications').textContent='Tidak ada pengajuan toko yang menunggu.';}else{
+  $('adminApplications').innerHTML=apps.map(a=>'<div class="tile"><b>'+escapeHtml(a.shop_name)+'</b><p class="muted">'+escapeHtml(a.shop_address)+' • '+escapeHtml(a.contact_phone||'Tanpa nomor')+'</p><p>'+escapeHtml(a.shop_description||'')+'</p><button class="btn" data-approve-app="'+a.id+'">Setujui toko</button> <button class="btn secondary" data-reject-app="'+a.id+'">Tolak</button></div>').join('');
+ }
+ const {data:products,error:productError}=await supabase.from('products').select('id,name,price,stock,description,shops(name)').eq('status','draft').order('created_at',{ascending:true});
+ if(productError){$('adminProducts').textContent='Gagal memuat: '+productError.message;}else if(!products.length){$('adminProducts').textContent='Tidak ada produk draft yang menunggu.';}else{
+  $('adminProducts').innerHTML=products.map(p=>'<div class="tile"><b>'+escapeHtml(p.name)+'</b><p class="muted">'+escapeHtml(p.shops?.name||'Toko')+' • Rp '+Number(p.price).toLocaleString('id-ID')+' • Stok '+p.stock+'</p><p>'+escapeHtml(p.description||'')+'</p><button class="btn" data-approve-product="'+p.id+'">Terbitkan produk</button></div>').join('');
+ }
+}
+$('adminApplications').addEventListener('click',async e=>{
+ const approve=e.target.closest('[data-approve-app]'),reject=e.target.closest('[data-reject-app]');
+ if(approve){approve.disabled=true;const {error}=await supabase.rpc('approve_seller_application',{application_id:approve.dataset.approveApp});if(error){message('adminMessage','Gagal menyetujui toko: '+error.message,true);approve.disabled=false;}else{message('adminMessage','Toko berhasil disetujui.');await loadAdminPanel();}}
+ if(reject){reject.disabled=true;const {data:{user}}=await supabase.auth.getUser();const {error}=await supabase.from('seller_applications').update({status:'rejected',reviewed_by:user.id,reviewed_at:new Date().toISOString()}).eq('id',reject.dataset.rejectApp);if(error){message('adminMessage','Gagal menolak pengajuan: '+error.message,true);reject.disabled=false;}else{message('adminMessage','Pengajuan toko ditolak.');await loadAdminPanel();}}
+});
+$('adminProducts').addEventListener('click',async e=>{
+ const btn=e.target.closest('[data-approve-product]');if(!btn)return;btn.disabled=true;
+ const {error}=await supabase.from('products').update({status:'active'}).eq('id',btn.dataset.approveProduct);
+ if(error){message('adminMessage','Gagal menerbitkan produk: '+error.message,true);btn.disabled=false;}else{message('adminMessage','Produk berhasil diterbitkan.');await loadAdminPanel();await loadCatalog();}
+});
 function escapeHtml(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 await refreshSession();await loadCatalog();
 </script></body></html>
