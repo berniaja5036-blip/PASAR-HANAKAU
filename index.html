@@ -74,6 +74,7 @@ footer{color:#829087;font-size:12px;padding:30px 10px}
 <div id="sellerOrders" class="muted">Memuat pesanan toko…</div>
 </section>
 <div class="section"><h2>🛒 Jelajahi produk</h2><p class="muted">Temukan kebutuhan dari toko-toko sekitar Anda.</p></div>
+<div class="panel" style="margin-top:10px"><label for="catalogSearch">Cari nama barang atau toko</label><input id="catalogSearch" class="field" type="search" placeholder="Contoh: beras, minyak, Toko Sumber Rezeki" autocomplete="off"><div class="row"><label for="catalogSort" class="muted">Urutkan:</label><select id="catalogSort" class="field" style="max-width:230px;margin:0"><option value="newest">Terbaru</option><option value="price-asc">Harga termurah</option><option value="price-desc">Harga termahal</option><option value="name-asc">Nama barang A–Z</option></select></div><div id="catalogCount" class="muted" style="margin-top:8px" aria-live="polite"></div></div>
 <div id="catalog" class="grid"><div class="tile muted">Menghubungkan ke katalog…</div></div>
 <div id="catalogMessage" class="status" role="status"></div>
 </main><footer>Pasar Hanakau • Uji coba awal</footer>
@@ -202,11 +203,26 @@ $('addProduct').addEventListener('click',async()=>{
 });
 $('signOut').addEventListener('click',async()=>{const {error}=await supabase.auth.signOut();if(error)message('catalogMessage',error.message,true);else{await refreshSession();message('catalogMessage','Anda sudah keluar.')}});
 supabase.auth.onAuthStateChange(()=>refreshSession());
+let catalogProducts=[];
+function renderCatalog(){
+ const query=$('catalogSearch')?.value.trim().toLocaleLowerCase('id-ID')||'';
+ const sort=$('catalogSort')?.value||'newest';
+ const items=catalogProducts.filter(p=>(p.name+' '+(p.description||'')+' '+(p.shops?.name||'')).toLocaleLowerCase('id-ID').includes(query));
+ if(sort==='price-asc')items.sort((a,b)=>Number(a.price)-Number(b.price));
+ else if(sort==='price-desc')items.sort((a,b)=>Number(b.price)-Number(a.price));
+ else if(sort==='name-asc')items.sort((a,b)=>a.name.localeCompare(b.name,'id'));
+ else items.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+ $('catalogCount').textContent=items.length+' dari '+catalogProducts.length+' produk ditampilkan';
+ if(!items.length){$('catalog').innerHTML='<div class="tile muted">'+(catalogProducts.length?'Tidak ada produk yang cocok. Coba kata kunci lain.':'Belum ada produk aktif. Produk akan muncul setelah toko dan produk disetujui admin.')+'</div>';return}
+ $('catalog').innerHTML=items.map(p=>'<article class="tile product"><div>'+productImageHtml(p.image_path)+'<h3>'+escapeHtml(p.name)+'</h3><div class="muted">'+escapeHtml(p.shops?.name||'Toko Pasar Hanakau')+'</div><p class="muted">'+escapeHtml(p.description||'')+'</p><div class="price">Rp '+Number(p.price).toLocaleString('id-ID')+'</div><div class="muted">Stok: '+p.stock+'</div><button class="btn" data-add-cart="'+p.id+'" data-name="'+escapeHtml(p.name)+'" data-price="'+Number(p.price)+'" data-stock="'+p.stock+'" data-shop="'+p.shop_id+'" data-shop-name="'+escapeHtml(p.shops?.name||'Toko')+'">Tambah ke keranjang</button></div></article>').join('');
+}
+$('catalogSearch').addEventListener('input',renderCatalog);
+$('catalogSort').addEventListener('change',renderCatalog);
 async function loadCatalog(){
- const {data,error}=await supabase.from('products').select('id,shop_id,name,description,price,stock,image_path,shops(name)').eq('status','active').gt('stock',0).order('created_at',{ascending:false}).limit(60);
+ const {data,error}=await supabase.from('products').select('id,shop_id,name,description,price,stock,image_path,created_at,shops(name)').eq('status','active').gt('stock',0).order('created_at',{ascending:false}).limit(60);
  if(error){$('catalog').innerHTML='<div class="tile muted">Katalog belum dapat dimuat. Pastikan tabel database dan kebijakan akses sudah diterapkan.</div>';message('catalogMessage','Keterangan: '+error.message,true);return}
- if(!data?.length){$('catalog').innerHTML='<div class="tile muted">Belum ada produk aktif. Produk akan muncul setelah toko dan produk disetujui admin.</div>';return}
- $('catalog').innerHTML=data.map(p=>'<article class="tile product"><div>'+productImageHtml(p.image_path)+'<h3>'+escapeHtml(p.name)+'</h3><div class="muted">'+escapeHtml(p.shops?.name||'Toko Pasar Hanakau')+'</div><p class="muted">'+escapeHtml(p.description||'')+'</p><div class="price">Rp '+Number(p.price).toLocaleString('id-ID')+'</div><div class="muted">Stok: '+p.stock+'</div><button class="btn" data-add-cart="'+p.id+'" data-name="'+escapeHtml(p.name)+'" data-price="'+Number(p.price)+'" data-stock="'+p.stock+'" data-shop="'+p.shop_id+'" data-shop-name="'+escapeHtml(p.shops?.name||'Toko')+'">Tambah ke keranjang</button></div></article>').join('');
+ catalogProducts=data||[];
+ renderCatalog();
 }
 async function loadAdminPanel(){
  $('adminApplications').textContent='Memuat…';$('adminProducts').textContent='Memuat…';
