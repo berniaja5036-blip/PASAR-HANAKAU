@@ -140,9 +140,19 @@ async function loadSellerProducts(){
  if(!sellerShopId)return;
  const {data,error}=await supabase.from('products').select('id,name,price,stock,status,image_path').eq('shop_id',sellerShopId).order('created_at',{ascending:false});
  if(error){$('sellerProductList').textContent='Gagal memuat produk: '+error.message;return}
- $('sellerProductList').innerHTML=data.length?data.map(p=>'<div class="tile">'+productImageHtml(p.image_path)+'<b>'+escapeHtml(p.name)+'</b><div class="muted">Rp '+Number(p.price).toLocaleString('id-ID')+' • Stok '+p.stock+' • '+escapeHtml(p.status)+'</div><button class="btn secondary" type="button" data-delete-product="'+p.id+'" style="margin-top:10px">Hapus barang</button></div>').join(''):'<p class="muted">Belum ada produk di toko ini.</p>';
+ $('sellerProductList').innerHTML=data.length?data.map(p=>'<div class="tile">'+productImageHtml(p.image_path)+'<b>'+escapeHtml(p.name)+'</b><div class="muted">Rp '+Number(p.price).toLocaleString('id-ID')+' • Stok '+p.stock+' • '+escapeHtml(p.status)+'</div><details style="margin-top:10px"><summary style="cursor:pointer;color:#176b45;font-weight:700;padding:8px 0">Ubah nama, harga, dan stok</summary><label for="edit-name-'+p.id+'">Nama barang</label><input class="field" id="edit-name-'+p.id+'" maxlength="120" value="'+escapeHtml(p.name)+'"><label for="edit-price-'+p.id+'">Harga (Rp)</label><input class="field" id="edit-price-'+p.id+'" type="number" min="0" step="1" value="'+Number(p.price)+'"><label for="edit-stock-'+p.id+'">Stok</label><input class="field" id="edit-stock-'+p.id+'" type="number" min="0" step="1" value="'+Number(p.stock)+'"><button class="btn" type="button" data-save-product="'+p.id+'">Simpan perubahan</button></details><button class="btn secondary" type="button" data-delete-product="'+p.id+'" style="margin-top:10px">Hapus barang</button></div>').join(''):'<p class="muted">Belum ada produk di toko ini.</p>';
 }
 $('sellerProductList').addEventListener('click',async e=>{
+ const save=e.target.closest('[data-save-product]');
+ if(save){
+  const id=save.dataset.saveProduct,name=$('edit-name-'+id).value.trim(),priceText=$('edit-price-'+id).value,stockText=$('edit-stock-'+id).value,price=Number(priceText),stock=Number(stockText);
+  if(name.length<2||priceText===''||!Number.isFinite(price)||price<0||stockText===''||!Number.isInteger(stock)||stock<0){message('productMessage','Periksa nama, harga, dan stok. Harga harus angka minimal 0 dan stok bilangan bulat minimal 0.',true);return}
+  save.disabled=true;message('productMessage','Menyimpan perubahan barang…');
+  const {data,error}=await supabase.from('products').update({name,price,stock}).eq('id',id).eq('shop_id',sellerShopId).select('id').maybeSingle();
+  if(error||!data){message('productMessage','Perubahan gagal disimpan: '+(error?.message||'produk tidak ditemukan atau izin belum tersedia. Pastikan SQL migrasi 012 sudah dijalankan.'),true);save.disabled=false;return}
+  message('productMessage','Nama, harga, dan stok berhasil diperbarui.');
+  await loadSellerProducts();await loadCatalog();return;
+ }
  const btn=e.target.closest('[data-delete-product]');if(!btn)return;
  const productId=btn.dataset.deleteProduct;
  if(!confirm('Hapus barang ini dari etalase toko? Tindakan ini tidak dapat dibatalkan.'))return;
