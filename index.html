@@ -293,7 +293,8 @@ async function loadAdminOrders(){
 
 }
 $('refreshAdminOrders').addEventListener('click',loadAdminOrders);
-function filterAdminOrders(){const q=$('adminOrderSearch')?.value.trim().toLocaleLowerCase('id-ID')||'',status=$('adminOrderStatus')?.value||'';let shown=0;document.querySelectorAll('[data-admin-order-card]').forEach(card=>{const matchText=(card.dataset.search||'').includes(q),matchStatus=!status||card.dataset.status===status;card.classList.toggle('hidden',!(matchText&&matchStatus));if(matchText&&matchStatus)shown++;});const box=$('adminOrders');let empty=$('adminOrderFilterEmpty');if(!empty){empty=document.createElement('p');empty.id='adminOrderFilterEmpty';empty.className='muted';box.appendChild(empty);}empty.textContent=shown?'Menampilkan '+shown+' pesanan sesuai filter.':'Tidak ada pesanan yang cocok dengan pencarian/filter.';empty.classList.toggle('hidden',shown>0||!document.querySelector('[data-admin-order-card]'));}\n$('adminOrderSearch').addEventListener('input',filterAdminOrders);$('adminOrderStatus').addEventListener('change',filterAdminOrders);
+function filterAdminOrders(){const q=$('adminOrderSearch')?.value.trim().toLocaleLowerCase('id-ID')||'',status=$('adminOrderStatus')?.value||'';let shown=0;document.querySelectorAll('[data-admin-order-card]').forEach(card=>{const matchText=(card.dataset.search||'').includes(q),matchStatus=!status||card.dataset.status===status;card.classList.toggle('hidden',!(matchText&&matchStatus));if(matchText&&matchStatus)shown++;});const box=$('adminOrders');let empty=$('adminOrderFilterEmpty');if(!empty){empty=document.createElement('p');empty.id='adminOrderFilterEmpty';empty.className='muted';box.appendChild(empty);}empty.textContent=shown?'Menampilkan '+shown+' pesanan sesuai filter.':'Tidak ada pesanan yang cocok dengan pencarian/filter.';empty.classList.toggle('hidden',shown>0||!document.querySelector('[data-admin-order-card]'));}
+$('adminOrderSearch').addEventListener('input',filterAdminOrders);$('adminOrderStatus').addEventListener('change',filterAdminOrders);
 $('exportAdminOrders').addEventListener('click',async()=>{
  const btn=$('exportAdminOrders');btn.disabled=true;message('adminMessage','Menyiapkan laporan pesanan…');
  const {data,error}=await supabase.from('orders').select('order_number,status,subtotal,delivery_fee,total,delivery_address,created_at').order('created_at',{ascending:false}).limit(50);
@@ -303,7 +304,7 @@ $('exportAdminOrders').addEventListener('click',async()=>{
  const labels={pending:'Menunggu konfirmasi',confirmed:'Dikonfirmasi',ready_for_pickup:'Siap dijemput',picked_up:'Sudah dijemput',delivered:'Terkirim',cancelled:'Dibatalkan'};
  const safe=v=>{let s=String(v??'');if(/^[=+@\\-\\t\\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};
  const rows=[['Nomor pesanan','Tanggal','Status','Subtotal','Ongkos kirim','Total','Alamat pengantaran'],...data.map(o=>[o.order_number,new Date(o.created_at).toLocaleString('id-ID'),labels[o.status]||o.status,o.subtotal,o.delivery_fee,o.total,o.delivery_address])];
- const csv='\\uFEFF'+rows.map(row=>row.map(safe).join(';')).join('\\r\\n');
+ const csv='\uFEFF'+rows.map(row=>row.map(safe).join(';')).join('\r\n');
  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
  const a=document.createElement('a');a.href=url;a.download='laporan-pesanan-pasar-hanakau.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
  message('adminMessage','Laporan CSV berhasil disiapkan ('+data.length+' pesanan terbaru).');
