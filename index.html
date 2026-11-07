@@ -50,7 +50,7 @@ footer{color:#829087;font-size:12px;padding:30px 10px}
 <div class="row"><button class="btn" id="signIn">Masuk</button><button class="btn secondary" id="signUp">Daftar akun</button></div><div id="authMessage" class="status" role="status"></div>
 </section>
 <section id="accountPanel" class="panel hidden"><div class="row"><div style="flex:1"><b id="accountEmail"></b><div class="muted" id="accountRole"></div></div><button class="btn secondary" id="signOut">Keluar</button></div></section>
-<section id="buyerPanel" class="panel hidden"><h2>🧺 Keranjang belanja</h2><p class="muted">Periksa barang, jumlah, dan alamat sebelum membuat pesanan. Pembayaran belum diaktifkan.</p><div id="cartItems" class="muted">Keranjang masih kosong.</div><div id="cartTotal" class="carttotal"></div><h3>Alamat pengantaran</h3><textarea id="deliveryAddress" class="field" rows="2" maxlength="500" placeholder="Nama jalan, RT/RW, patokan rumah, Desa Hanakau Jaya"></textarea><label for="orderNotes">Catatan untuk penjual/kurir (opsional)</label><textarea id="orderNotes" class="field" rows="2" maxlength="500" placeholder="Catatan pesanan"></textarea><button id="checkoutButton" class="btn">Buat pesanan</button><div id="checkoutMessage" class="status" role="status"></div><h3>Pesanan saya</h3><div id="buyerOrders" class="muted">Memuat pesanan…</div></section>
+<section id="buyerPanel" class="panel hidden"><h2>🧺 Keranjang belanja</h2><p class="muted">Periksa barang, jumlah, dan alamat sebelum membuat pesanan. Pembayaran belum diaktifkan.</p><div id="cartItems" class="muted">Keranjang masih kosong.</div><div id="cartTotal" class="carttotal"></div><h3>Alamat pengantaran</h3><textarea id="deliveryAddress" class="field" rows="2" maxlength="500" placeholder="Nama jalan, RT/RW, patokan rumah, Desa Hanakau Jaya"></textarea><label for="orderNotes">Catatan untuk penjual/kurir (opsional)</label><textarea id="orderNotes" class="field" rows="2" maxlength="500" placeholder="Catatan pesanan"></textarea><button id="checkoutButton" class="btn">Buat pesanan</button><div id="checkoutMessage" class="status" role="status"></div><h3>Pesanan saya</h3><div id="buyerOrders" class="muted">Memuat pesanan…</div><h3>🚚 Daftar menjadi driver</h3><p class="muted">Ajukan akun driver agar dapat menerima tugas penjemputan dan pengantaran.</p><label for="driverVehicle">Jenis kendaraan</label><input id="driverVehicle" class="field" maxlength="60" placeholder="Contoh: Motor atau mobil pickup"><label for="driverPlate">Nomor kendaraan</label><input id="driverPlate" class="field" maxlength="20" placeholder="Contoh: BE 1234 XX"><button class="btn" id="applyDriver">Ajukan menjadi driver</button><div id="driverApplyMessage" class="status" role="status"></div></section>
 <section id="sellerPanel" class="panel hidden">
 <h2>🏬 Buka toko di Pasar Hanakau</h2><p class="muted">Ajukan toko Anda. Toko akan diperiksa admin sebelum dapat berjualan.</p>
 <label for="shopName">Nama toko</label><input class="field" id="shopName" maxlength="100" placeholder="Contoh: Toko Sumber Rezeki">
@@ -58,7 +58,8 @@ footer{color:#829087;font-size:12px;padding:30px 10px}
 <label for="shopDescription">Deskripsi toko (opsional)</label><textarea class="field" id="shopDescription" rows="3" placeholder="Ceritakan barang yang dijual"></textarea>
 <button class="btn" id="submitSeller">Kirim pengajuan toko</button><div id="sellerMessage" class="status" role="status"></div>
 </section>
-<section id="adminPanel" class="panel hidden"><h2>🛡️ Panel admin</h2><p class="muted">Kelola pengajuan toko, produk, dan pesanan pembeli.</p><h3>Pesanan masuk</h3><p class="muted">Daftar pesanan terbaru dari seluruh pembeli.</p><button class="btn secondary" id="refreshAdminOrders" type="button">↻ Muat ulang pesanan</button><div id="adminOrders" class="muted">Memuat pesanan…</div><h3>Pengajuan toko</h3><div id="adminApplications" class="muted">Memuat pengajuan…</div><h3>Produk menunggu persetujuan</h3><div id="adminProducts" class="muted">Memuat produk…</div><div id="adminMessage" class="status" role="status"></div></section>
+<section id="adminPanel" class="panel hidden"><h2>🛡️ Panel admin</h2><p class="muted">Kelola pengajuan toko, produk, dan pesanan pembeli.</p><h3>Pesanan masuk</h3><p class="muted">Daftar pesanan terbaru dari seluruh pembeli.</p><button class="btn secondary" id="refreshAdminOrders" type="button">↻ Muat ulang pesanan</button><div id="adminOrders" class="muted">Memuat pesanan…</div><h3>Pengajuan toko</h3><div id="adminApplications" class="muted">Memuat pengajuan…</div><h3>🚚 Pendaftaran driver</h3><div id="adminDriverApplications" class="muted">Memuat pendaftaran driver…</div><h3>Produk menunggu persetujuan</h3><div id="adminProducts" class="muted">Memuat produk…</div><div id="adminMessage" class="status" role="status"></div></section>
+<section id="driverPanel" class="panel hidden"><h2>🚚 Panel Driver</h2><p class="muted">Lihat tugas penjemputan dan pengantaran yang ditugaskan kepada Anda.</p><button class="btn secondary" id="refreshDriverTasks" type="button">↻ Muat ulang tugas</button><div id="driverTasks" class="muted">Memuat tugas…</div><div id="driverMessage" class="status" role="status"></div></section>
 <section id="sellerProducts" class="panel hidden">
 <h2>🏪 Kelola produk toko</h2><p class="muted">Tambahkan barang yang dijual di toko Anda. Produk baru akan berstatus draft dan belum tampil untuk pembeli sampai disetujui admin.</p>
 <label for="productName">Nama produk</label><input class="field" id="productName" maxlength="120" placeholder="Contoh: Beras 5 kg">
@@ -83,7 +84,7 @@ function validCredentials(){const email=$('email').value.trim(),password=$('pass
 async function refreshSession(){
  const {data:{session}}=await supabase.auth.getSession();
  $('authPanel').classList.toggle('hidden',!!session);$('accountPanel').classList.toggle('hidden',!session);
- $('sellerPanel').classList.add('hidden');$('sellerProducts').classList.add('hidden');$('adminPanel').classList.add('hidden');$('buyerPanel').classList.add('hidden');
+ $('sellerPanel').classList.add('hidden');$('sellerProducts').classList.add('hidden');$('adminPanel').classList.add('hidden');$('buyerPanel').classList.add('hidden');$('driverPanel').classList.add('hidden');
  if(!session){sellerShopId=null;activeBuyerId=null;cart={};return}
  activeBuyerId=null;cart={};
  $('accountEmail').textContent=session.user.email||'Akun aktif';
@@ -100,10 +101,22 @@ async function refreshSession(){
   else{$('sellerMessage').textContent='Anda belum mengajukan toko.';$('submitSeller').disabled=false;}
  } else if(role==='seller'){
   $('sellerProducts').classList.remove('hidden');await loadSellerShop();
+ } else if(role==='driver'){
+  $('driverPanel').classList.remove('hidden');await loadDriverTasks();
  }
 }
 $('signIn').addEventListener('click',async()=>{const c=validCredentials();if(!c)return; $('signIn').disabled=true;message('authMessage','Sedang masuk…');const {error}=await supabase.auth.signInWithPassword(c);$('signIn').disabled=false;if(error)message('authMessage',error.message,true);else{message('authMessage','Berhasil masuk.');await refreshSession();}});
 $('signUp').addEventListener('click',async()=>{const c=validCredentials();if(!c)return;if(c.password.length<6){message('authMessage','Kata sandi minimal 6 karakter.',true);return}$('signUp').disabled=true;message('authMessage','Sedang membuat akun…');const {data,error}=await supabase.auth.signUp({email:c.email,password:c.password});$('signUp').disabled=false;if(error)message('authMessage',error.message,true);else if(data.session){message('authMessage','Akun berhasil dibuat.');await refreshSession();}else message('authMessage','Pendaftaran diterima. Periksa email untuk konfirmasi, lalu masuk.');});
+$('applyDriver').addEventListener('click',async()=>{
+ const {data:{session}}=await supabase.auth.getSession();if(!session){message('driverApplyMessage','Silakan masuk terlebih dahulu.',true);return}
+ const vehicle_type=$('driverVehicle').value.trim(),vehicle_plate=$('driverPlate').value.trim();
+ if(vehicle_type.length<2||vehicle_plate.length<2){message('driverApplyMessage','Isi jenis dan nomor kendaraan dengan benar.',true);return}
+ $('applyDriver').disabled=true;message('driverApplyMessage','Mengirim pendaftaran driver…');
+ const {error}=await supabase.from('driver_applications').insert({user_id:session.user.id,vehicle_type,vehicle_plate});
+ $('applyDriver').disabled=false;
+ if(error){message('driverApplyMessage','Pendaftaran gagal: '+error.message,true);return}
+ message('driverApplyMessage','Pendaftaran terkirim. Tunggu persetujuan admin.');
+});
 $('submitSeller').addEventListener('click',async()=>{
  const {data:{session}}=await supabase.auth.getSession();if(!session){message('sellerMessage','Silakan masuk terlebih dahulu.',true);return}
  const shop_name=$('shopName').value.trim(),shop_address=$('shopAddress').value.trim(),contact_phone=$('shopPhone').value.trim(),shop_description=$('shopDescription').value.trim();
@@ -154,6 +167,7 @@ async function loadCatalog(){
 async function loadAdminPanel(){
  $('adminApplications').textContent='Memuat…';$('adminProducts').textContent='Memuat…';
  await loadAdminOrders();
+ await loadAdminDriverApplications();
  const {data:apps,error:appError}=await supabase.from('seller_applications').select('id,shop_name,shop_address,contact_phone,shop_description,created_at').eq('status','pending').order('created_at',{ascending:true});
  if(appError){$('adminApplications').textContent='Gagal memuat: '+appError.message;}else if(!apps.length){$('adminApplications').textContent='Tidak ada pengajuan toko yang menunggu.';}else{
   $('adminApplications').innerHTML=apps.map(a=>'<div class="tile"><b>'+escapeHtml(a.shop_name)+'</b><p class="muted">'+escapeHtml(a.shop_address)+' • '+escapeHtml(a.contact_phone||'Tanpa nomor')+'</p><p>'+escapeHtml(a.shop_description||'')+'</p><button class="btn" data-approve-app="'+a.id+'">Setujui toko</button> <button class="btn secondary" data-reject-app="'+a.id+'">Tolak</button></div>').join('');
@@ -163,19 +177,43 @@ async function loadAdminPanel(){
   $('adminProducts').innerHTML=products.map(p=>'<div class="tile">'+productImageHtml(p.image_path)+'<b>'+escapeHtml(p.name)+'</b><p class="muted">'+escapeHtml(p.shops?.name||'Toko')+' • Rp '+Number(p.price).toLocaleString('id-ID')+' • Stok '+p.stock+'</p><p>'+escapeHtml(p.description||'')+'</p><button class="btn" data-approve-product="'+p.id+'">Terbitkan produk</button></div>').join('');
  }
 }
+async function loadAdminDriverApplications(){
+ const box=$('adminDriverApplications');if(!box)return;
+ const {data,error}=await supabase.from('driver_applications').select('id,user_id,vehicle_type,vehicle_plate,created_at,profiles(full_name,phone)').eq('status','pending').order('created_at',{ascending:true});
+ if(error){box.textContent='Pendaftaran driver belum dapat dimuat: '+error.message;return}
+ if(!data?.length){box.textContent='Tidak ada pendaftaran driver yang menunggu.';return}
+ box.innerHTML=data.map(a=>'<article class="tile"><b>'+escapeHtml(a.profiles?.full_name||'Calon driver')+'</b><p class="muted">'+escapeHtml(a.profiles?.phone||'Nomor telepon belum diisi')+' • '+escapeHtml(a.vehicle_type)+' • '+escapeHtml(a.vehicle_plate)+'</p><button class="btn" data-review-driver="'+a.id+'" data-approve-driver="true">Setujui driver</button> <button class="btn secondary" data-review-driver="'+a.id+'" data-approve-driver="false">Tolak</button></article>').join('');
+}
+$('adminDriverApplications').addEventListener('click',async e=>{
+ const btn=e.target.closest('[data-review-driver]');if(!btn)return;btn.disabled=true;
+ const approve=btn.dataset.approveDriver==='true';message('adminMessage','Memproses pendaftaran driver…');
+ const {error}=await supabase.rpc('admin_review_driver_application',{p_application_id:btn.dataset.reviewDriver,p_approve:approve});
+ if(error){message('adminMessage','Pendaftaran driver gagal diproses: '+error.message,true);btn.disabled=false;return}
+ message('adminMessage',approve?'Driver berhasil disetujui.':'Pendaftaran driver ditolak.');await loadAdminDriverApplications();
+});
 async function loadAdminOrders(){
  const box=$('adminOrders');if(!box)return;
  box.textContent='Memuat pesanan…';
- const {data,error}=await supabase.from('orders').select('id,order_number,buyer_id,status,subtotal,delivery_fee,total,delivery_address,notes,created_at,order_items(product_name,quantity,unit_price,line_total)').order('created_at',{ascending:false}).limit(50);
+ const [{data,error},{data:drivers,error:driverError}]=await Promise.all([
+  supabase.from('orders').select('id,order_number,buyer_id,status,subtotal,delivery_fee,total,delivery_address,notes,created_at,order_items(product_name,quantity,unit_price,line_total),deliveries(id,status,driver_id)').order('created_at',{ascending:false}).limit(50),
+  supabase.from('driver_profiles').select('id,vehicle_type,vehicle_plate,profiles(full_name,phone)').eq('approval_status','approved')
+ ]);
  if(error){box.textContent='Pesanan belum dapat dimuat: '+error.message;return}
+ if(driverError){message('adminMessage','Daftar driver belum dapat dimuat: '+driverError.message,true)}
  if(!data?.length){box.textContent='Belum ada pesanan yang masuk.';return}
  const labels={pending:'Menunggu konfirmasi',confirmed:'Dikonfirmasi',ready_for_pickup:'Siap dijemput',picked_up:'Sudah dijemput',delivered:'Terkirim',cancelled:'Dibatalkan'};
- const next={pending:[['confirmed','Terima pesanan'],['cancelled','Batalkan']],confirmed:[['ready_for_pickup','Siapkan untuk driver'],['cancelled','Batalkan']],ready_for_pickup:[['picked_up','Tandai sudah dijemput']],picked_up:[['delivered','Tandai terkirim']],delivered:[],cancelled:[]};
- box.innerHTML=data.map(o=>'<article class="tile"><div class="row" style="justify-content:space-between"><b>'+escapeHtml(o.order_number)+'</b><b class="price">'+formatRupiah(o.total)+'</b></div><div class="muted">'+new Date(o.created_at).toLocaleString('id-ID')+' • Status: <b>'+escapeHtml(labels[o.status]||o.status)+'</b></div><p class="muted"><b>Alamat:</b> '+escapeHtml(o.delivery_address)+'</p>'+(o.notes?'<p class="muted"><b>Catatan:</b> '+escapeHtml(o.notes)+'</p>':'')+'<div>'+((o.order_items||[]).map(i=>'<div class="cartline"><span>'+escapeHtml(i.product_name)+' × '+i.quantity+'</span><b>'+formatRupiah(i.line_total)+'</b></div>').join(''))+'</div><p class="muted">Subtotal: '+formatRupiah(o.subtotal)+' • Ongkir: '+formatRupiah(o.delivery_fee)+'</p>'+(next[o.status]||[]).map(([status,label])=>'<button class="btn '+(status==='cancelled'?'secondary':'')+'" data-order-id="'+o.id+'" data-order-status="'+status+'">'+label+'</button>').join(' ')+'</article>').join('');
+ const next={pending:[['confirmed','Terima pesanan'],['cancelled','Batalkan']],confirmed:[['ready_for_pickup','Siapkan untuk driver'],['cancelled','Batalkan']],ready_for_pickup:[],picked_up:[],delivered:[],cancelled:[]};
+ box.innerHTML=data.map(o=>{
+  const delivery=o.deliveries?.[0];
+  const assign=o.status==='ready_for_pickup'?(drivers?.length?'<div class="tile"><label for="driver-'+o.id+'">Pilih driver</label><select class="field" id="driver-'+o.id+'" data-driver-for="'+o.id+'"><option value="">Pilih driver yang disetujui</option>'+drivers.map(d=>'<option value="'+d.id+'" '+(delivery?.driver_id===d.id?'selected':'')+'>'+escapeHtml(d.profiles?.full_name||'Driver')+' • '+escapeHtml(d.vehicle_type)+' • '+escapeHtml(d.vehicle_plate)+'</option>').join('')+'</select><button class="btn" data-assign-order="'+o.id+'">'+(delivery?.driver_id?'Simpan penugasan driver':'Tugaskan driver')+'</button></div>':'<p class="muted">Belum ada driver yang disetujui admin.</p>'):'';
+  return '<article class="tile"><div class="row" style="justify-content:space-between"><b>'+escapeHtml(o.order_number)+'</b><b class="price">'+formatRupiah(o.total)+'</b></div><div class="muted">'+new Date(o.created_at).toLocaleString('id-ID')+' • Status: <b>'+escapeHtml(labels[o.status]||o.status)+'</b></div><p class="muted"><b>Alamat:</b> '+escapeHtml(o.delivery_address)+'</p>'+(o.notes?'<p class="muted"><b>Catatan:</b> '+escapeHtml(o.notes)+'</p>':'')+'<div>'+((o.order_items||[]).map(i=>'<div class="cartline"><span>'+escapeHtml(i.product_name)+' × '+i.quantity+'</span><b>'+formatRupiah(i.line_total)+'</b></div>').join(''))+'</div><p class="muted">Subtotal: '+formatRupiah(o.subtotal)+' • Ongkir: '+formatRupiah(o.delivery_fee)+'</p>'+(next[o.status]||[]).map(([status,label])=>'<button class="btn '+(status==='cancelled'?'secondary':'')+'" data-order-id="'+o.id+'" data-order-status="'+status+'">'+label+'</button>').join(' ')+assign+'</article>';
+ }).join('');
 
 }
 $('refreshAdminOrders').addEventListener('click',loadAdminOrders);
 $('adminOrders').addEventListener('click',async e=>{
+ const assign=e.target.closest('[data-assign-order]');
+ if(assign){const orderId=assign.dataset.assignOrder,select=$('driver-'+orderId),driverId=select?.value;if(!driverId){message('adminMessage','Pilih driver terlebih dahulu.',true);return}assign.disabled=true;message('adminMessage','Menugaskan driver…');const {error}=await supabase.rpc('admin_assign_delivery',{p_order_id:orderId,p_driver_id:driverId});if(error){message('adminMessage','Penugasan gagal: '+error.message,true);assign.disabled=false;return}message('adminMessage','Driver berhasil ditugaskan.');await loadAdminOrders();return;}
  const btn=e.target.closest('[data-order-id][data-order-status]');if(!btn)return;
  const orderId=btn.dataset.orderId,newStatus=btn.dataset.orderStatus;
  btn.disabled=true;message('adminMessage','Memperbarui status pesanan…');
@@ -184,6 +222,17 @@ $('adminOrders').addEventListener('click',async e=>{
  message('adminMessage','Status pesanan berhasil diperbarui.');
  await loadAdminOrders();
 });
+async function loadDriverTasks(){
+ const box=$('driverTasks');if(!box)return;box.textContent='Memuat tugas…';
+ const {data:{user}}=await supabase.auth.getUser();if(!user){box.textContent='Silakan masuk kembali.';return}
+ const {data,error}=await supabase.from('deliveries').select('id,status,assigned_at,orders(order_number,status,delivery_address,notes,total,order_items(product_name,quantity,shops(name,address)))').eq('driver_id',user.id).order('assigned_at',{ascending:false});
+ if(error){box.textContent='Tugas belum dapat dimuat: '+error.message;return}
+ if(!data?.length){box.textContent='Belum ada tugas pengiriman yang ditugaskan kepada Anda.';return}
+ const labels={assigned:'Menunggu dijemput',picked_up:'Dalam perjalanan',delivered:'Selesai'};
+ box.innerHTML=data.map(d=>{const o=d.orders||{};const items=o.order_items||[];const pickup=[...new Set(items.map(i=>i.shops?.address).filter(Boolean))].join(' • ');const action=d.status==='assigned'?'<button class="btn" data-delivery-id="'+d.id+'" data-delivery-status="picked_up">Konfirmasi sudah dijemput</button>':d.status==='picked_up'?'<button class="btn" data-delivery-id="'+d.id+'" data-delivery-status="delivered">Konfirmasi sudah diantar</button>':'';return '<article class="tile"><b>'+escapeHtml(o.order_number||'Pesanan')+'</b><p class="muted">Status tugas: '+escapeHtml(labels[d.status]||d.status)+'</p><p class="muted"><b>Ambil di:</b> '+escapeHtml(pickup||'Alamat toko tersedia di detail pesanan')+'</p><p class="muted"><b>Antar ke:</b> '+escapeHtml(o.delivery_address||'')+'</p>'+items.map(i=>'<div class="muted">'+escapeHtml(i.product_name)+' × '+i.quantity+'</div>').join('')+(o.notes?'<p class="muted"><b>Catatan:</b> '+escapeHtml(o.notes)+'</p>':'')+action+'</article>';}).join('');
+}
+$('refreshDriverTasks').addEventListener('click',loadDriverTasks);
+$('driverTasks').addEventListener('click',async e=>{const btn=e.target.closest('[data-delivery-id][data-delivery-status]');if(!btn)return;btn.disabled=true;message('driverMessage','Memperbarui status pengiriman…');const {error}=await supabase.rpc('driver_update_delivery_status',{p_delivery_id:btn.dataset.deliveryId,p_new_status:btn.dataset.deliveryStatus,p_note:''});if(error){message('driverMessage','Status belum berubah: '+error.message,true);btn.disabled=false;return}message('driverMessage','Status pengiriman berhasil diperbarui.');await loadDriverTasks();});
 
 $('adminApplications').addEventListener('click',async e=>{
  const approve=e.target.closest('[data-approve-app]'),reject=e.target.closest('[data-reject-app]');
