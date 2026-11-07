@@ -24,6 +24,14 @@
 <label for="shopDescription">Deskripsi toko (opsional)</label><textarea class="field" id="shopDescription" rows="3" placeholder="Ceritakan barang yang dijual"></textarea>
 <button class="btn" id="submitSeller">Kirim pengajuan toko</button><div id="sellerMessage" class="status" role="status"></div>
 </section>
+<section id="sellerProducts" class="panel hidden">
+<h2>Kelola produk toko</h2><p class="muted">Tambahkan barang yang dijual di toko Anda. Produk baru akan berstatus draft dan belum tampil untuk pembeli sampai disetujui admin.</p>
+<label for="productName">Nama produk</label><input class="field" id="productName" maxlength="120" placeholder="Contoh: Beras 5 kg">
+<div class="formgrid"><div><label for="productPrice">Harga (Rp)</label><input class="field" id="productPrice" type="number" min="0" step="1" placeholder="25000"></div><div><label for="productStock">Stok</label><input class="field" id="productStock" type="number" min="0" step="1" placeholder="10"></div></div>
+<label for="productDescription">Deskripsi (opsional)</label><textarea class="field" id="productDescription" rows="2" placeholder="Keterangan produk"></textarea>
+<button class="btn" id="addProduct">Simpan produk</button><div id="productMessage" class="status" role="status"></div>
+<div id="sellerProductList"></div>
+</section>
 <div class="section"><h2>Katalog produk</h2><p class="muted">Produk aktif dari toko yang sudah disetujui akan tampil di sini.</p></div>
 <div id="catalog" class="grid"><div class="tile muted">Menghubungkan ke katalog…</div></div>
 <div id="catalogMessage" class="status" role="status"></div>
@@ -50,8 +58,13 @@ async function refreshSession(){
    if(application){$('sellerMessage').textContent='Pengajuan "'+application.shop_name+'" berstatus: '+application.status+'.';$('submitSeller').disabled=true;}
    else if(error){$('sellerMessage').textContent='Aktifkan formulir setelah migrasi pengajuan penjual diterapkan.';}
    else{$('sellerMessage').textContent='Anda belum mengajukan toko.';$('submitSeller').disabled=false;}
-  } else if(role==='seller') $('accountRole').textContent='Peran: penjual';
- }
+  } else if(role==='seller') {
+   $('accountRole').textContent='Peran: penjual';
+   $('sellerProducts').classList.remove('hidden');
+   await loadSellerShop();
+  }
+ } else { $('sellerProducts').classList.add('hidden'); }
+}
 }
 $('signIn').addEventListener('click',async()=>{const c=validCredentials();if(!c)return; $('signIn').disabled=true;message('authMessage','Sedang masuk…');const {error}=await supabase.auth.signInWithPassword(c);$('signIn').disabled=false;if(error)message('authMessage',error.message,true);else{message('authMessage','Berhasil masuk.');await refreshSession();}});
 $('signUp').addEventListener('click',async()=>{const c=validCredentials();if(!c)return;if(c.password.length<6){message('authMessage','Kata sandi minimal 6 karakter.',true);return}$('signUp').disabled=true;message('authMessage','Sedang membuat akun…');const {data,error}=await supabase.auth.signUp({email:c.email,password:c.password});$('signUp').disabled=false;if(error)message('authMessage',error.message,true);else if(data.session){message('authMessage','Akun berhasil dibuat.');await refreshSession();}else message('authMessage','Pendaftaran diterima. Periksa email untuk konfirmasi, lalu masuk.');});
@@ -63,6 +76,34 @@ $('submitSeller').addEventListener('click',async()=>{
  const {error}=await supabase.from('seller_applications').insert({user_id:session.user.id,shop_name,shop_address,contact_phone,shop_description});
  if(error){$('submitSeller').disabled=false;message('sellerMessage','Gagal mengirim: '+error.message,true)}
  else{message('sellerMessage','Pengajuan terkirim. Tunggu pemeriksaan admin.');}
+});
+let sellerShopId=null;
+async function loadSellerShop(){
+ const {data:{session}}=await supabase.auth.getSession();if(!session)return;
+ const {data:shop,error}=await supabase.from('shops').select('id,name,status').eq('owner_id',session.user.id).maybeSingle();
+ if(error){message('productMessage','Gagal memeriksa toko: '+error.message,true);return}
+ if(!shop){message('productMessage','Toko belum ditemukan. Hubungi admin untuk pemeriksaan pengajuan.',true);return}
+ if(shop.status!=='approved'){message('productMessage','Status toko: '+shop.status+'. Produk dapat dikelola setelah toko disetujui admin.');return}
+ sellerShopId=shop.id;message('productMessage','Toko aktif: '+shop.name);
+ await loadSellerProducts();
+}
+async function loadSellerProducts(){
+ if(!sellerShopId)return;
+ const {data,error}=await supabase.from('products').select('id,name,price,stock,status').eq('shop_id',sellerShopId).order('created_at',{ascending:false});
+ if(error){$('sellerProductList').textContent='Gagal memuat produk: '+error.message;return}
+ $('sellerProductList').innerHTML=data.length?data.map(p=>'<div class="tile"><b>'+escapeHtml(p.name)+'</b><div class="muted">Rp '+Number(p.price).toLocaleString('id-ID')+' • Stok '+p.stock+' • '+escapeHtml(p.status)+'</div></div>').join(''):'<p class="muted">Belum ada produk di toko ini.</p>';
+}
+$('addProduct').addEventListener('click',async()=>{
+ if(!sellerShopId){message('productMessage','Toko belum disetujui admin.',true);return}
+ const name=$('productName').value.trim(),price=Number($('productPrice').value),stock=Number($('productStock').value),description=$('productDescription').value.trim();
+ if(name.length<2||$('productPrice').value===''||!Number.isFinite(price)||price<0||$('productStock').value===''||!Number.isInteger(stock)||stock<0){message('productMessage','Periksa nama, harga, dan stok produk.',true);return}
+ $('addProduct').disabled=true;
+ const {error}=await supabase.from('products').insert({shop_id:sellerShopId,name,price,stock,description,status:'draft'});
+ $('addProduct').disabled=false;
+ if(error){message('productMessage','Produk gagal disimpan: '+error.message,true);return}
+ $('productName').value='';$('productPrice').value='';$('productStock').value='';$('productDescription').value='';
+ message('productMessage','Produk tersimpan sebagai draft. Menunggu persetujuan admin.');
+ await loadSellerProducts();
 });
 $('signOut').addEventListener('click',async()=>{const {error}=await supabase.auth.signOut();if(error)message('catalogMessage',error.message,true);else{await refreshSession();message('catalogMessage','Anda sudah keluar.')}});
 supabase.auth.onAuthStateChange(()=>refreshSession());
