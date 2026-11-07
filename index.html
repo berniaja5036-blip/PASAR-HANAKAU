@@ -179,7 +179,7 @@ async function loadAdminPanel(){
 }
 async function loadAdminDriverApplications(){
  const box=$('adminDriverApplications');if(!box)return;
- const {data,error}=await supabase.from('driver_applications').select('id,user_id,vehicle_type,vehicle_plate,created_at,profiles(full_name,phone)').eq('status','pending').order('created_at',{ascending:true});
+ const {data,error}=await supabase.from('driver_applications').select('id,user_id,vehicle_type,vehicle_plate,created_at,profiles!driver_applications_user_id_fkey(full_name,phone)').eq('status','pending').order('created_at',{ascending:true});
  if(error){box.textContent='Pendaftaran driver belum dapat dimuat: '+error.message;return}
  if(!data?.length){box.textContent='Tidak ada pendaftaran driver yang menunggu.';return}
  box.innerHTML=data.map(a=>'<article class="tile"><b>'+escapeHtml(a.profiles?.full_name||'Calon driver')+'</b><p class="muted">'+escapeHtml(a.profiles?.phone||'Nomor telepon belum diisi')+' • '+escapeHtml(a.vehicle_type)+' • '+escapeHtml(a.vehicle_plate)+'</p><button class="btn" data-review-driver="'+a.id+'" data-approve-driver="true">Setujui driver</button> <button class="btn secondary" data-review-driver="'+a.id+'" data-approve-driver="false">Tolak</button></article>').join('');
