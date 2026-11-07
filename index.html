@@ -143,12 +143,17 @@ async function loadSellerShop(){
 async function loadSellerOrders(){
  const box=$('sellerOrders');if(!box||!sellerShopId)return;
  box.textContent='Memuat pesanan toko…';
- const {data,error}=await supabase.from('orders').select('id,order_number,status,subtotal,total,created_at,order_items(product_name,quantity,unit_price,line_total)').order('created_at',{ascending:false}).limit(50);
+ const {data,error}=await supabase.from('orders').select('id,order_number,status,created_at,notes,order_items(product_name,quantity,unit_price,line_total)').order('created_at',{ascending:false}).limit(50);
  if(error){box.textContent='Pesanan toko belum dapat dimuat: '+error.message;return}
  const orders=(data||[]).filter(o=>(o.order_items||[]).length>0);
  if(!orders.length){box.textContent='Belum ada pesanan yang berisi barang dari toko Anda.';return}
  const labels={pending:'Menunggu konfirmasi admin',confirmed:'Pesanan dikonfirmasi',ready_for_pickup:'Siap dijemput driver',picked_up:'Sudah dijemput driver',delivered:'Terkirim',cancelled:'Dibatalkan'};
- box.innerHTML=orders.map(o=>'<article class="tile"><div class="row" style="justify-content:space-between"><b>'+escapeHtml(o.order_number)+'</b><b class="price">'+escapeHtml(labels[o.status]||o.status)+'</b></div><p class="muted">'+new Date(o.created_at).toLocaleString('id-ID')+'</p>'+o.order_items.map(i=>'<div class="cartline"><span>'+escapeHtml(i.product_name)+' × '+i.quantity+'</span><b>'+formatRupiah(i.line_total)+'</b></div>').join('')+'<p class="price" style="margin-bottom:0">Total barang toko: '+formatRupiah(o.subtotal)+'</p></article>').join('');
+ box.innerHTML=orders.map(o=>{
+  const shopTotal=(o.order_items||[]).reduce((sum,item)=>sum+Number(item.line_total||0),0);
+  const items=(o.order_items||[]).map(i=>'<div class="cartline"><span>'+escapeHtml(i.product_name)+' × '+Number(i.quantity)+'<br><span class="muted">'+formatRupiah(i.unit_price)+' per barang</span></span><b>'+formatRupiah(i.line_total)+'</b></div>').join('');
+  const notes=o.notes?'<div class="notice" style="margin-top:10px"><b>Catatan pembeli:</b><br>'+escapeHtml(o.notes)+'</div>':'<p class="muted">Tidak ada catatan dari pembeli.</p>';
+  return '<article class="tile"><div class="row" style="justify-content:space-between"><b>'+escapeHtml(o.order_number)+'</b><b class="price">'+escapeHtml(labels[o.status]||o.status)+'</b></div><p class="muted">'+new Date(o.created_at).toLocaleString('id-ID')+'</p><details><summary style="cursor:pointer;color:#176b45;font-weight:700;padding:8px 0">Lihat rincian barang dan catatan</summary>'+items+notes+'</details><p class="price" style="margin-bottom:0">Total barang toko: '+formatRupiah(shopTotal)+'</p></article>';
+ }).join('');
 }
 $('refreshSellerOrders').addEventListener('click',loadSellerOrders);
 async function loadSellerProducts(){
