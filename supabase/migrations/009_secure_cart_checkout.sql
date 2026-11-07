@@ -27,7 +27,7 @@ begin
   if not public.current_user_has_role('buyer') then
     raise exception 'Checkout hanya tersedia untuk akun pembeli';
   end if;
-  if jsonb_typeof(p_items) <> 'array' then
+  if p_items is null or jsonb_typeof(p_items) is distinct from 'array' then
     raise exception 'Daftar belanja tidak valid';
   end if;
   v_item_count := jsonb_array_length(p_items);
@@ -140,3 +140,9 @@ $$;
 
 revoke all on function public.checkout_cart(jsonb,text,text) from public;
 grant execute on function public.checkout_cart(jsonb,text,text) to authenticated;
+
+
+-- Hak baca pesanan diberikan hanya kepada akun masuk; RLS membatasi baris
+-- pesanan ke pembeli pemilik dan admin, serta item ke peserta yang berhak.
+grant select on table public.orders to authenticated;
+grant select on table public.order_items to authenticated;
