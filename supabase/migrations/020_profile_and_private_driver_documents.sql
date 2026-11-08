@@ -1,6 +1,5 @@
--- Pasar Hanakau: profil lengkap, status verifikasi WhatsApp, dan dokumen privat driver.
+-- Pasar Hanakau: profil lengkap, status WhatsApp, dan dokumen privat driver.
 -- Jalankan sekali di Supabase SQL Editor setelah migrasi 019.
--- Status verifikasi tetap false sampai OTP sungguhan divalidasi oleh penyedia resmi.
 
 alter table public.profiles
   add column if not exists full_address text not null default '',
@@ -11,7 +10,29 @@ alter table public.driver_applications
   add column if not exists ktp_image_path text,
   add column if not exists face_image_path text;
 
--- Dokumen identitas tidak boleh berada di bucket publik.
+-- Metadata pendaftaran disimpan saat trigger membuat profil baru.
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $ph$
+begin
+  insert into public.profiles (id, full_name, phone, full_address)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data ->> 'full_name', ''),
+    nullif(new.raw_user_meta_data ->> 'phone', ''),
+    coalesce(new.raw_user_meta_data ->> 'full_address', '')
+  );
+  insert into public.role_memberships (user_id, role, status)
+  values (new.id, 'buyer', 'approved')
+  on conflict (user_id, role) do nothing;
+  return new;
+end;
+$ph$;
+
+-- Dokumen identitas disimpan privat, bukan pada bucket publik.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'driver-private-documents',
@@ -53,10 +74,10 @@ using (
 );
 
 comment on column public.profiles.full_address is
-  'Alamat lengkap profil pengguna; pemilik dan admin dapat melihat sesuai kebijakan RLS profiles.';
+  'Alamat lengkap pengguna.';
 comment on column public.profiles.whatsapp_verified_at is
-  'Diisi hanya oleh alur verifikasi OTP tepercaya setelah penyedia WhatsApp mengonfirmasi kode.';
+  'Hanya diisi oleh verifikasi OTP tepercaya; tetap NULL sebelum integrasi resmi.';
 comment on column public.driver_applications.ktp_image_path is
-  'Path dokumen KTP di bucket privat driver-private-documents; bukan URL publik.';
+  'Path KTP di bucket privat driver-private-documents.';
 comment on column public.driver_applications.face_image_path is
-  'Path foto wajah di bucket privat driver-private-documents; bukan URL publik.';
+  'Path foto wajah di bucket privat driver-private-documents.';
