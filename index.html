@@ -60,7 +60,7 @@ footer{color:#829087;font-size:12px;padding:30px 10px}
 <button class="btn" id="submitSeller">Kirim pengajuan toko</button><div id="sellerMessage" class="status" role="status"></div>
 </section>
 <section id="driverApplyPanel" class="panel hidden"><h2>🚚 Pendaftaran Driver</h2><p class="muted">Daftarkan kendaraan Anda. Akun driver aktif setelah disetujui admin.</p><label for="driverVehicle">Jenis kendaraan</label><input id="driverVehicle" class="field" maxlength="60" placeholder="Contoh: Motor atau mobil pickup"><label for="driverPlate">Nomor kendaraan</label><input id="driverPlate" class="field" maxlength="20" placeholder="Contoh: BE 1234 XX"><button class="btn" id="applyDriver">Ajukan menjadi driver</button><div id="driverApplyMessage" class="status" role="status"></div></section>
-<section id="adminPanel" class="panel hidden"><h2>🛡️ Panel admin</h2><p class="muted">Kelola pengajuan toko, produk, dan pesanan pembeli.</p><h3>Ringkasan pesanan</h3><p class="muted">Status dari maksimal 50 pesanan terbaru yang dapat dibaca admin.</p><div id="adminOrderSummary" class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;margin:10px 0"><div class="tile">Memuat ringkasan…</div></div><h3>Pesanan masuk</h3><p class="muted">Daftar pesanan terbaru dari seluruh pembeli. Pesanan diperbarui otomatis setiap 45 detik saat halaman aktif.</p><label for="adminOrderSearch">Cari nomor pesanan, alamat, atau nama barang</label><input id="adminOrderSearch" class="field" type="search" placeholder="Ketik kata kunci..." autocomplete="off"><div class="row"><label for="adminOrderStatus" class="muted">Filter status:</label><select id="adminOrderStatus" class="field" style="max-width:240px;margin:0"><option value="">Semua status</option><option value="pending">Menunggu konfirmasi</option><option value="confirmed">Dikonfirmasi</option><option value="ready_for_pickup">Siap dijemput</option><option value="picked_up">Sudah dijemput / diantar</option><option value="delivered">Terkirim</option><option value="cancelled">Dibatalkan</option></select></div><div class="row" style="margin-top:10px"><button class="btn secondary" id="refreshAdminOrders" type="button">↻ Muat ulang pesanan</button><button class="btn secondary" id="exportAdminOrders" type="button">⬇ Unduh laporan CSV</button></div><div class="muted">Laporan berisi maksimal 50 pesanan terbaru yang dapat dibaca admin.</div><div id="adminOrders" class="muted">Memuat pesanan…</div><h3>Pengajuan toko</h3><div id="adminApplications" class="muted">Memuat pengajuan…</div><h3>🚚 Pendaftaran driver</h3><div id="adminDriverApplications" class="muted">Memuat pendaftaran driver…</div><h3>Produk menunggu persetujuan</h3><div id="adminProducts" class="muted">Memuat produk…</div><div id="adminMessage" class="status" role="status"></div></section>
+<section id="adminPanel" class="panel hidden"><h2>🛡️ Panel admin</h2><p class="muted">Kelola pengajuan toko, produk, dan pesanan pembeli.</p><h3>Ringkasan pesanan</h3><p class="muted">Status dari maksimal 50 pesanan terbaru yang dapat dibaca admin.</p><div id="adminOrderSummary" class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;margin:10px 0"><div class="tile">Memuat ringkasan…</div></div><h3>Pesanan masuk</h3><p class="muted">Daftar pesanan terbaru dari seluruh pembeli. Pesanan diperbarui otomatis setiap 45 detik saat halaman aktif.</p><label for="adminOrderSearch">Cari nomor pesanan, alamat, atau nama barang</label><input id="adminOrderSearch" class="field" type="search" placeholder="Ketik kata kunci..." autocomplete="off"><div class="row"><label for="adminOrderStatus" class="muted">Filter status:</label><select id="adminOrderStatus" class="field" style="max-width:240px;margin:0"><option value="">Semua status</option><option value="pending">Menunggu konfirmasi</option><option value="confirmed">Dikonfirmasi</option><option value="ready_for_pickup">Siap dijemput</option><option value="picked_up">Sudah dijemput / diantar</option><option value="delivered">Terkirim</option><option value="cancelled">Dibatalkan</option></select></div><div class="row" style="margin-top:10px"><button class="btn secondary" id="refreshAdminOrders" type="button">↻ Muat ulang pesanan</button><button class="btn secondary" id="exportAdminOrders" type="button">⬇ Unduh laporan CSV</button></div><div class="muted">Laporan berisi maksimal 50 pesanan terbaru yang dapat dibaca admin.</div><div id="adminOrders" class="muted">Memuat pesanan…</div><h3>Pengajuan toko</h3><div id="adminApplications" class="muted">Memuat pengajuan…</div><h3>🚚 Pendaftaran driver</h3><div id="adminDriverApplications" class="muted">Memuat pendaftaran driver…</div><h3>🧾 Tagihan komisi penjual</h3><p class="muted">Komisi 2% dari nilai barang pesanan yang sudah terkirim. Tagihan dibuat bulanan dan diverifikasi admin setelah seller mengirim referensi pembayaran.</p><div class="row"><button class="btn secondary" id="generateCommissionInvoices" type="button">Terbitkan tagihan bulan ini</button><button class="btn secondary" id="refreshCommissionInvoices" type="button">Muat ulang tagihan</button></div><div id="adminCommissionInvoices" class="muted">Memuat tagihan…</div><h3>Produk menunggu persetujuan</h3><div id="adminProducts" class="muted">Memuat produk…</div><div id="adminMessage" class="status" role="status"></div></section>
 <section id="driverPanel" class="panel hidden"><h2>🚚 Panel Driver</h2><p class="muted">Lihat tugas penjemputan dan pengantaran yang ditugaskan kepada Anda. Tugas diperbarui otomatis setiap 45 detik saat halaman aktif.</p><button class="btn secondary" id="refreshDriverTasks" type="button">↻ Muat ulang tugas</button><div class="notice" style="margin:10px 0"><b>🔔 Pemberitahuan tugas</b><div id="driverNotifications" class="muted" style="margin-top:6px">Belum ada pemberitahuan.</div></div><div id="driverTasks" class="muted">Memuat tugas…</div><div id="driverMessage" class="status" role="status"></div></section>
 <section id="sellerProducts" class="panel hidden">
 <h2>🏪 Kelola produk toko</h2><p class="muted">Tambahkan barang yang dijual di toko Anda. Produk baru akan berstatus draft dan belum tampil untuk pembeli sampai disetujui admin.</p>
@@ -70,7 +70,7 @@ footer{color:#829087;font-size:12px;padding:30px 10px}
 <label for="productImage">Foto produk (JPG, PNG, atau WebP; maksimal 5 MB)</label><input class="field" id="productImage" type="file" accept="image/jpeg,image/png,image/webp"><div id="productImagePreview" class="muted">Belum ada foto dipilih.</div>
 <button class="btn" id="addProduct">Simpan produk</button><div id="productMessage" class="status" role="status"></div>
 <div id="sellerProductList"></div>
-<h3>📦 Pesanan barang saya</h3>
+<h3>🧾 Tagihan komisi toko</h3><p class="muted">Komisi 2% dihitung dari nilai barang pesanan yang sudah terkirim. Pembayaran komisi ditagihkan bulanan.</p><button class="btn secondary" id="refreshSellerCommission" type="button">Muat ulang tagihan komisi</button><div id="sellerCommissionInvoices" class="muted">Memuat tagihan…</div><h3>📦 Pesanan barang saya</h3>
 <p class="muted">Lihat pesanan pembeli yang berisi barang dari toko Anda. Daftar diperbarui otomatis setiap 45 detik saat halaman aktif.</p>
 <button class="btn secondary" id="refreshSellerOrders" type="button">↻ Muat ulang pesanan</button>
 <div class="notice" style="margin:10px 0"><b>🔔 Pemberitahuan pesanan toko</b><div id="sellerNotifications" class="muted" style="margin-top:6px">Belum ada pemberitahuan.</div></div>
@@ -156,7 +156,7 @@ async function loadSellerShop(){
  if(!shop){message('productMessage','Toko belum ditemukan. Hubungi admin untuk pemeriksaan pengajuan.',true);return}
  if(shop.status!=='approved'){message('productMessage','Status toko: '+shop.status+'. Produk dapat dikelola setelah toko disetujui admin.');return}
  sellerShopId=shop.id;message('productMessage','Toko aktif: '+shop.name);
- await loadSellerProducts();await loadSellerOrders();
+ await loadSellerProducts();await loadSellerOrders();await loadSellerCommissionInvoices();
 }
 async function loadSellerOrders(){
  const box=$('sellerOrders');if(!box||!sellerShopId)return;
@@ -254,6 +254,7 @@ async function loadAdminPanel(){
  await loadAdminOrders();
  
  await loadAdminDriverApplications();
+ await loadAdminCommissionInvoices();
  const {data:apps,error:appError}=await supabase.from('seller_applications').select('id,shop_name,shop_address,contact_phone,shop_description,created_at').eq('status','pending').order('created_at',{ascending:true});
  if(appError){$('adminApplications').textContent='Gagal memuat: '+appError.message;}else if(!apps.length){$('adminApplications').textContent='Tidak ada pengajuan toko yang menunggu.';}else{
   $('adminApplications').innerHTML=apps.map(a=>'<div class="tile"><b>'+escapeHtml(a.shop_name)+'</b><p class="muted">'+escapeHtml(a.shop_address)+' • '+escapeHtml(a.contact_phone||'Tanpa nomor')+'</p><p>'+escapeHtml(a.shop_description||'')+'</p><button class="btn" data-approve-app="'+a.id+'">Setujui toko</button> <button class="btn secondary" data-reject-app="'+a.id+'">Tolak</button></div>').join('');
@@ -263,6 +264,54 @@ async function loadAdminPanel(){
   $('adminProducts').innerHTML=products.map(p=>'<div class="tile">'+productImageHtml(p.image_path)+'<b>'+escapeHtml(p.name)+'</b><p class="muted">'+escapeHtml(p.shops?.name||'Toko')+' • Rp '+Number(p.price).toLocaleString('id-ID')+' • Stok '+p.stock+'</p><p>'+escapeHtml(p.description||'')+'</p><button class="btn" data-approve-product="'+p.id+'">Terbitkan produk</button></div>').join('');
  }
 }
+async function loadSellerCommissionInvoices(){
+ const box=$('sellerCommissionInvoices');if(!box)return;
+ box.textContent='Memuat tagihan komisi…';
+ const {data,error}=await supabase.from('seller_commission_invoices').select('id,period_start,subtotal_amount,commission_amount,status,due_date,payment_reference,seller_submitted_at,admin_note,created_at').order('period_start',{ascending:false}).limit(24);
+ if(error){box.textContent='Tagihan belum dapat dimuat: '+error.message;return}
+ const labels={issued:'Belum dibayar / perlu konfirmasi',payment_submitted:'Menunggu verifikasi admin',paid:'Lunas'};
+ if(!data?.length){box.textContent='Belum ada tagihan komisi. Tagihan dibuat admin pada akhir periode bulanan.';return}
+ box.innerHTML=data.map(i=>'<article class="tile"><b>Periode '+new Date(i.period_start+'T00:00:00').toLocaleDateString('id-ID',{month:'long',year:'numeric'})+'</b><p class="muted">Nilai barang terkirim: '+formatRupiah(i.subtotal_amount)+'</p><p class="price">Komisi 2%: '+formatRupiah(i.commission_amount)+'</p><p class="muted">Status: <b>'+escapeHtml(labels[i.status]||i.status)+'</b>'+(i.due_date?' • Jatuh tempo '+new Date(i.due_date+'T00:00:00').toLocaleDateString('id-ID'):'')+'</p>'+(i.payment_reference?'<p class="muted">Referensi pembayaran: '+escapeHtml(i.payment_reference)+'</p>':'')+(i.admin_note?'<p class="notice">Catatan admin: '+escapeHtml(i.admin_note)+'</p>':'')+(i.status==='issued'?'<label for="commission-ref-'+i.id+'">Nomor referensi transfer</label><input class="field" id="commission-ref-'+i.id+'" maxlength="120" placeholder="Nomor referensi / keterangan transfer"><button class="btn" data-submit-commission="'+i.id+'">Kirim konfirmasi pembayaran</button>':'')+'</article>').join('');
+}
+$('refreshSellerCommission').addEventListener('click',loadSellerCommissionInvoices);
+$('sellerCommissionInvoices').addEventListener('click',async e=>{
+ const btn=e.target.closest('[data-submit-commission]');if(!btn)return;
+ const ref=$('commission-ref-'+btn.dataset.submitCommission)?.value.trim()||'';
+ if(ref.length<4){message('productMessage','Masukkan referensi pembayaran minimal 4 karakter.',true);return}
+ btn.disabled=true;const {error}=await supabase.rpc('seller_submit_commission_payment',{p_invoice_id:btn.dataset.submitCommission,p_payment_reference:ref});
+ if(error){message('productMessage','Konfirmasi pembayaran gagal dikirim: '+error.message,true);btn.disabled=false;return}
+ message('productMessage','Konfirmasi pembayaran terkirim. Menunggu verifikasi admin.');await loadSellerCommissionInvoices();
+});
+async function loadAdminCommissionInvoices(){
+ const box=$('adminCommissionInvoices');if(!box)return;
+ box.textContent='Memuat tagihan komisi…';
+ const {data,error}=await supabase.from('seller_commission_invoices').select('id,seller_id,period_start,subtotal_amount,commission_amount,status,due_date,payment_reference,seller_submitted_at,admin_note').order('period_start',{ascending:false}).limit(100);
+ if(error){box.textContent='Tagihan komisi belum dapat dimuat: '+error.message;return}
+ const labels={issued:'Menunggu pembayaran',payment_submitted:'Menunggu verifikasi',paid:'Lunas'};
+ if(!data?.length){box.textContent='Belum ada tagihan. Gunakan tombol terbitkan setelah periode komisi siap ditagihkan.';return}
+ box.innerHTML=data.map(i=>'<article class="tile"><b>Periode '+new Date(i.period_start+'T00:00:00').toLocaleDateString('id-ID',{month:'long',year:'numeric'})+'</b><p class="muted">ID penjual: '+escapeHtml(i.seller_id)+'<br>Nilai barang: '+formatRupiah(i.subtotal_amount)+'</p><p class="price">Komisi: '+formatRupiah(i.commission_amount)+'</p><p class="muted">Status: <b>'+escapeHtml(labels[i.status]||i.status)+'</b></p>'+(i.payment_reference?'<p class="muted">Referensi: '+escapeHtml(i.payment_reference)+'</p>':'')+(i.status==='payment_submitted'?'<div class="row"><button class="btn" data-review-commission="'+i.id+'" data-approve-commission="true">Tandai lunas</button><button class="btn secondary" data-review-commission="'+i.id+'" data-approve-commission="false">Tolak / minta ulang</button></div>':'')+(i.admin_note?'<p class="notice">Catatan: '+escapeHtml(i.admin_note)+'</p>':'')+'</article>').join('');
+}
+$('generateCommissionInvoices').addEventListener('click',async()=>{
+ const now=new Date(),period=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-01';
+ if(!confirm('Terbitkan tagihan komisi untuk periode '+period+'? Hanya pesanan terkirim yang belum ditagihkan yang akan dihitung.'))return;
+ const btn=$('generateCommissionInvoices');btn.disabled=true;message('adminMessage','Menerbitkan tagihan komisi…');
+ const {error}=await supabase.rpc('admin_generate_monthly_commission_invoices',{p_period_start:period,p_due_date:null});
+ btn.disabled=false;
+ if(error){message('adminMessage','Tagihan gagal diterbitkan: '+error.message,true);return}
+ message('adminMessage','Proses penerbitan tagihan selesai. Periksa daftar tagihan di bawah.');await loadAdminCommissionInvoices();
+});
+$('refreshCommissionInvoices').addEventListener('click',loadAdminCommissionInvoices);
+$('adminCommissionInvoices').addEventListener('click',async e=>{
+ const btn=e.target.closest('[data-review-commission]');if(!btn)return;
+ const approve=btn.dataset.approveCommission==='true';
+ const note=prompt(approve?'Catatan verifikasi (opsional):':'Alasan penolakan / instruksi pembayaran ulang:','');
+ if(note===null)return;
+ if(!approve&&note.trim().length<5){message('adminMessage','Tuliskan alasan minimal 5 karakter.',true);return}
+ btn.disabled=true;message('adminMessage','Memeriksa pembayaran komisi…');
+ const {error}=await supabase.rpc('admin_review_commission_payment',{p_invoice_id:btn.dataset.reviewCommission,p_approve:approve,p_admin_note:note});
+ if(error){message('adminMessage','Pemeriksaan pembayaran gagal: '+error.message,true);btn.disabled=false;return}
+ message('adminMessage',approve?'Tagihan ditandai lunas.':'Pembayaran ditolak; seller dapat mengirim ulang konfirmasi.');await loadAdminCommissionInvoices();
+});
 async function loadAdminDriverApplications(){
  const box=$('adminDriverApplications');if(!box)return;
  const {data,error}=await supabase.from('driver_applications').select('id,user_id,vehicle_type,vehicle_plate,created_at,profiles!driver_applications_user_id_fkey(full_name,phone)').eq('status','pending').order('created_at',{ascending:true});
@@ -447,6 +496,7 @@ async function refreshRoleData(){
    await loadAdminDriverApplications();
   }else if(activePanelRole==='seller'){
    await loadSellerOrders();
+   await loadSellerCommissionInvoices();
   }else if(activePanelRole==='driver'){
    await loadDriverTasks();
   }else if(activePanelRole==='buyer'){
