@@ -92,7 +92,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 const $ = id => document.getElementById(id);
 let selectedEntryRole=null;
 let activePanelRole=null;let roleRefreshBusy=false;
-document.querySelectorAll('[data-entry-role]').forEach(button=>button.addEventListener('click',()=>{selectedEntryRole=button.dataset.entryRole;$('rolePanel').classList.add('hidden');$('authPanel').classList.remove('hidden');const names={buyer:'Pembeli',seller:'Penjual',driver:'Driver',admin:'Admin'};$('authTitle').textContent='Masuk atau daftar sebagai '+names[selectedEntryRole];$('authDescription').textContent=selectedEntryRole==='admin'?'Halaman masuk khusus pengelola Pasar Hanakau.':'Gunakan email dan kata sandi untuk akun '+names[selectedEntryRole]+'.';$('signUp').classList.toggle('hidden',selectedEntryRole==='admin');$('password').value='';$('email').value='';message('authMessage','');}));
+document.querySelectorAll('[data-entry-role]').forEach(button=>button.addEventListener('click',()=>{selectedEntryRole=button.dataset.entryRole;$('rolePanel').classList.add('hidden');$('authPanel').classList.remove('hidden');const names={buyer:'Pembeli',seller:'Penjual',driver:'Driver',admin:'Admin'};$('authTitle').textContent='Masuk atau daftar sebagai '+names[selectedEntryRole];$('authDescription').textContent=selectedEntryRole==='admin'?'Halaman masuk khusus pengelola Pasar Hanakau.':'Gunakan email dan kata sandi untuk akun '+names[selectedEntryRole]+'.';$('signUp').classList.toggle('hidden',selectedEntryRole==='admin');$('registrationDetails').classList.toggle('hidden',selectedEntryRole==='admin');$('password').value='';$('email').value='';message('authMessage','');}));
 $('signIn').addEventListener('click',()=>{$('registrationDetails').classList.add('hidden');});
 $('signUp').addEventListener('click',()=>{$('registrationDetails').classList.remove('hidden');});
 $('backToRoles').addEventListener('click',()=>{$('authPanel').classList.add('hidden');$('rolePanel').classList.remove('hidden');selectedEntryRole=null;});
@@ -108,42 +108,75 @@ async function refreshSession(){
  activeBuyerId=null;cart={};
  $('accountEmail').textContent=session.user.email||'Akun aktif';
  const {data:profile}=await supabase.from('profiles').select('full_name,role,phone,full_address').eq('id',session.user.id).maybeSingle();
- const role=profile?.role||'buyer';$('accountRole').textContent='Peran: '+role;
- if(selectedEntryRole && selectedEntryRole!==role && !(role==='buyer' && ['seller','driver'].includes(selectedEntryRole))){$('accountRole').textContent='Akun ini terdaftar sebagai '+role+'. Silakan keluar dan pilih akses yang sesuai.';return}
+ const role=profile?.role||'buyer';
+ const requestedRole=selectedEntryRole||session.user.user_metadata?.requested_role||null;
+ $('accountRole').textContent='Peran: '+role;
+ if(requestedRole && requestedRole!==role && !(role==='buyer' && ['seller','driver'].includes(requestedRole))){$('accountRole').textContent='Akun ini terdaftar sebagai '+role+'. Silakan keluar dan pilih akses yang sesuai.';return}
  if(role==='admin'){
-  activePanelRole='admin';$('adminPanel').classList.remove('hidden');await loadAdminPanel();
- } else if(role==='buyer' && selectedEntryRole==='seller'){
+  $('accountRole').textContent='Peran: Admin';
+  activePanelRole='admin';$('adminPanel').classList.remove('hidden');await loadAdminPanel();return;
+ }
+ if(role==='seller'){
+  $('accountRole').textContent='Peran: Penjual';
+  activePanelRole='seller';$('sellerProducts').classList.remove('hidden');await loadSellerShop();return;
+ }
+ if(role==='driver'){
+  $('accountRole').textContent='Peran: Driver';
+  activePanelRole='driver';$('driverPanel').classList.remove('hidden');await loadDriverTasks();return;
+ }
+ // Semua akun berperan buyer diperiksa lebih dahulu untuk memastikan akun
+ // yang pernah mengajukan driver tidak masuk ke katalog sebelum disetujui.
+ const {data:driverApplication,error:driverLookupError}=await supabase.from('driver_applications').select('status').eq('user_id',session.user.id).maybeSingle();
+ if(driverLookupError){
+  if(requestedRole==='driver'){
+   $('accountRole').textContent='Peran: Driver • status menunggu pemeriksaan';
+   $('driverApplyPanel').classList.remove('hidden');
+   $('driverApplyMessage').textContent='Status pendaftaran belum dapat diperiksa. Akses belanja dikunci sementara demi keamanan. Muat ulang halaman atau hubungi admin.';
+   $('applyDriver').disabled=true;
+   for(const id of ['driverVehicle','driverPlate','driverKtp','driverFace','applyDriver'])$(id).classList.add('hidden');
+   for(const id of ['driverVehicle','driverPlate','driverKtp','driverFace'])document.querySelector('label[for="'+id+'"]')?.classList.add('hidden');
+   return;
+  }
+  $('accountRole').textContent='Peran: Pembeli';
+  activePanelRole='buyer';$('buyerPanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');initBuyerMap();activeBuyerId=session.user.id;loadCart();loadBuyerDeliveryPoint();renderCart();await loadCatalog();await loadBuyerOrders();return;
+ }
+ if(driverApplication || requestedRole==='driver'){
+  activePanelRole='driver-application';$('driverApplyPanel').classList.remove('hidden');
+  const {data:driverProfile}=await supabase.from('profiles').select('full_name,phone,full_address').eq('id',session.user.id).maybeSingle();
+  $('driverProfileSummary').textContent=(driverProfile?.full_name||'Nama belum diisi')+' • WA: '+(driverProfile?.phone||'Belum diisi')+' • '+(driverProfile?.full_address||'Alamat belum diisi');
+  const status=driverApplication?.status||'not_submitted';
+  if(status==='pending'){
+   $('accountRole').textContent='Peran: Driver • Menunggu persetujuan admin';
+   $('driverApplyMessage').textContent='Pendaftaran driver Anda sedang diperiksa admin. Selama menunggu, fitur pembeli, katalog, dan pemesanan dikunci.';
+  }else if(status==='rejected'){
+   $('accountRole').textContent='Peran: Driver • Pengajuan ditolak';
+   $('driverApplyMessage').textContent='Pengajuan driver ditolak admin. Hubungi admin untuk mengetahui alasan dan meminta arahan sebelum mengajukan kembali.';
+  }else if(status==='approved'){
+   $('accountRole').textContent='Peran: Driver • Persetujuan tercatat, peran sedang disinkronkan';
+   $('driverApplyMessage').textContent='Pengajuan sudah disetujui. Silakan keluar lalu masuk kembali. Jika status ini tetap muncul, hubungi admin.';
+  }else{
+   $('accountRole').textContent='Peran: Driver • Belum mengajukan';
+   $('driverApplyMessage').textContent='Lengkapi data kendaraan dan unggah kedua foto untuk mengajukan pendaftaran driver.';
+  }
+  const showForm=status==='not_submitted';
+  for(const id of ['driverVehicle','driverPlate','driverKtp','driverFace','applyDriver'])$(id).classList.toggle('hidden',!showForm);
+  for(const id of ['driverVehicle','driverPlate','driverKtp','driverFace'])document.querySelector('label[for="'+id+'"]')?.classList.toggle('hidden',!showForm);
+  $('applyDriver').disabled=!showForm;
+  return;
+ }
+ if(requestedRole==='seller'){
   activePanelRole='seller-application';$('sellerPanel').classList.remove('hidden');initSellerApplyMap();
   const {data:application,error}=await supabase.from('seller_applications').select('status,shop_name').eq('user_id',session.user.id).maybeSingle();
   if(application){$('sellerMessage').textContent='Pengajuan toko "'+application.shop_name+'" berstatus: '+application.status+'.';$('submitSeller').disabled=true;}
   else if(error){$('sellerMessage').textContent='Pengajuan belum dapat dimuat: '+error.message;}
   else{$('sellerMessage').textContent='Silakan lengkapi pengajuan toko Anda.';$('submitSeller').disabled=false;}
- } else if(role==='buyer' && selectedEntryRole==='driver'){
-  activePanelRole='driver-application';$('driverApplyPanel').classList.remove('hidden');
-  const {data:application,error}=await supabase.from('driver_applications').select('status').eq('user_id',session.user.id).maybeSingle();
-  const {data:driverProfile}=await supabase.from('profiles').select('full_name,phone,full_address').eq('id',session.user.id).maybeSingle();
-  $('driverProfileSummary').textContent=(driverProfile?.full_name||'Nama belum diisi')+' • WA: '+(driverProfile?.phone||'Belum diisi')+' • '+(driverProfile?.full_address||'Alamat belum diisi');
-  if(application){
-   const statusText={pending:'Menunggu persetujuan admin',approved:'Sudah disetujui sebagai driver',rejected:'Ditolak admin'}[application.status]||application.status;
-   $('driverApplyMessage').textContent='Anda sudah memiliki pendaftaran driver: '+statusText+'. Tidak perlu mendaftar ulang.';
-   $('applyDriver').disabled=true;
-  }else if(error){
-   $('driverApplyMessage').textContent='Status pendaftaran belum dapat diperiksa: '+error.message+'. Muat ulang halaman sebelum mencoba lagi.';
-   $('applyDriver').disabled=true;
-  }else{
-   $('driverApplyMessage').textContent='Silakan lengkapi data kendaraan dan unggah kedua foto.';
-   $('applyDriver').disabled=false;
-  }
- } else if(role==='buyer'){
-  activePanelRole='buyer';$('buyerPanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');initBuyerMap();activeBuyerId=session.user.id;loadCart();loadBuyerDeliveryPoint();renderCart();await loadCatalog();await loadBuyerOrders();
- } else if(role==='seller'){
-  activePanelRole='seller';$('sellerProducts').classList.remove('hidden');await loadSellerShop();
- } else if(role==='driver'){
-  activePanelRole='driver';$('driverPanel').classList.remove('hidden');await loadDriverTasks();
+  return;
  }
+ $('accountRole').textContent='Peran: Pembeli';
+ activePanelRole='buyer';$('buyerPanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');initBuyerMap();activeBuyerId=session.user.id;loadCart();loadBuyerDeliveryPoint();renderCart();await loadCatalog();await loadBuyerOrders();
 }
 $('signIn').addEventListener('click',async()=>{const c=validCredentials();if(!c)return; $('signIn').disabled=true;message('authMessage','Sedang masuk…');const {error}=await supabase.auth.signInWithPassword(c);$('signIn').disabled=false;if(error)message('authMessage',error.message,true);else{message('authMessage','Berhasil masuk.');await refreshSession();}});
-$('signUp').addEventListener('click',async()=>{const c=validCredentials();if(!c)return;const full_name=$('registerFullName').value.trim(),phone=$('registerPhone').value.trim(),full_address=$('registerAddress').value.trim();if(c.password.length<6){message('authMessage','Kata sandi minimal 6 karakter.',true);return}if(full_name.length<3||phone.replace(/\D/g,'').length<9||full_address.length<10){message('authMessage','Lengkapi nama, nomor WhatsApp aktif, dan alamat lengkap.',true);return}$('signUp').disabled=true;message('authMessage','Sedang membuat akun…');const {data,error}=await supabase.auth.signUp({email:c.email,password:c.password,options:{data:{full_name,phone,full_address}}});$('signUp').disabled=false;if(error)message('authMessage',error.message,true);else if(data.session){await supabase.from('profiles').update({full_name,phone,full_address}).eq('id',data.user.id);message('authMessage','Akun berhasil dibuat.');await refreshSession();}else message('authMessage','Pendaftaran diterima. Periksa email untuk konfirmasi, lalu masuk. Data profil akan tersimpan saat akun dibuat.');});
+$('signUp').addEventListener('click',async()=>{const c=validCredentials();if(!c)return;const full_name=$('registerFullName').value.trim(),phone=$('registerPhone').value.trim(),full_address=$('registerAddress').value.trim();if(c.password.length<6){message('authMessage','Kata sandi minimal 6 karakter.',true);return}if(full_name.length<3||phone.replace(/\D/g,'').length<9||full_address.length<10){message('authMessage','Lengkapi nama, nomor WhatsApp aktif, dan alamat lengkap.',true);return}$('signUp').disabled=true;message('authMessage','Sedang membuat akun…');if(!['buyer','seller','driver'].includes(selectedEntryRole)){message('authMessage','Pendaftaran admin tidak tersedia melalui halaman publik.',true);return}const {data,error}=await supabase.auth.signUp({email:c.email,password:c.password,options:{data:{full_name,phone,full_address,requested_role:selectedEntryRole}}});$('signUp').disabled=false;if(error)message('authMessage',error.message,true);else if(data.session){await supabase.from('profiles').update({full_name,phone,full_address}).eq('id',data.user.id);message('authMessage','Akun berhasil dibuat.');await refreshSession();}else message('authMessage','Pendaftaran diterima. Periksa email untuk konfirmasi, lalu masuk. Data profil akan tersimpan saat akun dibuat.');});
 $('applyDriver').addEventListener('click',async()=>{
  const btn=$('applyDriver');btn.disabled=true;
  const {data:{session}}=await supabase.auth.getSession();if(!session){btn.disabled=false;message('driverApplyMessage','Silakan masuk terlebih dahulu.',true);return}
