@@ -58,6 +58,34 @@ begin
 end;
 $$;
 
+create or replace function public.sync_delivery_fee_payment_status()
+returns trigger
+language plpgsql
+set search_path = ''
+as $
+begin
+  if new.delivery_fee <= 0 then
+    new.delivery_fee_payment_status := 'not_required';
+    new.delivery_fee_payment_method := null;
+    new.driver_fee_confirmed_at := null;
+    new.buyer_fee_confirmed_at := null;
+    new.delivery_fee_paid_at := null;
+  elsif tg_op = 'INSERT' or new.delivery_fee is distinct from old.delivery_fee then
+    new.delivery_fee_payment_status := 'unpaid';
+    new.delivery_fee_payment_method := null;
+    new.driver_fee_confirmed_at := null;
+    new.buyer_fee_confirmed_at := null;
+    new.delivery_fee_paid_at := null;
+  end if;
+  return new;
+end;
+$;
+
+drop trigger if exists orders_sync_delivery_fee_payment_status on public.orders;
+create trigger orders_sync_delivery_fee_payment_status
+before insert or update of delivery_fee on public.orders
+for each row execute function public.sync_delivery_fee_payment_status();
+
 create table if not exists public.delivery_fee_settings (
   id boolean primary key default true check (id),
   enabled boolean not null default false,
@@ -255,6 +283,17 @@ begin
      and e.period_start = p_period_start
      and e.status = 'accrued';
 
+  update public.seller_commission_invoices i
+     set subtotal_amount = totals.subtotal_amount,
+         commission_amount = totals.commission_amount
+    from (
+      select invoice_id,sum(basis_amount) as subtotal_amount,sum(commission_amount) as commission_amount
+        from public.seller_commission_entries
+       where period_start = p_period_start and invoice_id is not null
+       group by invoice_id
+    ) totals
+   where i.id = totals.invoice_id and i.status = 'issued';
+
   get diagnostics v_count = row_count;
   return v_count;
 end;
@@ -348,7 +387,7 @@ as $$
 declare
   v_order public.orders%rowtype;
 begin
-  if p_payment_method not in ('cash','transfer') then
+  if p_payment_method is null or p_payment_method not in ('cash','transfer') then
     raise exception 'Metode pembayaran ongkir harus tunai atau transfer.';
   end if;
   select o.* into v_order
