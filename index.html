@@ -93,6 +93,8 @@ const $ = id => document.getElementById(id);
 let selectedEntryRole=null;
 let activePanelRole=null;let roleRefreshBusy=false;
 document.querySelectorAll('[data-entry-role]').forEach(button=>button.addEventListener('click',()=>{selectedEntryRole=button.dataset.entryRole;$('rolePanel').classList.add('hidden');$('authPanel').classList.remove('hidden');const names={buyer:'Pembeli',seller:'Penjual',driver:'Driver',admin:'Admin'};$('authTitle').textContent='Masuk atau daftar sebagai '+names[selectedEntryRole];$('authDescription').textContent=selectedEntryRole==='admin'?'Halaman masuk khusus pengelola Pasar Hanakau.':'Gunakan email dan kata sandi untuk akun '+names[selectedEntryRole]+'.';$('signUp').classList.toggle('hidden',selectedEntryRole==='admin');$('password').value='';$('email').value='';message('authMessage','');}));
+$('signIn').addEventListener('click',()=>{$('registrationDetails').classList.add('hidden');});
+$('signUp').addEventListener('click',()=>{$('registrationDetails').classList.remove('hidden');});
 $('backToRoles').addEventListener('click',()=>{$('authPanel').classList.add('hidden');$('rolePanel').classList.remove('hidden');selectedEntryRole=null;});
 function message(id,text,isError=false){$(id).textContent=text;$(id).style.color=isError?'#b42318':'#176b45'}
 function validCredentials(){const email=$('email').value.trim(),password=$('password').value;if(!email||!password){message('authMessage','Isi email dan kata sandi terlebih dahulu.',true);return null}return {email,password}}
