@@ -62,7 +62,7 @@ create or replace function public.sync_delivery_fee_payment_status()
 returns trigger
 language plpgsql
 set search_path = ''
-as $
+as $$
 begin
   if new.delivery_fee <= 0 then
     new.delivery_fee_payment_status := 'not_required';
@@ -79,7 +79,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists orders_sync_delivery_fee_payment_status on public.orders;
 create trigger orders_sync_delivery_fee_payment_status
