@@ -3,6 +3,9 @@
 -- Pasar Hanakau: checkout aman melalui transaksi database.
 -- Berlaku untuk skema aktif aplikasi (shops/products/orders/order_items/deliveries).
 -- Satu pesanan dibuat per toko agar setiap pengiriman memiliki satu titik penjemputan.
+-- Hapus signature lama agar checkout tidak dapat melewati kewajiban titik GPS.
+drop function if exists public.checkout_cart(jsonb,text,text);
+
 create or replace function public.checkout_cart(
   p_items jsonb,
   p_delivery_address text,
@@ -41,8 +44,8 @@ begin
   if coalesce(length(trim(p_delivery_address)),0) < 8 then
     raise exception 'Alamat pengantaran harus diisi dengan lengkap';
   end if;
-  if (p_delivery_latitude is null) <> (p_delivery_longitude is null) then
-    raise exception 'Titik pengantaran harus memiliki latitude dan longitude sekaligus';
+  if p_delivery_latitude is null or p_delivery_longitude is null then
+    raise exception 'Titik GPS pengantaran wajib diambil dari perangkat pembeli.';
   end if;
   if p_delivery_latitude is not null and (p_delivery_latitude not between -90 and 90 or p_delivery_longitude not between -180 and 180) then
     raise exception 'Koordinat pengantaran tidak valid';
@@ -101,6 +104,10 @@ begin
     join public.shops s on s.id = p.shop_id
     order by s.id
   loop
+    if v_shop.pickup_latitude is null or v_shop.pickup_longitude is null then
+      raise exception 'Toko % belum menyimpan titik penjemputan GPS. Penjual harus mengambil lokasi dari perangkat di area toko.', v_shop.name;
+    end if;
+
     select coalesce(sum(p.price * (e.value->>'quantity')::integer),0)
       into v_subtotal
     from jsonb_array_elements(p_items) e
