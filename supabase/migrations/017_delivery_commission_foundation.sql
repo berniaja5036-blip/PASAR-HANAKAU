@@ -25,7 +25,7 @@ update public.orders
  where delivery_fee = 0
    and delivery_fee_payment_status = 'unpaid';
 
-do $$
+do $ph$
 begin
   if not exists (select 1 from pg_constraint where conname = 'orders_delivery_fee_payment_status_check') then
     alter table public.orders add constraint orders_delivery_fee_payment_status_check
@@ -56,13 +56,13 @@ begin
       check (delivery_longitude is null or delivery_longitude between -180 and 180);
   end if;
 end;
-$$;
+$ph$;
 
 create or replace function public.sync_delivery_fee_payment_status()
 returns trigger
 language plpgsql
 set search_path = ''
-as $$
+as $ph$
 begin
   if new.delivery_fee <= 0 then
     new.delivery_fee_payment_status := 'not_required';
@@ -79,7 +79,7 @@ begin
   end if;
   return new;
 end;
-$$;
+$ph$;
 
 drop trigger if exists orders_sync_delivery_fee_payment_status on public.orders;
 create trigger orders_sync_delivery_fee_payment_status
@@ -118,7 +118,7 @@ returns void
 language plpgsql
 security definer
 set search_path = ''
-as $$
+as $ph$
 begin
   if not coalesce(public.is_admin(), false) then
     raise exception 'Hanya admin yang dapat mengatur tarif pengantaran.';
@@ -140,7 +140,7 @@ begin
          updated_at = now()
    where id = true;
 end;
-$$;
+$ph$;
 revoke all on function public.admin_update_delivery_fee_settings(boolean,numeric,numeric,numeric,numeric) from public, anon;
 grant execute on function public.admin_update_delivery_fee_settings(boolean,numeric,numeric,numeric,numeric) to authenticated;
 
@@ -212,7 +212,7 @@ returns trigger
 language plpgsql
 security definer
 set search_path = ''
-as $$
+as $ph$
 declare
   v_rate numeric(5,2);
 begin
@@ -238,7 +238,7 @@ begin
   end if;
   return new;
 end;
-$$;
+$ph$;
 
 drop trigger if exists orders_record_seller_commission on public.orders;
 create trigger orders_record_seller_commission
@@ -253,7 +253,7 @@ returns integer
 language plpgsql
 security definer
 set search_path = ''
-as $$
+as $ph$
 declare
   v_count integer;
 begin
@@ -297,7 +297,7 @@ begin
   get diagnostics v_count = row_count;
   return v_count;
 end;
-$$;
+$ph$;
 revoke all on function public.admin_generate_monthly_commission_invoices(date,date) from public, anon;
 grant execute on function public.admin_generate_monthly_commission_invoices(date,date) to authenticated;
 
@@ -309,7 +309,7 @@ returns void
 language plpgsql
 security definer
 set search_path = ''
-as $$
+as $ph$
 begin
   if not (select public.current_user_has_role('seller')) then
     raise exception 'Hanya akun seller yang dapat mengirim konfirmasi pembayaran komisi.';
@@ -330,7 +330,7 @@ begin
     raise exception 'Tagihan tidak ditemukan atau sudah pernah dikirim untuk pemeriksaan.';
   end if;
 end;
-$$;
+$ph$;
 revoke all on function public.seller_submit_commission_payment(uuid,text) from public, anon;
 grant execute on function public.seller_submit_commission_payment(uuid,text) to authenticated;
 
@@ -343,7 +343,7 @@ returns void
 language plpgsql
 security definer
 set search_path = ''
-as $$
+as $ph$
 declare
   v_invoice public.seller_commission_invoices%rowtype;
 begin
@@ -371,7 +371,7 @@ begin
      where invoice_id = p_invoice_id;
   end if;
 end;
-$$;
+$ph$;
 revoke all on function public.admin_review_commission_payment(uuid,boolean,text) from public, anon;
 grant execute on function public.admin_review_commission_payment(uuid,boolean,text) to authenticated;
 
@@ -383,7 +383,7 @@ returns void
 language plpgsql
 security definer
 set search_path = ''
-as $$
+as $ph$
 declare
   v_order public.orders%rowtype;
 begin
@@ -421,7 +421,7 @@ begin
          end
    where id = p_order_id;
 end;
-$$;
+$ph$;
 revoke all on function public.driver_confirm_delivery_fee(uuid,text) from public, anon;
 grant execute on function public.driver_confirm_delivery_fee(uuid,text) to authenticated;
 
@@ -430,7 +430,7 @@ returns void
 language plpgsql
 security definer
 set search_path = ''
-as $$
+as $ph$
 declare
   v_order public.orders%rowtype;
 begin
@@ -463,7 +463,7 @@ begin
          end
    where id = p_order_id;
 end;
-$$;
+$ph$;
 revoke all on function public.buyer_confirm_delivery_fee(uuid) from public, anon;
 grant execute on function public.buyer_confirm_delivery_fee(uuid) to authenticated;
 
@@ -475,7 +475,7 @@ returns void
 language plpgsql
 security definer
 set search_path = ''
-as $$
+as $ph$
 begin
   if length(trim(coalesce(p_note,''))) < 5 or length(trim(coalesce(p_note,''))) > 500 then
     raise exception 'Keterangan masalah harus berisi 5 sampai 500 karakter.';
@@ -492,7 +492,7 @@ begin
     raise exception 'Pesanan tidak dapat dilaporkan atau pembayaran sudah dikonfirmasi.';
   end if;
 end;
-$$;
+$ph$;
 revoke all on function public.buyer_report_delivery_fee_dispute(uuid,text) from public, anon;
 grant execute on function public.buyer_report_delivery_fee_dispute(uuid,text) to authenticated;
 
@@ -505,7 +505,7 @@ returns void
 language plpgsql
 security definer
 set search_path = ''
-as $$
+as $ph$
 begin
   if not coalesce(public.is_admin(),false) then
     raise exception 'Hanya admin yang dapat memeriksa sengketa ongkir.';
@@ -522,7 +522,7 @@ begin
     raise exception 'Sengketa ongkir tidak ditemukan atau sudah diselesaikan.';
   end if;
 end;
-$$;
+$ph$;
 revoke all on function public.admin_resolve_delivery_fee_dispute(uuid,boolean,text) from public, anon;
 grant execute on function public.admin_resolve_delivery_fee_dispute(uuid,boolean,text) to authenticated;
 
