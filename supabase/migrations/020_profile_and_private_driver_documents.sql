@@ -81,3 +81,58 @@ comment on column public.driver_applications.ktp_image_path is
   'Path KTP di bucket privat driver-private-documents.';
 comment on column public.driver_applications.face_image_path is
   'Path foto wajah di bucket privat driver-private-documents.';
+
+alter table public.seller_applications
+  add column if not exists pickup_latitude numeric,
+  add column if not exists pickup_longitude numeric;
+
+-- Titik yang dipilih saat pengajuan toko disalin ke profil toko ketika admin menyetujui.
+create or replace function public.approve_seller_application(application_id uuid)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $ph$
+declare
+  application_row public.seller_applications%rowtype;
+  new_shop_id uuid;
+begin
+  if not public.is_admin() then
+    raise exception 'Hanya admin yang dapat menyetujui pengajuan toko';
+  end if;
+
+  select * into application_row
+  from public.seller_applications
+  where id = application_id
+  for update;
+
+  if not found then
+    raise exception 'Pengajuan toko tidak ditemukan';
+  end if;
+  if application_row.status <> 'pending' then
+    raise exception 'Pengajuan ini sudah diproses';
+  end if;
+  if application_row.pickup_latitude is null or application_row.pickup_longitude is null then
+    raise exception 'Titik penjemputan toko belum dipilih pada peta.';
+  end if;
+
+  update public.profiles set role = 'seller'
+  where id = application_row.user_id;
+
+  insert into public.shops
+    (owner_id, name, description, address, status, pickup_latitude, pickup_longitude)
+  values
+    (application_row.user_id, application_row.shop_name,
+     application_row.shop_description, application_row.shop_address, 'approved',
+     application_row.pickup_latitude, application_row.pickup_longitude)
+  returning id into new_shop_id;
+
+  update public.seller_applications
+  set status = 'approved', reviewed_by = auth.uid(), reviewed_at = now()
+  where id = application_row.id;
+
+  return new_shop_id;
+end;
+$ph$;
+revoke all on function public.approve_seller_application(uuid) from public, anon;
+grant execute on function public.approve_seller_application(uuid) to authenticated;
