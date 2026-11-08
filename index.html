@@ -102,7 +102,7 @@ async function refreshSession(){
  if(!session){sellerShopId=null;activeBuyerId=null;cart={};buyerDeliveryPoint=null;return}
  activeBuyerId=null;cart={};
  $('accountEmail').textContent=session.user.email||'Akun aktif';
- const {data:profile}=await supabase.from('profiles').select('full_name,role').eq('id',session.user.id).maybeSingle();
+ const {data:profile}=await supabase.from('profiles').select('full_name,role,phone,full_address,whatsapp_verified_at').eq('id',session.user.id).maybeSingle();
  const role=profile?.role||'buyer';$('accountRole').textContent='Peran: '+role;
  if(selectedEntryRole && selectedEntryRole!==role && !(role==='buyer' && ['seller','driver'].includes(selectedEntryRole))){$('accountRole').textContent='Akun ini terdaftar sebagai '+role+'. Silakan keluar dan pilih akses yang sesuai.';return}
  if(role==='admin'){
@@ -116,9 +116,11 @@ async function refreshSession(){
  } else if(role==='buyer' && selectedEntryRole==='driver'){
   activePanelRole='driver-application';$('driverApplyPanel').classList.remove('hidden');
   const {data:application,error}=await supabase.from('driver_applications').select('status').eq('user_id',session.user.id).maybeSingle();
+  const {data:driverProfile}=await supabase.from('profiles').select('full_name,phone,full_address,whatsapp_verified_at').eq('id',session.user.id).maybeSingle();
+  $('driverProfileSummary').textContent=(driverProfile?.full_name||'Nama belum diisi')+' • WA: '+(driverProfile?.phone||'Belum diisi')+' ('+(driverProfile?.whatsapp_verified_at?'terverifikasi':'belum diverifikasi')+') • '+(driverProfile?.full_address||'Alamat belum diisi');
   if(application){$('driverApplyMessage').textContent='Pendaftaran driver berstatus: '+application.status+'.';$('applyDriver').disabled=true;}
   else if(error){$('driverApplyMessage').textContent='Pendaftaran belum dapat dimuat: '+error.message;}
-  else{$('driverApplyMessage').textContent='Silakan lengkapi data kendaraan.';$('applyDriver').disabled=false;}
+  else{$('driverApplyMessage').textContent='Silakan lengkapi data kendaraan dan unggah kedua foto.';$('applyDriver').disabled=false;}
  } else if(role==='buyer'){
   activePanelRole='buyer';$('buyerPanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');activeBuyerId=session.user.id;loadCart();loadBuyerDeliveryPoint();renderCart();await loadCatalog();await loadBuyerOrders();
  } else if(role==='seller'){
@@ -153,8 +155,9 @@ $('applyDriver').addEventListener('click',async()=>{
 $('submitSeller').addEventListener('click',async()=>{
  const {data:{session}}=await supabase.auth.getSession();if(!session){message('sellerMessage','Silakan masuk terlebih dahulu.',true);return}
  const shop_name=$('shopName').value.trim(),shop_address=$('shopAddress').value.trim(),contact_phone=$('shopPhone').value.trim(),shop_description=$('shopDescription').value.trim();
- if(shop_name.length<2||shop_address.length<5){message('sellerMessage','Isi nama toko dan alamat dengan lengkap.',true);return}
+ if(shop_name.length<2||shop_address.length<5||contact_phone.replace(/\\D/g,'').length<9){message('sellerMessage','Isi nama toko, alamat lengkap, dan nomor WhatsApp aktif.',true);return}
  $('submitSeller').disabled=true;message('sellerMessage','Mengirim pengajuan…');
+ await supabase.from('profiles').update({phone:contact_phone}).eq('id',session.user.id);
  const {error}=await supabase.from('seller_applications').insert({user_id:session.user.id,shop_name,shop_address,contact_phone,shop_description});
  if(error){$('submitSeller').disabled=false;message('sellerMessage','Gagal mengirim: '+error.message,true)}
  else{message('sellerMessage','Pengajuan terkirim. Tunggu pemeriksaan admin.');}
@@ -352,10 +355,10 @@ $('adminCommissionInvoices').addEventListener('click',async e=>{
 });
 async function loadAdminDriverApplications(){
  const box=$('adminDriverApplications');if(!box)return;
- const {data,error}=await supabase.from('driver_applications').select('id,user_id,vehicle_type,vehicle_plate,created_at,profiles!driver_applications_user_id_fkey(full_name,phone)').eq('status','pending').order('created_at',{ascending:true});
+ const {data,error}=await supabase.from('driver_applications').select('id,user_id,vehicle_type,vehicle_plate,whatsapp_number,ktp_image_path,face_image_path,created_at,profiles!driver_applications_user_id_fkey(full_name,phone,full_address,whatsapp_verified_at)').eq('status','pending').order('created_at',{ascending:true});
  if(error){box.textContent='Pendaftaran driver belum dapat dimuat: '+error.message;return}
  if(!data?.length){box.textContent='Tidak ada pendaftaran driver yang menunggu.';return}
- box.innerHTML=data.map(a=>'<article class="tile"><b>'+escapeHtml(a.profiles?.full_name||'Calon driver')+'</b><p class="muted">'+escapeHtml(a.profiles?.phone||'Nomor telepon belum diisi')+' • '+escapeHtml(a.vehicle_type)+' • '+escapeHtml(a.vehicle_plate)+'</p><button class="btn" data-review-driver="'+a.id+'" data-approve-driver="true">Setujui driver</button> <button class="btn secondary" data-review-driver="'+a.id+'" data-approve-driver="false">Tolak</button></article>').join('');
+ const cards=await Promise.all(data.map(async a=>{const [k,f]=await Promise.all([a.ktp_image_path?supabase.storage.from('driver-private-documents').createSignedUrl(a.ktp_image_path,300):Promise.resolve({data:null}),a.face_image_path?supabase.storage.from('driver-private-documents').createSignedUrl(a.face_image_path,300):Promise.resolve({data:null})]);return '<article class="tile"><b>'+escapeHtml(a.profiles?.full_name||'Calon driver')+'</b><p class="muted">WA: '+escapeHtml(a.whatsapp_number||a.profiles?.phone||'Belum diisi')+' • '+(a.profiles?.whatsapp_verified_at?'Terverifikasi':'Belum diverifikasi')+'<br>Alamat: '+escapeHtml(a.profiles?.full_address||'Belum diisi')+'<br>'+escapeHtml(a.vehicle_type)+' • '+escapeHtml(a.vehicle_plate)+'</p><p>'+ (k.data?.signedUrl?'<a href="'+k.data.signedUrl+'" target="_blank" rel="noopener">Lihat foto KTP</a>':'Foto KTP belum tersedia')+' • '+(f.data?.signedUrl?'<a href="'+f.data.signedUrl+'" target="_blank" rel="noopener">Lihat foto wajah</a>':'Foto wajah belum tersedia')+'</p><button class="btn" data-review-driver="'+a.id+'" data-approve-driver="true">Setujui driver</button> <button class="btn secondary" data-review-driver="'+a.id+'" data-approve-driver="false">Tolak</button></article>'; }));box.innerHTML=cards.join('');
 }
 $('adminDriverApplications').addEventListener('click',async e=>{
  const btn=e.target.closest('[data-review-driver]');if(!btn)return;btn.disabled=true;
