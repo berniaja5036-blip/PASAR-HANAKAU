@@ -292,8 +292,9 @@ async function loadAdminCommissionInvoices(){
  box.innerHTML=data.map(i=>'<article class="tile"><b>Periode '+new Date(i.period_start+'T00:00:00').toLocaleDateString('id-ID',{month:'long',year:'numeric'})+'</b><p class="muted">ID penjual: '+escapeHtml(i.seller_id)+'<br>Nilai barang: '+formatRupiah(i.subtotal_amount)+'</p><p class="price">Komisi: '+formatRupiah(i.commission_amount)+'</p><p class="muted">Status: <b>'+escapeHtml(labels[i.status]||i.status)+'</b></p>'+(i.payment_reference?'<p class="muted">Referensi: '+escapeHtml(i.payment_reference)+'</p>':'')+(i.status==='payment_submitted'?'<div class="row"><button class="btn" data-review-commission="'+i.id+'" data-approve-commission="true">Tandai lunas</button><button class="btn secondary" data-review-commission="'+i.id+'" data-approve-commission="false">Tolak / minta ulang</button></div>':'')+(i.admin_note?'<p class="notice">Catatan: '+escapeHtml(i.admin_note)+'</p>':'')+'</article>').join('');
 }
 $('generateCommissionInvoices').addEventListener('click',async()=>{
- const now=new Date();now.setDate(1);now.setMonth(now.getMonth()-1);const period=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-01';
- if(!confirm('Terbitkan tagihan komisi untuk periode '+period+'? Hanya pesanan terkirim yang belum ditagihkan yang akan dihitung.'))return;
+ const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jakarta',year:'numeric',month:'2-digit'}).formatToParts(new Date());const year=Number(parts.find(p=>p.type==='year').value),month=Number(parts.find(p=>p.type==='month').value);const previous=new Date(Date.UTC(year,month-2,1));const period=previous.getUTCFullYear()+'-'+String(previous.getUTCMonth()+1).padStart(2,'0')+'-01';
+ if(!confirm('TAHAP 1 dari 2\\n\\nPeriode yang akan ditagihkan: '+period+'\\n\\nTagihan hanya untuk pesanan terkirim pada periode tersebut. Lanjutkan ke pemeriksaan akhir?'))return;
+ if(!confirm('TAHAP 2 dari 2\\n\\nPastikan periode '+period+' sudah selesai dan siap ditagihkan.\\n\\nTerbitkan tagihan sekarang?'))return;
  const btn=$('generateCommissionInvoices');btn.disabled=true;message('adminMessage','Menerbitkan tagihan komisi…');
  const {error}=await supabase.rpc('admin_generate_monthly_commission_invoices',{p_period_start:period,p_due_date:null});
  btn.disabled=false;
