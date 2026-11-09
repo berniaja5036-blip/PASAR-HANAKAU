@@ -255,6 +255,7 @@ async function loadSellerOrders(){
   const cancellationInfo=cancellation?'<p class="muted"><b>Permintaan pembatalan:</b> '+({pending:'Menunggu pemeriksaan admin',approved:'Disetujui',rejected:'Ditolak'}[cancellation.status]||cancellation.status)+(cancellation.admin_note?'<br>Catatan admin: '+escapeHtml(cancellation.admin_note):'')+'</p>':'';
   const canRequest=['pending','confirmed'].includes(o.status)&&(!cancellation||cancellation.status==='rejected');
   const cancellationButton=canRequest?'<button class="btn secondary" type="button" data-cancel-request="'+o.id+'">Ajukan pembatalan</button>':'';
+  const history=(o.order_status_history||[]).slice().sort((a,b)=>new Date(b.changed_at)-new Date(a.changed_at)).map(h=>'<div class="cartline"><span>'+escapeHtml(orderStatusLabel(h.to_status))+'</span><span class="muted">'+new Date(h.changed_at).toLocaleString('id-ID')+'</span></div>').join('');
   return '<article class="tile"><div class="row" style="justify-content:space-between"><b>'+escapeHtml(o.order_number)+'</b><b class="price">'+escapeHtml(labels[o.status]||o.status)+'</b></div><p class="muted">'+new Date(o.created_at).toLocaleString('id-ID')+'</p>'+cancellationInfo+cancellationButton+'<details><summary style="cursor:pointer;color:#176b45;font-weight:700;padding:8px 0">Lihat rincian barang dan catatan</summary>'+items+notes+'</details><details><summary style="cursor:pointer;color:#176b45;font-weight:700;padding:8px 0">Riwayat status pesanan</summary>'+(history||'<p class="muted">Belum ada riwayat status.</p>')+'</details><p class="price" style="margin-bottom:0">Total barang toko: '+formatRupiah(shopTotal)+'</p></article>';
  }).join('');
 }
@@ -488,13 +489,30 @@ $('adminOrders').addEventListener('click',async e=>{
 async function loadDriverTasks(){
  const box=$('driverTasks');if(!box)return;box.textContent='Memuat tugas…';
  const {data:{user}}=await supabase.auth.getUser();if(!user){box.textContent='Silakan masuk kembali.';return}
- const {data,error}=await supabase.from('deliveries').select('id,status,assigned_at,orders(order_number,status,delivery_address,notes,total,order_items(product_name,quantity,shops(name,address)))').eq('driver_id',user.id).order('assigned_at',{ascending:false});
+ const {data,error}=await supabase.from('deliveries').select('id,status,assigned_at,orders(order_number,status,delivery_address,notes,total,pickup_latitude,pickup_longitude,delivery_latitude,delivery_longitude,order_items(product_name,quantity,shops(name,address)))').eq('driver_id',user.id).order('assigned_at',{ascending:false});
  if(error){box.textContent='Tugas belum dapat dimuat: '+error.message;return}
  const labels={assigned:'Menunggu dijemput',picked_up:'Dalam perjalanan',delivered:'Selesai'};
  const noticeBox=$('driverNotifications');
  if(noticeBox)noticeBox.innerHTML=(data||[]).slice(0,5).map(d=>'<div style="padding:6px 0;border-bottom:1px solid #e5eee8"><b>'+escapeHtml(d.orders?.order_number||'Pesanan')+'</b> • '+escapeHtml(labels[d.status]||d.status)+'<div class="muted">'+(d.assigned_at?new Date(d.assigned_at).toLocaleString('id-ID'):'Tugas terbaru')+'</div></div>').join('')||'Belum ada tugas baru.';
  if(!data?.length){box.textContent='Belum ada tugas pengiriman yang ditugaskan kepada Anda.';return}
- box.innerHTML=data.map(d=>{const o=d.orders||{};const items=o.order_items||[];const pickup=[...new Set(items.map(i=>i.shops?.address).filter(Boolean))].join(' • ');const action=d.status==='assigned'?'<button class="btn" data-delivery-id="'+d.id+'" data-delivery-status="picked_up">Konfirmasi sudah dijemput</button>':d.status==='picked_up'?'<button class="btn" data-delivery-id="'+d.id+'" data-delivery-status="delivered">Konfirmasi sudah diantar</button>':'';return '<article class="tile"><b>'+escapeHtml(o.order_number||'Pesanan')+'</b><p class="muted">Status tugas: '+escapeHtml(labels[d.status]||d.status)+'</p><p class="muted"><b>Ambil di:</b> '+escapeHtml(pickup||'Alamat toko tersedia di detail pesanan')+'</p><p class="muted"><b>Antar ke:</b> '+escapeHtml(o.delivery_address||'')+'</p>'+items.map(i=>'<div class="muted">'+escapeHtml(i.product_name)+' × '+i.quantity+'</div>').join('')+(o.notes?'<p class="muted"><b>Catatan:</b> '+escapeHtml(o.notes)+'</p>':'')+action+'</article>';}).join('');
+ box.innerHTML=(data||[]).map(d=>{
+  const o=d.orders||{};
+  const items=o.order_items||[];
+  const pickup=[...new Set(items.map(i=>i.shops?.address).filter(Boolean))].join(' • ');
+  const rawCoordinates=[o.pickup_latitude,o.pickup_longitude,o.delivery_latitude,o.delivery_longitude];
+  const coordinates=rawCoordinates.map(Number);
+  const validCoordinates=rawCoordinates.every(value=>value!==null&&value!==undefined&&value!=='')
+   &&coordinates.every(Number.isFinite)
+   &&coordinates[0]>=-90&&coordinates[0]<=90
+   &&coordinates[1]>=-180&&coordinates[1]<=180
+   &&coordinates[2]>=-90&&coordinates[2]<=90
+   &&coordinates[3]>=-180&&coordinates[3]<=180;
+  const routeAction=validCoordinates
+   ?'<a class="btn secondary" style="display:inline-block;text-decoration:none;margin:8px 0" href="https://www.google.com/maps/dir/?api=1&origin='+coordinates[0]+','+coordinates[1]+'&destination='+coordinates[2]+','+coordinates[3]+'&travelmode=driving" target="_blank" rel="noopener">Buka rute di Google Maps</a>'
+   :'<p class="muted">Titik GPS belum tersedia untuk pesanan ini. Hubungi admin.</p>';
+  const action=d.status==='assigned'?'<button class="btn" data-delivery-id="'+d.id+'" data-delivery-status="picked_up">Konfirmasi sudah dijemput</button>':d.status==='picked_up'?'<button class="btn" data-delivery-id="'+d.id+'" data-delivery-status="delivered">Konfirmasi sudah diantar</button>':'';
+  return '<article class="tile"><b>'+escapeHtml(o.order_number||'Pesanan')+'</b><p class="muted">Status tugas: '+escapeHtml(labels[d.status]||d.status)+'</p><p class="muted"><b>Ambil di:</b> '+escapeHtml(pickup||'Alamat toko tersedia di detail pesanan')+'</p><p class="muted"><b>Antar ke:</b> '+escapeHtml(o.delivery_address||'')+'</p>'+routeAction+items.map(i=>'<div class="muted">'+escapeHtml(i.product_name)+' × '+i.quantity+'</div>').join('')+(o.notes?'<p class="muted"><b>Catatan:</b> '+escapeHtml(o.notes)+'</p>':'')+action+'</article>';
+ }).join('');
 }
 $('refreshDriverTasks').addEventListener('click',loadDriverTasks);
 $('driverTasks').addEventListener('click',async e=>{const btn=e.target.closest('[data-delivery-id][data-delivery-status]');if(!btn)return;btn.disabled=true;message('driverMessage','Memperbarui status pengiriman…');const {error}=await supabase.rpc('driver_update_delivery_status',{p_delivery_id:btn.dataset.deliveryId,p_new_status:btn.dataset.deliveryStatus,p_note:''});if(error){message('driverMessage','Status belum berubah: '+error.message,true);btn.disabled=false;return}message('driverMessage','Status pengiriman berhasil diperbarui.');await loadDriverTasks();});
