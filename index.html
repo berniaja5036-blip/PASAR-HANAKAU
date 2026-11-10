@@ -38,7 +38,7 @@ footer{color:#829087;font-size:12px;padding:30px 10px}
 @media(min-width:650px){.tile:hover{transform:translateY(-2px);box-shadow:0 9px 24px #18332912}.product{display:block}}
 @media(max-width:420px){.top h1{font-size:24px}.wrap{padding:13px}.panel{padding:14px}.authgrid{grid-template-columns:1fr}}
 
- #buyerDeliveryMap,#sellerPickupMap,#legacyShopPickupMap{height:280px;width:100%;border-radius:12px;border:1px solid #dce6df;margin:10px 0}.leaflet-container{font:inherit}
+ #buyerDeliveryMap,#sellerPickupMap,#legacyShopPickupMap,.driverOrderMap{height:280px;width:100%;border-radius:12px;border:1px solid #dce6df;margin:10px 0}.leaflet-container{font:inherit}
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
@@ -506,8 +506,26 @@ async function loadDriverTasks(){
    ?'<a class="btn secondary" style="display:inline-block;text-decoration:none;margin:8px 0" href="https://www.google.com/maps/dir/?api=1&origin='+coordinates[0]+','+coordinates[1]+'&destination='+coordinates[2]+','+coordinates[3]+'&travelmode=driving" target="_blank" rel="noopener">Buka rute di Google Maps</a>'
    :'<p class="muted">Titik GPS belum tersedia untuk pesanan ini. Hubungi admin.</p>';
   const action=d.status==='assigned'?'<button class="btn" data-delivery-id="'+d.id+'" data-delivery-status="picked_up">Konfirmasi sudah dijemput</button>':d.status==='picked_up'?'<button class="btn" data-delivery-id="'+d.id+'" data-delivery-status="delivered">Konfirmasi sudah diantar</button>':'';
-  return '<article class="tile"><b>'+escapeHtml(o.order_number||'Pesanan')+'</b><p class="muted">Status tugas: '+escapeHtml(labels[d.status]||d.status)+'</p><p class="muted"><b>Ambil di:</b> '+escapeHtml(pickup||'Alamat toko tersedia di detail pesanan')+'</p><p class="muted"><b>Antar ke:</b> '+escapeHtml(o.delivery_address||'')+'</p>'+routeAction+items.map(i=>'<div class="muted">'+escapeHtml(i.product_name)+' × '+i.quantity+'</div>').join('')+(o.notes?'<p class="muted"><b>Catatan:</b> '+escapeHtml(o.notes)+'</p>':'')+action+'</article>';
+  const mapHtml=validCoordinates
+   ?'<h4 style="margin:12px 0 6px;color:#244d38">Peta penjemputan dan pengantaran</h4><div id="driver-route-map-'+escapeHtml(d.id)+'" class="driverOrderMap" aria-label="Peta titik penjemputan dan pengantaran"></div><div id="driver-route-status-'+escapeHtml(d.id)+'" class="muted" role="status">Memuat peta tugas…</div>'
+   :'';
+  return '<article class="tile"><b>'+escapeHtml(o.order_number||'Pesanan')+'</b><p class="muted">Status tugas: '+escapeHtml(labels[d.status]||d.status)+'</p><p class="muted"><b>Ambil di:</b> '+escapeHtml(pickup||'Alamat toko tersedia di detail pesanan')+'</p><p class="muted"><b>Antar ke:</b> '+escapeHtml(o.delivery_address||'')+'</p>'+mapHtml+routeAction+items.map(i=>'<div class="muted">'+escapeHtml(i.product_name)+' × '+i.quantity+'</div>').join('')+(o.notes?'<p class="muted"><b>Catatan:</b> '+escapeHtml(o.notes)+'</p>':'')+action+'</article>';
  }).join('');
+ (data||[]).forEach(d=>{
+  const o=d.orders||{};
+  const coords=[o.pickup_latitude,o.pickup_longitude,o.delivery_latitude,o.delivery_longitude].map(Number);
+  if(coords.every(Number.isFinite)&&coords[0]>=-90&&coords[0]<=90&&coords[1]>=-180&&coords[1]<=180&&coords[2]>=-90&&coords[2]<=90&&coords[3]>=-180&&coords[3]<=180){
+   const mapId='driver-route-map-'+d.id;
+   const map=makePickerMap(mapId,null,{latitude:coords[0],longitude:coords[1]});
+   if(map){
+    if(map._pasarHanakauMarker)map._pasarHanakauMarker.bindPopup('Titik penjemputan');
+    const destination=L.marker([coords[2],coords[3]]).addTo(map).bindPopup('Titik pengantaran');
+    map.fitBounds([[coords[0],coords[1]],[coords[2],coords[3]]],{padding:[24,24],maxZoom:15});
+    const status=$('driver-route-status-'+d.id);
+    if(status)status.textContent='Penjemputan dan pengantaran ditandai pada peta. Tombol Google Maps membuka navigasi jalan.';
+   }
+  }
+ });
 }
 $('refreshDriverTasks').addEventListener('click',loadDriverTasks);
 $('driverTasks').addEventListener('click',async e=>{const btn=e.target.closest('[data-delivery-id][data-delivery-status]');if(!btn)return;btn.disabled=true;message('driverMessage','Memperbarui status pengiriman…');const {error}=await supabase.rpc('driver_update_delivery_status',{p_delivery_id:btn.dataset.deliveryId,p_new_status:btn.dataset.deliveryStatus,p_note:''});if(error){message('driverMessage','Status belum berubah: '+error.message,true);btn.disabled=false;return}message('driverMessage','Status pengiriman berhasil diperbarui.');await loadDriverTasks();});
@@ -535,35 +553,44 @@ function makePickerMap(elementId,existingMap,initialPoint){
  if(!window.L){element.innerHTML='<div style="padding:14px;color:#9b3b32">Pustaka peta belum termuat. Periksa koneksi internet lalu muat ulang halaman.</div>';return existingMap;}
  if(existingMap){[150,500,1000].forEach(delay=>setTimeout(()=>{if(existingMap&&element.isConnected){existingMap.invalidateSize(true);if(existingMap._pasarHanakauMarker)existingMap.panTo(existingMap._pasarHanakauMarker.getLatLng());}},delay));return existingMap;}
  const map=L.map(element).setView(initialPoint?[initialPoint.latitude,initialPoint.longitude]:HANAKAU_CENTER,initialPoint?17:14);
- // Sumber peta berlapis: CARTO, Esri, lalu OpenStreetMap.
- // Listener dipasang sebelum addTo agar kegagalan tile awal tidak terlewat.
+ // CARTO sengaja tidak digunakan karena meminta API key dan menampilkan watermark.
+ // Gunakan Esri terlebih dahulu, lalu OpenStreetMap sebagai cadangan.
  const providers=[
-  {name:'CARTO',url:'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',options:{subdomains:'abcd',maxZoom:19,attribution:'© OpenStreetMap © CARTO'}},
   {name:'Esri',url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',options:{maxZoom:19,attribution:'Tiles © Esri'}},
   {name:'OpenStreetMap',url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',options:{maxZoom:19,attribution:'© OpenStreetMap'}}
  ];
- let providerIndex=0,tiles=null,providerErrorCount=0,providerSwitching=false;
+ let providerIndex=0,tiles=null,providerErrorCount=0,providerSwitching=false,providerTimer=null,providerLoaded=false;
  const mapStatusId=elementId==='legacyShopPickupMap'?'shopLocationStatus':elementId==='sellerPickupMap'?'sellerPickupStatus':elementId==='buyerDeliveryMap'?'buyerLocationStatus':null;
  function showMapStatus(text){const status=mapStatusId&&$(mapStatusId);if(status)status.textContent=text;}
+ function switchMapProvider(){
+  if(providerSwitching)return;
+  providerSwitching=true;
+  if(providerTimer)clearTimeout(providerTimer);
+  if(providerIndex<providers.length-1){
+   const previous=providers[providerIndex].name;
+   if(tiles)map.removeLayer(tiles);
+   providerIndex++;
+   showMapStatus('Peta '+previous+' tidak berhasil dimuat. Mencoba '+providers[providerIndex].name+'…');
+   loadProvider();
+  }else{
+   showMapStatus('Peta gagal dimuat dari Esri dan OpenStreetMap. Periksa koneksi internet atau coba jaringan lain.');
+  }
+ }
  function loadProvider(){
   const provider=providers[providerIndex];
-  providerErrorCount=0;providerSwitching=false;
+  providerErrorCount=0;providerSwitching=false;providerLoaded=false;
   tiles=L.tileLayer(provider.url,provider.options);
+  tiles.on('tileload',()=>{
+   providerLoaded=true;
+   if(providerTimer)clearTimeout(providerTimer);
+   showMapStatus('Peta berhasil dimuat dari '+provider.name+'.');
+  });
   tiles.on('tileerror',()=>{
    providerErrorCount++;
-   if(providerErrorCount>=2&&!providerSwitching){
-    providerSwitching=true;
-    if(providerIndex<providers.length-1){
-     map.removeLayer(tiles);
-     providerIndex++;
-     showMapStatus('Sumber peta '+provider.name+' tidak merespons. Mencoba sumber peta '+providers[providerIndex].name+'…');
-     loadProvider();
-    }else{
-     showMapStatus('Semua sumber gambar peta gagal dimuat. Kemungkinan koneksi HP atau jaringan memblokir layanan peta. Coba jaringan internet lain.');
-    }
-   }
+   if(providerErrorCount>=2)switchMapProvider();
   });
   tiles.addTo(map);
+  providerTimer=setTimeout(()=>{if(!providerLoaded)switchMapProvider();},10000);
  }
  loadProvider();
  map._pasarHanakauMarker=initialPoint?L.marker([initialPoint.latitude,initialPoint.longitude]).addTo(map):null;
