@@ -14,12 +14,13 @@ Marketplace multi-penjual tahap awal untuk Desa Hanakau Jaya, Kecamatan Sungkai 
 ## Peran dan alur yang telah diterapkan
 
 1. Buyer mendaftar/login, melihat produk aktif, menambah ke keranjang, dan checkout.
-2. Seller mengajukan toko; Admin menyetujui atau menolak. Seller yang disetujui dapat mengelola produk dan memproses pesanan tokonya.
+2. Seller mengajukan toko; Admin menyetujui atau menolak. Seller yang disetujui dapat mengelola produk dan melihat pesanan tokonya melalui RPC terbatas `seller_list_orders`, tanpa menerima alamat atau koordinat pengantaran pembeli.
 3. Produk baru menunggu persetujuan Admin sebelum tampil pada katalog Buyer.
 4. Checkout dijalankan melalui RPC `checkout_cart`. Fungsi memeriksa akun Buyer, format keranjang, produk aktif, persetujuan toko, dan stok; mengunci baris produk saat transaksi; memisahkan pesanan per toko; lalu mengurangi stok.
 5. Admin memantau pesanan, memperbarui status, menyetujui Driver, dan menugaskan Driver untuk pesanan siap dijemput.
 6. Driver melihat hanya tugas yang ditugaskan kepadanya, lalu memperbarui status penjemputan dan pengantaran.
-7. Perubahan status pesanan direkam di `order_status_history`. Panel pemberitahuan Buyer, Seller, dan Driver membaca status/tugas terbaru dari database.
+7. Perubahan status pesanan direkam di `order_status_history`. Buyer dapat mengajukan pembatalan hanya saat status masih `pending`; Admin menyetujui atau menolaknya, dan stok dikembalikan secara atomik jika disetujui.
+8. Panel pemberitahuan Buyer, Seller, dan Driver membaca status/tugas terbaru dari database.
 
 ## Migrasi database
 
@@ -32,6 +33,11 @@ Migrasi berurutan berada di `supabase/migrations/`. Di antaranya:
 - `011_driver_workflow.sql`: pendaftaran, persetujuan, penugasan, dan alur Driver.
 - `012_seller_edit_products.sql` dan `013_seller_order_visibility.sql`: pengelolaan produk serta visibilitas pesanan Seller.
 - `014_order_status_history.sql`: riwayat status otomatis.
+- `015`–`016`: permintaan pembatalan oleh Buyer dan pemeriksaan Admin; hanya sebelum konfirmasi Admin.
+- `017`–`018`: fondasi tarif pengantaran dan tagihan komisi Seller; ongkir tetap nonaktif sampai tarif disepakati.
+- `019_order_location_coordinates.sql`: simpan titik GPS toko dan tujuan pada pesanan.
+- `020`–`022`: dokumen driver privat, penghapusan ketergantungan OTP WhatsApp, dan perbaikan trigger pendaftaran.
+- `023_secure_seller_order_read.sql`: RPC baca pesanan Seller yang tidak mengembalikan alamat/koordinat pembeli serta mencabut akses baris langsung Seller ke tabel `orders`.
 
 Jangan menjalankan ulang migrasi secara sembarang. Periksa terlebih dahulu migrasi mana yang sudah diterapkan pada proyek Supabase aktif.
 
@@ -51,7 +57,7 @@ Jangan menjalankan ulang migrasi secara sembarang. Periksa terlebih dahulu migra
 - Pembayaran online, COD terintegrasi, top-up, dan dompet saldo belum tersedia.
 - RPC checkout saat ini menetapkan `delivery_fee = 0`; tarif dan mekanisme pembagian biaya pengiriman belum ditetapkan.
 - Notifikasi belum memakai push notification browser/Android atau WhatsApp.
-- Pembatalan pesanan, refund, sengketa, dan penanganan kegagalan operasional perlu dirancang.
+- Alur permintaan pembatalan sebelum konfirmasi Admin tersedia. Refund, sengketa, dan penanganan kegagalan operasional setelah pembayaran belum dirancang karena pembayaran belum diaktifkan.
 - Belum ada APK Android.
 - Pengujian keamanan menyeluruh, privasi, pemulihan backup, dan kesiapan produksi belum selesai.
 
