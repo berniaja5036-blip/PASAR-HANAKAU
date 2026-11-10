@@ -4,11 +4,13 @@ Dokumen ini mengikuti skema database yang dipakai website saat ini: `profiles`, 
 
 ## Urutan migrasi
 
-Jalankan hanya tiga file berikut, berurutan, melalui Supabase SQL Editor:
+Untuk database baru, mulai dengan migrasi dasar berikut secara berurutan:
 
 1. `supabase/migrations/001_initial_schema.sql`
 2. `supabase/migrations/002_row_level_security.sql`
 3. `supabase/migrations/003_data_api_grants.sql`
+
+Fitur aplikasi saat ini juga memerlukan migrasi lanjutan `004` sampai `023` sesuai urutan nomor. Pada database yang sudah dipakai, jalankan hanya migrasi yang memang belum diterapkan—jangan mengulang migrasi lama. Khusus migrasi `023_secure_seller_order_read.sql`, jalankan satu kali setelah `022`; migrasi ini menambahkan RPC baca pesanan Seller yang membatasi data dan menghapus kebijakan baca langsung Seller pada tabel `orders`.
 
 Jangan jalankan file skema alternatif bertanggal `20261106...`; file tersebut memakai rancangan tabel berbeda dan bukan skema yang digunakan website saat ini.
 
@@ -30,7 +32,7 @@ where id = 'GANTI_DENGAN_UUID_AKUN_ADMIN';
 ## Keamanan dan batas tahap ini
 
 - File `003_data_api_grants.sql` hanya memberi izin baca minimum pada katalog publik dan profil akun. Row Level Security (RLS) tetap membatasi baris yang terlihat.
-- Belum ada checkout transaksional, pengelolaan pesanan lengkap, penugasan driver, atau integrasi pembayaran.
-- Jangan gunakan aplikasi ini untuk menerima uang atau pembayaran sungguhan.
+- Checkout transaksional, pengelolaan status pesanan, permintaan pembatalan, dan penugasan/pembaruan pengiriman Driver sudah tersedia melalui RPC yang memeriksa peran dan stok.
+- Pembayaran sungguhan, top-up, dan dompet saldo belum tersedia. Jangan gunakan aplikasi ini untuk menerima uang atau pembayaran sungguhan.
 - Jangan pernah memasukkan password, service-role key, atau access token ke kode website maupun repositori.
 - Publishable key boleh digunakan di browser; keamanan data tetap wajib ditegakkan oleh RLS dan izin database.
