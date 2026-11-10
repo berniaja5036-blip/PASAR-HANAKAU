@@ -535,8 +535,27 @@ function makePickerMap(elementId,existingMap,initialPoint){
  if(!window.L){element.innerHTML='<div style="padding:14px;color:#9b3b32">Pustaka peta belum termuat. Periksa koneksi internet lalu muat ulang halaman.</div>';return existingMap;}
  if(existingMap){[150,500,1000].forEach(delay=>setTimeout(()=>{if(existingMap&&element.isConnected){existingMap.invalidateSize(true);if(existingMap._pasarHanakauMarker)existingMap.panTo(existingMap._pasarHanakauMarker.getLatLng());}},delay));return existingMap;}
  const map=L.map(element).setView(initialPoint?[initialPoint.latitude,initialPoint.longitude]:HANAKAU_CENTER,initialPoint?17:14);
- const tiles=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
- tiles.on('tileerror',()=>{const status=$('shopLocationStatus');if(status&&elementId==='legacyShopPickupMap')status.textContent='Peta belum dapat memuat gambar. Periksa koneksi internet atau pemblokiran tile OpenStreetMap.';});
+ // Gunakan penyedia tile alternatif terlebih dahulu agar peta tidak kosong
+ // ketika server tile OpenStreetMap utama tidak dapat dijangkau dari jaringan HP.
+ let tileErrors=0,fallbackUsed=false;
+ const tiles=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+  maxZoom:19,subdomains:'abcd',
+  attribution:'© OpenStreetMap © CARTO'
+ }).addTo(map);
+ tiles.on('tileerror',()=>{
+  tileErrors++;
+  if(tileErrors>=2&&!fallbackUsed){
+   fallbackUsed=true;
+   map.removeLayer(tiles);
+   const fallback=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    maxZoom:19,attribution:'© OpenStreetMap'
+   }).addTo(map);
+   fallback.on('tileerror',()=>{
+    const status=elementId==='legacyShopPickupMap'?$('shopLocationStatus'):elementId==='sellerPickupMap'?$('sellerPickupStatus'):$('buyerLocationStatus');
+    if(status)status.textContent='Gambar peta tidak dapat dimuat. Periksa koneksi internet HP, lalu muat ulang halaman.';
+   });
+  }
+ });
  map._pasarHanakauMarker=initialPoint?L.marker([initialPoint.latitude,initialPoint.longitude]).addTo(map):null;
  [150,500,1000].forEach(delay=>setTimeout(()=>{if(map&&element.isConnected){map.invalidateSize(true);if(map._pasarHanakauMarker)map.panTo(map._pasarHanakauMarker.getLatLng());}},delay));
  return map;
