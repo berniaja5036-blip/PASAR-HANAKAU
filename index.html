@@ -535,27 +535,37 @@ function makePickerMap(elementId,existingMap,initialPoint){
  if(!window.L){element.innerHTML='<div style="padding:14px;color:#9b3b32">Pustaka peta belum termuat. Periksa koneksi internet lalu muat ulang halaman.</div>';return existingMap;}
  if(existingMap){[150,500,1000].forEach(delay=>setTimeout(()=>{if(existingMap&&element.isConnected){existingMap.invalidateSize(true);if(existingMap._pasarHanakauMarker)existingMap.panTo(existingMap._pasarHanakauMarker.getLatLng());}},delay));return existingMap;}
  const map=L.map(element).setView(initialPoint?[initialPoint.latitude,initialPoint.longitude]:HANAKAU_CENTER,initialPoint?17:14);
- // Gunakan penyedia tile alternatif terlebih dahulu agar peta tidak kosong
- // ketika server tile OpenStreetMap utama tidak dapat dijangkau dari jaringan HP.
- let tileErrors=0,fallbackUsed=false;
- const tiles=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
-  maxZoom:19,subdomains:'abcd',
-  attribution:'© OpenStreetMap © CARTO'
- }).addTo(map);
- tiles.on('tileerror',()=>{
-  tileErrors++;
-  if(tileErrors>=2&&!fallbackUsed){
-   fallbackUsed=true;
-   map.removeLayer(tiles);
-   const fallback=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-    maxZoom:19,attribution:'© OpenStreetMap'
-   }).addTo(map);
-   fallback.on('tileerror',()=>{
-    const status=elementId==='legacyShopPickupMap'?$('shopLocationStatus'):elementId==='sellerPickupMap'?$('sellerPickupStatus'):$('buyerLocationStatus');
-    if(status)status.textContent='Gambar peta tidak dapat dimuat. Periksa koneksi internet HP, lalu muat ulang halaman.';
-   });
-  }
- });
+ // Sumber peta berlapis: CARTO, Esri, lalu OpenStreetMap.
+ // Listener dipasang sebelum addTo agar kegagalan tile awal tidak terlewat.
+ const providers=[
+  {name:'CARTO',url:'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',options:{subdomains:'abcd',maxZoom:19,attribution:'© OpenStreetMap © CARTO'}},
+  {name:'Esri',url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',options:{maxZoom:19,attribution:'Tiles © Esri'}},
+  {name:'OpenStreetMap',url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',options:{maxZoom:19,attribution:'© OpenStreetMap'}}
+ ];
+ let providerIndex=0,tiles=null,providerErrorCount=0,providerSwitching=false;
+ const mapStatusId=elementId==='legacyShopPickupMap'?'shopLocationStatus':elementId==='sellerPickupMap'?'sellerPickupStatus':elementId==='buyerDeliveryMap'?'buyerLocationStatus':null;
+ function showMapStatus(text){const status=mapStatusId&&$(mapStatusId);if(status)status.textContent=text;}
+ function loadProvider(){
+  const provider=providers[providerIndex];
+  providerErrorCount=0;providerSwitching=false;
+  tiles=L.tileLayer(provider.url,provider.options);
+  tiles.on('tileerror',()=>{
+   providerErrorCount++;
+   if(providerErrorCount>=2&&!providerSwitching){
+    providerSwitching=true;
+    if(providerIndex<providers.length-1){
+     map.removeLayer(tiles);
+     providerIndex++;
+     showMapStatus('Sumber peta '+provider.name+' tidak merespons. Mencoba sumber peta '+providers[providerIndex].name+'…');
+     loadProvider();
+    }else{
+     showMapStatus('Semua sumber gambar peta gagal dimuat. Kemungkinan koneksi HP atau jaringan memblokir layanan peta. Coba jaringan internet lain.');
+    }
+   }
+  });
+  tiles.addTo(map);
+ }
+ loadProvider();
  map._pasarHanakauMarker=initialPoint?L.marker([initialPoint.latitude,initialPoint.longitude]).addTo(map):null;
  [150,500,1000].forEach(delay=>setTimeout(()=>{if(map&&element.isConnected){map.invalidateSize(true);if(map._pasarHanakauMarker)map.panTo(map._pasarHanakauMarker.getLatLng());}},delay));
  return map;
