@@ -530,11 +530,15 @@ let buyerDeliveryPoint=null,sellerPickupPoint=null,legacyShopPickupPoint=null;
 const HANAKAU_CENTER=[-4.56188,104.74436];
 let buyerMap=null,buyerMapMarker=null,sellerApplyMap=null,sellerApplyMarker=null,legacyShopMap=null,legacyShopMarker=null;
 function makePickerMap(elementId,existingMap,initialPoint){
- if(!window.L||!$(elementId))return existingMap;
- if(existingMap){setTimeout(()=>existingMap.invalidateSize(),100);return existingMap;}
- const map=L.map(elementId).setView(initialPoint?[initialPoint.latitude,initialPoint.longitude]:HANAKAU_CENTER,initialPoint?17:14);
- L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+ const element=$(elementId);
+ if(!element)return existingMap;
+ if(!window.L){element.innerHTML='<div style="padding:14px;color:#9b3b32">Pustaka peta belum termuat. Periksa koneksi internet lalu muat ulang halaman.</div>';return existingMap;}
+ if(existingMap){[150,500,1000].forEach(delay=>setTimeout(()=>{if(existingMap&&element.isConnected){existingMap.invalidateSize(true);if(existingMap._pasarHanakauMarker)existingMap.panTo(existingMap._pasarHanakauMarker.getLatLng());}},delay));return existingMap;}
+ const map=L.map(element).setView(initialPoint?[initialPoint.latitude,initialPoint.longitude]:HANAKAU_CENTER,initialPoint?17:14);
+ const tiles=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+ tiles.on('tileerror',()=>{const status=$('shopLocationStatus');if(status&&elementId==='legacyShopPickupMap')status.textContent='Peta belum dapat memuat gambar. Periksa koneksi internet atau pemblokiran tile OpenStreetMap.';});
  map._pasarHanakauMarker=initialPoint?L.marker([initialPoint.latitude,initialPoint.longitude]).addTo(map):null;
+ [150,500,1000].forEach(delay=>setTimeout(()=>{if(map&&element.isConnected){map.invalidateSize(true);if(map._pasarHanakauMarker)map.panTo(map._pasarHanakauMarker.getLatLng());}},delay));
  return map;
 }
 function setPickerMapPoint(map,point){
@@ -577,7 +581,7 @@ function captureDeviceGps(buttonId,statusId,mapGetter,onCaptured){
 function renderBuyerLocationStatus(){const box=$('buyerLocationStatus');if(box)box.textContent=buyerDeliveryPoint?'Lokasi GPS pengantaran tersimpan (akurasi '+Math.round(buyerDeliveryPoint.accuracy)+' m): '+buyerDeliveryPoint.latitude.toFixed(6)+', '+buyerDeliveryPoint.longitude.toFixed(6)+'.':'Belum ada lokasi GPS pengantaran. Tekan Ambil lokasi GPS HP saat berada di titik tujuan.';}
 function initBuyerMap(){buyerMap=makePickerMap('buyerDeliveryMap',buyerMap);}
 function initSellerApplyMap(){sellerApplyMap=makePickerMap('sellerPickupMap',sellerApplyMap);}
-function initLegacyShopMap(initialPoint=null){legacyShopMap=makePickerMap('legacyShopPickupMap',legacyShopMap,initialPoint);if(legacyShopMap&&!legacyShopMap._pasarShopClickBound){legacyShopMap.on('click',event=>{const point={latitude:Number(event.latlng.lat.toFixed(6)),longitude:Number(event.latlng.lng.toFixed(6)),accuracy:null};legacyShopPickupPoint=point;setPickerMapPoint(legacyShopMap,point);const status=$('shopLocationStatus');if(status)status.textContent='Titik baru dipilih: '+point.latitude.toFixed(6)+', '+point.longitude.toFixed(6)+'. Tekan Simpan titik penjemputan toko.';});legacyShopMap._pasarShopClickBound=true;}}
+function initLegacyShopMap(initialPoint=null){legacyShopMap=makePickerMap('legacyShopPickupMap',legacyShopMap,initialPoint);if(legacyShopMap&&!legacyShopMap._pasarShopClickBound){legacyShopMap.on('click',event=>{const point={latitude:Number(event.latlng.lat.toFixed(6)),longitude:Number(event.latlng.lng.toFixed(6)),accuracy:null};legacyShopPickupPoint=point;setPickerMapPoint(legacyShopMap,point);const status=$('shopLocationStatus');if(status)status.textContent='Titik baru dipilih: '+point.latitude.toFixed(6)+', '+point.longitude.toFixed(6)+'. Tekan Simpan titik penjemputan toko.';});legacyShopMap._pasarShopClickBound=true;}if(legacyShopMap){[200,700,1300].forEach(delay=>setTimeout(()=>legacyShopMap?.invalidateSize(true),delay));}}
 captureDeviceGps('useBuyerGps','buyerLocationStatus',()=>buyerMap,p=>{buyerDeliveryPoint=p;renderBuyerLocationStatus();});
 captureDeviceGps('useSellerGps','sellerPickupStatus',()=>sellerApplyMap,p=>{$('sellerPickupStatus').textContent='Lokasi GPS toko tersimpan (akurasi '+Math.round(p.accuracy)+' m): '+p.latitude.toFixed(6)+', '+p.longitude.toFixed(6)+'.';});
 captureDeviceGps('useLegacyShopGps','shopLocationStatus',()=>legacyShopMap,p=>{legacyShopPickupPoint=p;$('shopLocationStatus').textContent='Lokasi GPS toko tersimpan (akurasi '+Math.round(p.accuracy)+' m): '+p.latitude.toFixed(6)+', '+p.longitude.toFixed(6)+'.';});
