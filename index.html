@@ -238,7 +238,7 @@ async function loadSellerShop(){
 async function loadSellerOrders(){
  const box=$('sellerOrders');if(!box||!sellerShopId)return;
  box.textContent='Memuat pesanan toko…';
- const {data,error}=await supabase.from('orders').select('id,order_number,status,created_at,notes,order_items(product_name,quantity,unit_price,line_total),order_status_history(from_status,to_status,changed_at)').order('created_at',{ascending:false}).limit(50);
+ const {data,error}=await supabase.rpc('seller_list_orders');
  if(error){box.textContent='Pesanan toko belum dapat dimuat: '+error.message;return}
  const orders=(data||[]).filter(o=>(o.order_items||[]).length>0);
  const notices=orders.flatMap(o=>(o.order_status_history||[]).map(h=>({order:o.order_number,...h}))).sort((a,b)=>new Date(b.changed_at)-new Date(a.changed_at)).slice(0,5);
