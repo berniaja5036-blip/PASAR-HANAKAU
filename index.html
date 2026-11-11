@@ -551,7 +551,7 @@ async function loadOrderDriverDetails(orderIds){
  const profileMap=new Map((publicProfiles||[]).map(p=>[p.user_id,p]));
  (deliveries||[]).forEach(delivery=>{
   const driver=driverMap.get(delivery.driver_id),profile=profileMap.get(delivery.driver_id);
-  if(driver)result.set(delivery.order_id,{display_name:profile?.display_name||'Driver Pasar Hanakau',avatar_path:profile?.avatar_path||null,vehicle_type:driver.vehicle_type||'Jenis kendaraan belum diisi',status:delivery.status});
+  if(driver)result.set(delivery.order_id,{driver_id:delivery.driver_id,display_name:profile?.display_name||'Driver Pasar Hanakau',avatar_path:profile?.avatar_path||null,vehicle_type:driver.vehicle_type||'Jenis kendaraan belum diisi',status:delivery.status});
  });
  return result;
 }
@@ -953,9 +953,18 @@ $('checkoutButton').addEventListener('click',async()=>{
 async function loadBuyerOrders(){
  if(!activeBuyerId)return;
  const box=$('buyerOrders');box.textContent='Memuat riwayat pesanan…';
- const {data,error}=await supabase.from('orders').select('id,order_number,status,subtotal,delivery_fee,total,delivery_address,notes,created_at,buyer_received_at,delivery_fee_payment_status,delivery_fee_payment_method,delivery_fee_dispute_note,order_items(product_name,quantity,line_total),order_status_history(from_status,to_status,changed_at),order_cancellation_requests(id,status,reason,admin_note,created_at)').eq('buyer_id',activeBuyerId).order('created_at',{ascending:false}).limit(30);
+ const {data,error}=await supabase.from('orders').select('id,order_number,status,subtotal,delivery_fee,total,delivery_address,notes,created_at,buyer_received_at,delivery_fee_payment_status,delivery_fee_payment_method,delivery_fee_dispute_note,order_items(id,product_id,shop_id,product_name,quantity,line_total),order_status_history(from_status,to_status,changed_at),order_cancellation_requests(id,status,reason,admin_note,created_at)').eq('buyer_id',activeBuyerId).order('created_at',{ascending:false}).limit(30);
  if(error){box.textContent='Pesanan belum dapat dimuat: '+error.message;return}
  const driverInfoByOrder=await loadOrderDriverDetails((data||[]).map(o=>o.id));
+ const itemIds=(data||[]).flatMap(o=>(o.order_items||[]).map(i=>i.id));
+ const [{data:productReviews,error:productReviewError},{data:driverRatings,error:driverRatingError}]=await Promise.all([
+  itemIds.length?supabase.from('product_reviews').select('id,order_item_id,rating,review_text').in('order_item_id',itemIds):Promise.resolve({data:[],error:null}),
+  (data||[]).length?supabase.from('driver_ratings').select('id,order_id,rating,review_text').in('order_id',(data||[]).map(o=>o.id)):Promise.resolve({data:[],error:null})
+ ]);
+ if(productReviewError)console.warn('Ulasan produk belum dapat dimuat:',productReviewError.message);
+ if(driverRatingError)console.warn('Penilaian driver belum dapat dimuat:',driverRatingError.message);
+ const productReviewMap=new Map((productReviews||[]).map(r=>[r.order_item_id,r]));
+ const driverRatingMap=new Map((driverRatings||[]).map(r=>[r.order_id,r]));
  const noticeBox=$('buyerNotifications');
  const notices=(data||[]).flatMap(o=>(o.order_status_history||[]).map(h=>({order:o.order_number,...h}))).sort((a,b)=>new Date(b.changed_at)-new Date(a.changed_at)).slice(0,5);
  if(noticeBox)noticeBox.innerHTML=notices.length?notices.map(n=>'<div style="padding:6px 0;border-bottom:1px solid #e5eee8"><b>'+escapeHtml(n.order)+'</b> • '+escapeHtml(orderStatusLabel(n.to_status))+'<div class="muted">'+new Date(n.changed_at).toLocaleString('id-ID')+'</div></div>').join(''):'Belum ada perubahan status pesanan.';
@@ -967,12 +976,38 @@ async function loadBuyerOrders(){
   const cancellationInfo=cancellation?'<p class="muted"><b>Permintaan pembatalan:</b> '+({pending:'Menunggu pemeriksaan admin',approved:'Disetujui',rejected:'Ditolak'}[cancellation.status]||cancellation.status)+(cancellation.admin_note?'<br>Catatan admin: '+escapeHtml(cancellation.admin_note):'')+'</p>':'';
   const canRequest=o.status==='pending'&&(!cancellation||cancellation.status==='rejected');
   const cancellationButton=canRequest?'<button class="btn secondary" type="button" data-cancel-request="'+o.id+'">Ajukan pembatalan</button>':'';
+  const productReviewHtml=(o.status==='delivered'&&o.buyer_received_at?(o.order_items||[]).map(item=>{
+   const existing=productReviewMap.get(item.id);
+   return '<div class="tile" style="margin:8px 0"><b>Ulasan: '+escapeHtml(item.product_name)+'</b>'+(existing?'<p class="price">'+('★'.repeat(Number(existing.rating)))+' ('+existing.rating+'/5)</p><p class="muted">'+escapeHtml(existing.review_text||'Tanpa komentar')+'</p>':'<label for="product-rating-'+item.id+'">Nilai produk</label><select class="field" id="product-rating-'+item.id+'"><option value="5">5 - Sangat baik</option><option value="4">4 - Baik</option><option value="3">3 - Cukup</option><option value="2">2 - Kurang</option><option value="1">1 - Buruk</option></select><label for="product-review-'+item.id+'">Ulasan (opsional)</label><textarea class="field" id="product-review-'+item.id+'" maxlength="1000" placeholder="Bagaimana kualitas produk ini?"></textarea><button class="btn secondary" data-product-review="'+item.id+'" data-product-id="'+item.product_id+'" data-shop-id="'+item.shop_id+'">Kirim ulasan produk</button>')+'</div>';
+  }).join(''):'');
+  const driverInfo=driverInfoByOrder.get(o.id),existingDriverRating=driverRatingMap.get(o.id);
+  const driverRatingHtml=o.status==='delivered'&&o.buyer_received_at&&driverInfo?.driver_id?'<div class="tile" style="margin:8px 0"><b>Penilaian driver</b>'+(existingDriverRating?'<p class="price">'+('★'.repeat(Number(existingDriverRating.rating)))+' ('+existingDriverRating.rating+'/5)</p><p class="muted">'+escapeHtml(existingDriverRating.review_text||'Tanpa komentar')+'</p>':'<label for="driver-rating-'+o.id+'">Nilai pelayanan driver</label><select class="field" id="driver-rating-'+o.id+'"><option value="5">5 - Sangat baik</option><option value="4">4 - Baik</option><option value="3">3 - Cukup</option><option value="2">2 - Kurang</option><option value="1">1 - Buruk</option></select><label for="driver-review-'+o.id+'">Komentar (opsional)</label><textarea class="field" id="driver-review-'+o.id+'" maxlength="1000" placeholder="Bagaimana pelayanan driver?"></textarea><button class="btn secondary" data-driver-review="'+o.id+'" data-driver-id="'+driverInfo.driver_id+'">Kirim penilaian driver</button>')+'</div>':'';
   const buyerHistoryHtml=(o.order_status_history||[]).slice().sort((a,b)=>new Date(a.changed_at)-new Date(b.changed_at)).map(h=>'<div class="muted" style="padding:5px 0">'+(h.from_status?escapeHtml(orderStatusLabel(h.from_status))+' → ':'')+escapeHtml(orderStatusLabel(h.to_status))+' • '+new Date(h.changed_at).toLocaleString('id-ID')+'</div>').join('');
-  return '<article class="tile"><div class="row" style="justify-content:space-between"><b>'+escapeHtml(o.order_number)+'</b><b class="price">'+escapeHtml(labels[o.status]||o.status)+'</b></div><p class="muted">'+new Date(o.created_at).toLocaleString('id-ID')+'</p>'+renderOrderDriverInfo(driverInfoByOrder.get(o.id))+cancellationInfo+cancellationButton+(o.status==='delivered'&&!o.buyer_received_at?'<button class="btn" type="button" data-confirm-received="'+o.id+'">Konfirmasi barang sudah diterima</button>':'')+(o.buyer_received_at?'<p class="muted">Penerimaan barang dikonfirmasi '+new Date(o.buyer_received_at).toLocaleString('id-ID')+'</p>':'')+(Number(o.delivery_fee)>0?'<p class="muted"><b>Status pembayaran ongkir:</b> '+escapeHtml(({unpaid:'Belum dikonfirmasi',buyer_confirmed:'Pembeli sudah konfirmasi',driver_confirmed:'Driver sudah konfirmasi',confirmed:'Pembayaran terkonfirmasi',disputed:'Sedang diperiksa admin'}[o.delivery_fee_payment_status]||o.delivery_fee_payment_status||'Belum diketahui'))+'</p>'+(o.buyer_received_at&&o.delivery_fee_payment_status!=='confirmed'&&o.delivery_fee_payment_status!=='disputed'?'<button class="btn secondary" type="button" data-confirm-buyer-fee="'+o.id+'">Konfirmasi ongkir sudah dibayar</button> <button class="btn secondary" type="button" data-dispute-buyer-fee="'+o.id+'">Laporkan masalah ongkir</button>':'')+(o.delivery_fee_dispute_note?'<p class="muted">Catatan masalah: '+escapeHtml(o.delivery_fee_dispute_note)+'</p>':''):'')+'<details><summary style="cursor:pointer;color:#176b45;font-weight:700;padding:8px 0">Lihat detail pesanan</summary>'+items+'<p class="muted"><b>Alamat pengantaran:</b><br>'+escapeHtml(o.delivery_address||'-')+'</p>'+(o.notes?'<p class="muted"><b>Catatan:</b> '+escapeHtml(o.notes)+'</p>':'')+'<div class="cartline"><span>Subtotal</span><b>'+formatRupiah(o.subtotal)+'</b></div><div class="cartline"><span>Ongkos kirim</span><b>'+formatRupiah(o.delivery_fee||0)+'</b></div></details><details><summary style="cursor:pointer;color:#176b45;font-weight:700;padding:8px 0">Riwayat status pesanan</summary>'+(buyerHistoryHtml||'<p class="muted">Belum ada riwayat status.</p>')+'</details><p class="price" style="font-size:18px;margin-bottom:0">Total '+formatRupiah(o.total)+'</p></article>';
+  return '<article class="tile"><div class="row" style="justify-content:space-between"><b>'+escapeHtml(o.order_number)+'</b><b class="price">'+escapeHtml(labels[o.status]||o.status)+'</b></div><p class="muted">'+new Date(o.created_at).toLocaleString('id-ID')+'</p>'+renderOrderDriverInfo(driverInfoByOrder.get(o.id))+productReviewHtml+driverRatingHtml+cancellationInfo+cancellationButton+(o.status==='delivered'&&!o.buyer_received_at?'<button class="btn" type="button" data-confirm-received="'+o.id+'">Konfirmasi barang sudah diterima</button>':'')+(o.buyer_received_at?'<p class="muted">Penerimaan barang dikonfirmasi '+new Date(o.buyer_received_at).toLocaleString('id-ID')+'</p>':'')+(Number(o.delivery_fee)>0?'<p class="muted"><b>Status pembayaran ongkir:</b> '+escapeHtml(({unpaid:'Belum dikonfirmasi',buyer_confirmed:'Pembeli sudah konfirmasi',driver_confirmed:'Driver sudah konfirmasi',confirmed:'Pembayaran terkonfirmasi',disputed:'Sedang diperiksa admin'}[o.delivery_fee_payment_status]||o.delivery_fee_payment_status||'Belum diketahui'))+'</p>'+(o.buyer_received_at&&o.delivery_fee_payment_status!=='confirmed'&&o.delivery_fee_payment_status!=='disputed'?'<button class="btn secondary" type="button" data-confirm-buyer-fee="'+o.id+'">Konfirmasi ongkir sudah dibayar</button> <button class="btn secondary" type="button" data-dispute-buyer-fee="'+o.id+'">Laporkan masalah ongkir</button>':'')+(o.delivery_fee_dispute_note?'<p class="muted">Catatan masalah: '+escapeHtml(o.delivery_fee_dispute_note)+'</p>':''):'')+'<details><summary style="cursor:pointer;color:#176b45;font-weight:700;padding:8px 0">Lihat detail pesanan</summary>'+items+'<p class="muted"><b>Alamat pengantaran:</b><br>'+escapeHtml(o.delivery_address||'-')+'</p>'+(o.notes?'<p class="muted"><b>Catatan:</b> '+escapeHtml(o.notes)+'</p>':'')+'<div class="cartline"><span>Subtotal</span><b>'+formatRupiah(o.subtotal)+'</b></div><div class="cartline"><span>Ongkos kirim</span><b>'+formatRupiah(o.delivery_fee||0)+'</b></div></details><details><summary style="cursor:pointer;color:#176b45;font-weight:700;padding:8px 0">Riwayat status pesanan</summary>'+(buyerHistoryHtml||'<p class="muted">Belum ada riwayat status.</p>')+'</details><p class="price" style="font-size:18px;margin-bottom:0">Total '+formatRupiah(o.total)+'</p></article>';
  }).join('');
 }
 $('refreshBuyerOrders').addEventListener('click',loadBuyerOrders);
 $('buyerOrders').addEventListener('click',async e=>{
+ const productReviewButton=e.target.closest('[data-product-review]');
+ if(productReviewButton){
+  const itemId=productReviewButton.dataset.productReview;
+  const rating=Number($('product-rating-'+itemId)?.value||5);
+  const review=($('product-review-'+itemId)?.value||'').trim();
+  productReviewButton.disabled=true;
+  const {error}=await supabase.from('product_reviews').insert({order_item_id:itemId,product_id:productReviewButton.dataset.productId,shop_id:productReviewButton.dataset.shopId,buyer_id:activeBuyerId,rating,review_text:review||null});
+  if(error){message('checkoutMessage','Ulasan produk gagal dikirim: '+error.message,true);productReviewButton.disabled=false;return;}
+  message('checkoutMessage','Terima kasih, ulasan produk berhasil dikirim.');await loadBuyerOrders();return;
+ }
+ const driverReviewButton=e.target.closest('[data-driver-review]');
+ if(driverReviewButton){
+  const orderId=driverReviewButton.dataset.driverReview;
+  const rating=Number($('driver-rating-'+orderId)?.value||5);
+  const review=($('driver-review-'+orderId)?.value||'').trim();
+  driverReviewButton.disabled=true;
+  const {error}=await supabase.from('driver_ratings').insert({order_id:orderId,driver_id:driverReviewButton.dataset.driverId,buyer_id:activeBuyerId,rating,review_text:review||null});
+  if(error){message('checkoutMessage','Penilaian driver gagal dikirim: '+error.message,true);driverReviewButton.disabled=false;return;}
+  message('checkoutMessage','Terima kasih, penilaian driver berhasil dikirim.');await loadBuyerOrders();return;
+ }
  const received=e.target.closest('[data-confirm-received]');
  if(received){if(!confirm('Pastikan barang sudah Anda terima. Lanjutkan konfirmasi?'))return;received.disabled=true;const {error}=await supabase.rpc('buyer_confirm_order_received',{p_order_id:received.dataset.confirmReceived});if(error){message('checkoutMessage','Konfirmasi penerimaan gagal: '+error.message,true);received.disabled=false;return;}message('checkoutMessage','Penerimaan barang berhasil dikonfirmasi.');await loadBuyerOrders();return;}
  const feeConfirm=e.target.closest('[data-confirm-buyer-fee]');
