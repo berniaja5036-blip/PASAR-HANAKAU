@@ -505,7 +505,8 @@ async function loadDriverTasks(){
  box.innerHTML=(data||[]).map(d=>{
   const o=d.orders||{};
   const items=o.order_items||[];
-  const pickup=[...new Set(items.map(i=>i.shops?.address).filter(Boolean))].join(' • ');
+  const pickupShops=[...new Map(items.filter(i=>i.shops?.name).map(i=>[i.shops.name,{name:i.shops.name,address:i.shops.address||''}])).values()];
+  const pickup=pickupShops.map(shop=>shop.name+(shop.address?' — '+shop.address:'')).join(' • ');
   const rawCoordinates=[o.pickup_latitude,o.pickup_longitude,o.delivery_latitude,o.delivery_longitude];
   const coordinates=rawCoordinates.map(Number);
   const validCoordinates=rawCoordinates.every(value=>value!==null&&value!==undefined&&value!=='')
@@ -521,7 +522,7 @@ async function loadDriverTasks(){
   const mapHtml=validCoordinates
    ?'<h4 style="margin:12px 0 6px;color:#244d38">Peta penjemputan dan pengantaran</h4><div id="driver-route-map-'+escapeHtml(d.id)+'" class="driverOrderMap" aria-label="Peta titik penjemputan dan pengantaran"></div><div id="driver-route-status-'+escapeHtml(d.id)+'" class="muted" role="status">Memuat peta tugas…</div>'
    :'';
-  return '<article class="tile"><b>'+escapeHtml(o.order_number||'Pesanan')+'</b><p class="muted">Status tugas: '+escapeHtml(labels[d.status]||d.status)+'</p><p class="muted"><b>Ambil di:</b> '+escapeHtml(pickup||'Alamat toko tersedia di detail pesanan')+'</p><p class="muted"><b>Antar ke:</b> '+escapeHtml(o.delivery_address||'')+'</p>'+mapHtml+routeAction+items.map(i=>'<div class="muted">'+escapeHtml(i.product_name)+' × '+i.quantity+'</div>').join('')+(o.notes?'<p class="muted"><b>Catatan:</b> '+escapeHtml(o.notes)+'</p>':'')+action+'</article>';
+  return '<article class="tile"><b>'+escapeHtml(o.order_number||'Pesanan')+'</b><p class="muted">Status tugas: '+escapeHtml(labels[d.status]||d.status)+'</p><p class="muted"><b>Nama toko / ambil di:</b> '+escapeHtml(pickup||'Informasi toko belum tersedia')+'</p><p class="muted"><b>Antar ke:</b> '+escapeHtml(o.delivery_address||'')+'</p>'+mapHtml+routeAction+items.map(i=>'<div class="muted">'+escapeHtml(i.product_name)+' × '+i.quantity+'</div>').join('')+(o.notes?'<p class="muted"><b>Catatan:</b> '+escapeHtml(o.notes)+'</p>':'')+action+'</article>';
  }).join('');
  (data||[]).forEach(d=>{
   const o=d.orders||{};
