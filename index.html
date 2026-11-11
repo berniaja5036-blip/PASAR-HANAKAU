@@ -142,7 +142,7 @@ async function refreshSession(){
    return;
   }
   $('accountRole').textContent='Peran: Pembeli';
-  activePanelRole='buyer';$('buyerPanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');initBuyerMap();activeBuyerId=session.user.id;loadCart();loadBuyerDeliveryPoint();renderCart();await loadCatalog();await loadBuyerOrders();return;
+  activePanelRole='buyer';$('buyerPanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');initBuyerMap();activeBuyerId=session.user.id;loadCart();renderBuyerLocationStatus();renderCart();await loadCatalog();await loadBuyerOrders();return;
  }
  if(driverApplication || requestedRole==='driver'){
   activePanelRole='driver-application';$('driverApplyPanel').classList.remove('hidden');
@@ -177,7 +177,7 @@ async function refreshSession(){
   return;
  }
  $('accountRole').textContent='Peran: Pembeli';
- activePanelRole='buyer';$('buyerPanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');initBuyerMap();activeBuyerId=session.user.id;loadCart();loadBuyerDeliveryPoint();renderCart();await loadCatalog();await loadBuyerOrders();
+ activePanelRole='buyer';$('buyerPanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');initBuyerMap();activeBuyerId=session.user.id;loadCart();renderBuyerLocationStatus();renderCart();await loadCatalog();await loadBuyerOrders();
 }
 $('signIn').addEventListener('click',async()=>{const c=validCredentials();if(!c)return; $('signIn').disabled=true;message('authMessage','Sedang masuk…');const {error}=await supabase.auth.signInWithPassword(c);$('signIn').disabled=false;if(error)message('authMessage',error.message,true);else{message('authMessage','Berhasil masuk.');await refreshSession();}});
 $('signUp').addEventListener('click',async()=>{const c=validCredentials();if(!c)return;const full_name=$('registerFullName').value.trim(),phone=$('registerPhone').value.trim(),full_address=$('registerAddress').value.trim();if(c.password.length<6){message('authMessage','Kata sandi minimal 6 karakter.',true);return}if(full_name.length<3||phone.replace(/\D/g,'').length<9||full_address.length<10){message('authMessage','Lengkapi nama, nomor WhatsApp aktif, dan alamat lengkap.',true);return}$('signUp').disabled=true;message('authMessage','Sedang membuat akun…');if(!['buyer','seller','driver'].includes(selectedEntryRole)){message('authMessage','Pendaftaran admin tidak tersedia melalui halaman publik.',true);return}const {data,error}=await supabase.auth.signUp({email:c.email,password:c.password,options:{data:{full_name,phone,full_address,requested_role:selectedEntryRole}}});$('signUp').disabled=false;if(error)message('authMessage',error.message,true);else if(data.session){await supabase.from('profiles').update({full_name,phone,full_address}).eq('id',data.user.id);message('authMessage','Akun berhasil dibuat.');await refreshSession();}else message('authMessage','Pendaftaran diterima. Periksa email untuk konfirmasi, lalu masuk. Data profil akan tersimpan saat akun dibuat.');});
@@ -323,10 +323,16 @@ $('catalogSort').addEventListener('change',renderCatalog);
 async function loadCatalog(){
  $('catalog').innerHTML='<div class="tile muted">Menghubungkan ke katalog…</div>';
  $('catalogMessage').textContent='';
- const {data,error}=await supabase.from('products').select('id,shop_id,name,description,price,stock,image_path,created_at,shops(name)').eq('status','active').gt('stock',0).order('created_at',{ascending:false}).limit(60);
- if(error){$('catalog').innerHTML='<div class="tile muted">Katalog belum dapat dimuat. Pastikan tabel database dan kebijakan akses sudah diterapkan.</div>';message('catalogMessage','Keterangan: '+error.message,true);return}
- catalogProducts=data||[];
- renderCatalog();
+ try{
+  const {data,error}=await supabase.from('products').select('id,shop_id,name,description,price,stock,image_path,created_at,shops(name)').eq('status','active').gt('stock',0).order('created_at',{ascending:false}).limit(60);
+  if(error)throw error;
+  catalogProducts=data||[];
+  renderCatalog();
+ }catch(error){
+  $('catalog').innerHTML='<div class="tile muted">Katalog belum dapat dimuat. Periksa koneksi internet lalu coba muat ulang.</div>';
+  message('catalogMessage','Keterangan: '+(error?.message||'Permintaan data katalog gagal.'),true);
+  console.error('Gagal memuat katalog:',error);
+ }
 }
 async function loadAdminPanel(){
  await loadDeliveryFeeSettings();
