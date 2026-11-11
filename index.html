@@ -637,7 +637,11 @@ function captureDeviceGps(buttonId,statusId,mapGetter,onCaptured){
    if(finished)return;
    if(bestPosition){
     const accuracy=Math.round(bestPosition.coords.accuracy);
-    if(status)status.textContent='Sinyal GPS terbaik yang didapat masih '+accuracy+' meter. Titik belum disimpan karena perlu akurasi 100 meter atau lebih baik. Coba lagi setelah GPS HP mendapat sinyal lebih kuat.';
+    const point={latitude:Number(bestPosition.coords.latitude.toFixed(6)),longitude:Number(bestPosition.coords.longitude.toFixed(6)),accuracy};
+    const map=mapGetter();
+    setPickerMapPoint(map,point);
+    if(map)map._pasarNeedsRefinement=true;
+    if(status)status.textContent='GPS menemukan lokasi perkiraan dengan akurasi '+accuracy+' meter. Titik belum dipakai untuk ongkir. Perbesar peta, lalu ketuk tepat pada lokasi tujuan untuk mengoreksi pin.';
    }else if(status)status.textContent='HP belum memberikan koordinat GPS. Pastikan Lokasi aktif dan izin lokasi Chrome diizinkan, lalu coba lagi.';
    finish();
   },60000);
@@ -655,8 +659,21 @@ function captureDeviceGps(buttonId,statusId,mapGetter,onCaptured){
   },{enableHighAccuracy:true,timeout:60000,maximumAge:0});
  });
 }
-function renderBuyerLocationStatus(){const box=$('buyerLocationStatus');if(box)box.textContent=buyerDeliveryPoint?'Lokasi GPS pengantaran tersimpan (akurasi '+Math.round(buyerDeliveryPoint.accuracy)+' m): '+buyerDeliveryPoint.latitude.toFixed(6)+', '+buyerDeliveryPoint.longitude.toFixed(6)+'.':'Belum ada lokasi GPS pengantaran. Tekan Ambil lokasi GPS HP saat berada di titik tujuan.';}
-function initBuyerMap(){buyerMap=makePickerMap('buyerDeliveryMap',buyerMap);}
+function renderBuyerLocationStatus(){const box=$('buyerLocationStatus');if(box)box.textContent=buyerDeliveryPoint?(buyerDeliveryPoint.manuallyAdjusted?'Titik pengantaran dikoreksi pada peta: ':'Lokasi GPS pengantaran tersimpan (akurasi '+Math.round(buyerDeliveryPoint.accuracy)+' m): ')+buyerDeliveryPoint.latitude.toFixed(6)+', '+buyerDeliveryPoint.longitude.toFixed(6)+'.':'Belum ada lokasi GPS pengantaran. Tekan Ambil lokasi GPS HP saat berada di titik tujuan.';}
+function initBuyerMap(){
+ buyerMap=makePickerMap('buyerDeliveryMap',buyerMap);
+ if(buyerMap&&!buyerMap._pasarBuyerRefineBound){
+  buyerMap.on('click',event=>{
+   if(!buyerMap._pasarNeedsRefinement)return;
+   const point={latitude:Number(event.latlng.lat.toFixed(6)),longitude:Number(event.latlng.lng.toFixed(6)),accuracy:0,manuallyAdjusted:true};
+   buyerDeliveryPoint=point;buyerMap._pasarNeedsRefinement=false;setPickerMapPoint(buyerMap,point);
+   const status=$('buyerLocationStatus');
+   if(status)status.textContent='Titik pengantaran sudah Anda koreksi pada peta: '+point.latitude.toFixed(6)+', '+point.longitude.toFixed(6)+'. Titik ini akan digunakan untuk estimasi ongkir.';
+   renderBuyerLocationStatus();previewDeliveryQuote();
+  });
+  buyerMap._pasarBuyerRefineBound=true;
+ }
+}
 function initSellerApplyMap(){sellerApplyMap=makePickerMap('sellerPickupMap',sellerApplyMap);}
 function initLegacyShopMap(initialPoint=null){legacyShopMap=makePickerMap('legacyShopPickupMap',legacyShopMap,initialPoint);if(legacyShopMap&&!legacyShopMap._pasarShopClickBound){legacyShopMap.on('click',event=>{const point={latitude:Number(event.latlng.lat.toFixed(6)),longitude:Number(event.latlng.lng.toFixed(6)),accuracy:null};legacyShopPickupPoint=point;setPickerMapPoint(legacyShopMap,point);const status=$('shopLocationStatus');if(status)status.textContent='Titik baru dipilih: '+point.latitude.toFixed(6)+', '+point.longitude.toFixed(6)+'. Tekan Simpan titik penjemputan toko.';});legacyShopMap._pasarShopClickBound=true;}if(legacyShopMap){[200,700,1300].forEach(delay=>setTimeout(()=>legacyShopMap?.invalidateSize(true),delay));}}
 captureDeviceGps('useBuyerGps','buyerLocationStatus',()=>buyerMap,p=>{buyerDeliveryPoint=p;renderBuyerLocationStatus();previewDeliveryQuote();});
