@@ -113,6 +113,7 @@ let activeAccountUserId=null;
 async function loadAccountAvatar(userId){
  const img=$('accountAvatar'),fallback=$('accountAvatarFallback');
  if(!img||!fallback)return;
+ img.removeAttribute('src');img.classList.add('hidden');fallback.classList.remove('hidden');
  const {data,error}=await supabase.from('user_public_profiles').select('avatar_path').eq('user_id',userId).maybeSingle();
  if(error){message('profileAvatarMessage','Foto profil belum dapat dimuat: '+error.message,true);return}
  if(data?.avatar_path){
