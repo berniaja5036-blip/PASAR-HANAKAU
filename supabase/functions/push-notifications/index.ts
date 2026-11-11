@@ -1,19 +1,37 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { generateVapidKey, vapidPublicKey, send } from "jsr:@daaku/webpush@0.2.0";
 
-// Compatibility for Deno Edge Runtime versions without Uint8Array.fromBase64.
-const uint8ArrayCompat = Uint8Array as unknown as { fromBase64?: (value: string) => Uint8Array };
+// Deno 2.1 compatibility for Base64 typed-array methods used by @daaku/webpush.
+const typedArrayProto = Uint8Array.prototype as unknown as {
+  toBase64?: (options?: { alphabet?: "base64" | "base64url"; omitPadding?: boolean }) => string;
+};
+if (!typedArrayProto.toBase64) {
+  Object.defineProperty(Uint8Array.prototype, "toBase64", {
+    configurable: true,
+    value: function (options: { alphabet?: "base64" | "base64url"; omitPadding?: boolean } = {}) {
+      const bytes = this as Uint8Array;
+      let binary = "";
+      for (let i = 0; i < bytes.length; i += 0x8000) {
+        binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + 0x8000, bytes.length)));
+      }
+      let encoded = btoa(binary);
+      if (options.alphabet === "base64url") encoded = encoded.replace(/\+/g, "-").replace(/\//g, "_");
+      if (options.omitPadding) encoded = encoded.replace(/=+$/g, "");
+      return encoded;
+    },
+  });
+}
+const uint8ArrayCompat = Uint8Array as unknown as { fromBase64?: (value: string, options?: { alphabet?: "base64" | "base64url" }) => Uint8Array };
 if (!uint8ArrayCompat.fromBase64) {
   Object.defineProperty(Uint8Array, "fromBase64", {
-    value: (value: string) => {
-      const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+    value: (value: string, options: { alphabet?: "base64" | "base64url" } = {}) => {
+      let normalized = value;
+      if (options.alphabet === "base64url") normalized = normalized.replace(/-/g, "+").replace(/_/g, "/");
       const padded = normalized + "=".repeat((4 - normalized.length % 4) % 4);
       return Uint8Array.from(atob(padded), (character) => character.charCodeAt(0));
     },
   });
 }
-
-
 const cors = {
   "Access-Control-Allow-Origin": "https://berniaja5036-blip.github.io",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
