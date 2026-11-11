@@ -30,7 +30,8 @@ Deno.serve(async (req: Request) => {
   let payload: any;
   try { payload = await req.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
 
-  const authHeader = req.headers.get("Authorization") || "";\n  const authToken = authHeader.toLowerCase().startsWith("bearer ") ? authHeader.slice(7).trim() : "";
+  const authHeader = req.headers.get("Authorization") || "";
+  const authToken = authHeader.toLowerCase().startsWith("bearer ") ? authHeader.slice(7).trim() : "";
   const pubKey = publishableKey();
   const authenticatedUser = async () => {
     if (!authToken || !pubKey) return null;
