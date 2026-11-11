@@ -90,7 +90,7 @@ footer{color:#829087;font-size:12px;padding:30px 10px}
 </section>
 <section id="catalogPanel" class="hidden"><div class="section"><h2>🛒 Jelajahi produk</h2><p class="muted">Temukan kebutuhan dari toko-toko sekitar Anda.</p></div>
 <div class="tile" id="buyerChatBox" style="display:none;margin:14px 0"><div class="row" style="justify-content:space-between"><h3 style="margin:0">💬 Chat dengan toko</h3><button id="buyerChatClose" class="btn secondary" type="button">Tutup</button></div><p id="buyerChatShopTitle" class="muted"></p><p class="muted">Pilih tombol Hubungi toko pada katalog untuk memulai percakapan. Anda dapat mengirim teks, foto, dan dokumen.</p><div id="buyerChatConversations" class="muted">Memuat percakapan…</div><div id="buyerChatMessages" class="chat-messages muted">Pilih percakapan untuk melihat pesan.</div><textarea id="buyerChatBody" class="field" rows="2" maxlength="5000" placeholder="Tulis pesan untuk toko…"></textarea><input id="buyerChatFile" class="field" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,text/plain,text/csv,.doc,.docx,.xls,.xlsx"><button id="buyerChatSend" class="btn" type="button">Kirim pesan</button><div id="buyerChatStatus" class="status" role="status"></div></div>
-<div class="panel" style="margin:10px 0"><div class="row" style="justify-content:space-between"><h3 style="margin:0">❤️ Produk favorit saya</h3><button id="refreshWishlist" class="btn secondary" type="button">Muat ulang</button></div><div id="buyerWishlist" class="muted" style="margin-top:8px">Masuk sebagai pembeli untuk melihat favorit.</div></div><div class="panel" style="margin-top:10px"><label for="catalogSearch">Cari nama barang atau toko</label><input id="catalogSearch" class="field" type="search" placeholder="Contoh: beras, minyak, Toko Sumber Rezeki" autocomplete="off"><div class="row"><label for="catalogSort" class="muted">Urutkan:</label><select id="catalogSort" class="field" style="max-width:230px;margin:0"><option value="newest">Terbaru</option><option value="price-asc">Harga termurah</option><option value="price-desc">Harga termahal</option><option value="name-asc">Nama barang A–Z</option></select></div><div id="catalogCount" class="muted" style="margin-top:8px" aria-live="polite"></div></div>
+<div class="panel" style="margin:10px 0"><div class="row" style="justify-content:space-between"><h3 style="margin:0">❤️ Produk favorit saya</h3><button id="refreshWishlist" class="btn secondary" type="button">Muat ulang</button></div><div id="buyerWishlist" class="muted" style="margin-top:8px">Masuk sebagai pembeli untuk melihat favorit.</div></div><div class="panel" style="margin-top:10px"><label for="catalogSearch">Cari nama barang atau toko</label><input id="catalogSearch" class="field" type="search" placeholder="Contoh: beras, minyak, Toko Sumber Rezeki" autocomplete="off"><div class="row"><label for="catalogSort" class="muted">Urutkan:</label><select id="catalogSort" class="field" style="max-width:230px;margin:0"><option value="newest">Terbaru</option><option value="price-asc">Harga termurah</option><option value="price-desc">Harga termahal</option><option value="name-asc">Nama barang A–Z</option></select><label for="catalogShopFilter" class="muted">Toko:</label><select id="catalogShopFilter" class="field" style="max-width:230px;margin:0"><option value="">Semua toko</option></select></div><div class="row"><input id="catalogMinPrice" class="field" type="number" min="0" step="1000" inputmode="numeric" placeholder="Harga minimum (Rp)" aria-label="Harga minimum"><input id="catalogMaxPrice" class="field" type="number" min="0" step="1000" inputmode="numeric" placeholder="Harga maksimum (Rp)" aria-label="Harga maksimum"><button id="clearCatalogFilters" class="btn secondary" type="button">Reset filter</button></div><div id="catalogCount" class="muted" style="margin-top:8px" aria-live="polite"></div></div>
 <div id="catalog" class="grid"><div class="tile muted">Menghubungkan ke katalog…</div></div>
 <div id="catalogMessage" class="status" role="status"></div></section>
 </main><footer>Pasar Hanakau • Uji coba awal<br><a href="./kebijakan-privasi.html">Kebijakan Privasi</a> · <a href="./syarat-ketentuan.html">Syarat dan Ketentuan</a><br>Kontak pengelola: <a href="mailto:yisunshin715@gmail.com">yisunshin715@gmail.com</a></footer>
@@ -431,7 +431,10 @@ $('buyerWishlist')?.addEventListener('click',async e=>{
 function renderCatalog(){
  const query=$('catalogSearch')?.value.trim().toLocaleLowerCase('id-ID')||'';
  const sort=$('catalogSort')?.value||'newest';
- const items=catalogProducts.filter(p=>(p.name+' '+(p.description||'')+' '+(p.shops?.name||'')).toLocaleLowerCase('id-ID').includes(query));
+ const shopFilter=$('catalogShopFilter')?.value||'';
+ const minPrice=$('catalogMinPrice')?.value===''?null:Number($('catalogMinPrice')?.value);
+ const maxPrice=$('catalogMaxPrice')?.value===''?null:Number($('catalogMaxPrice')?.value);
+ const items=catalogProducts.filter(p=>{const text=(p.name+' '+(p.description||'')+' '+(p.shops?.name||'')).toLocaleLowerCase('id-ID');const price=Number(p.price);return text.includes(query)&&(!shopFilter||p.shop_id===shopFilter)&&(minPrice===null||price>=minPrice)&&(maxPrice===null||price<=maxPrice)});
  if(sort==='price-asc')items.sort((a,b)=>Number(a.price)-Number(b.price));
  else if(sort==='price-desc')items.sort((a,b)=>Number(b.price)-Number(a.price));
  else if(sort==='name-asc')items.sort((a,b)=>a.name.localeCompare(b.name,'id'));
@@ -442,6 +445,10 @@ function renderCatalog(){
 }
 $('catalogSearch').addEventListener('input',renderCatalog);
 $('catalogSort').addEventListener('change',renderCatalog);
+$('catalogShopFilter').addEventListener('change',renderCatalog);
+$('catalogMinPrice').addEventListener('input',renderCatalog);
+$('catalogMaxPrice').addEventListener('input',renderCatalog);
+$('clearCatalogFilters').addEventListener('click',()=>{$('catalogSearch').value='';$('catalogSort').value='newest';$('catalogShopFilter').value='';$('catalogMinPrice').value='';$('catalogMaxPrice').value='';renderCatalog()});
 async function loadCatalog(){
  $('catalog').innerHTML='<div class="tile muted">Menghubungkan ke katalog…</div>';
  $('catalogMessage').textContent='';
@@ -449,6 +456,9 @@ async function loadCatalog(){
   const {data,error}=await supabase.from('products').select('id,shop_id,name,description,price,stock,image_path,created_at,shops(name)').eq('status','active').gt('stock',0).order('created_at',{ascending:false}).limit(60);
   if(error)throw error;
   catalogProducts=data||[];
+  const shopSelect=$('catalogShopFilter');const previousShop=shopSelect.value;const shopOptions=[...new Map(catalogProducts.map(p=>[p.shop_id,p.shops?.name||'Toko Pasar Hanakau'])).entries()].sort((a,b)=>a[1].localeCompare(b[1],'id'));
+  shopSelect.innerHTML='<option value="">Semua toko</option>'+shopOptions.map(([id,name])=>'<option value="'+id+'">'+escapeHtml(name)+'</option>').join('');
+  if(shopOptions.some(([id])=>id===previousShop))shopSelect.value=previousShop;
   renderCatalog();
   if(activeBuyerId)await loadBuyerWishlist();
  }catch(error){
