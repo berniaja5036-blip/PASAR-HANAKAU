@@ -112,7 +112,11 @@ Deno.serve(async (req: Request) => {
   }
 
   const supplied = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-  if (!supplied || supplied !== service) return json({ error: "Unauthorized webhook" }, 401);
+  const { data: expectedWebhookToken, error: webhookTokenError } = await admin.rpc("get_pasar_hanakau_push_webhook_token");
+  if (webhookTokenError || !expectedWebhookToken || supplied !== expectedWebhookToken) {
+    console.error("Push webhook authentication failed", webhookTokenError?.message || "token mismatch");
+    return json({ error: "Unauthorized webhook" }, 401);
+  }
   const record = payload?.record;
   if (!record?.user_id || !record?.title || !record?.body) return json({ ok: true, skipped: true });
   const privateRaw = Deno.env.get("VAPID_PRIVATE_KEY");
