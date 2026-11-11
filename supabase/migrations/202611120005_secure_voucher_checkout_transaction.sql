@@ -54,7 +54,7 @@ begin
   end loop;
   insert into public.voucher_redemptions(voucher_id,buyer_id,checkout_group_id,discount_amount,order_ids)
   values(v_voucher.id,p_buyer_id,v_group,v_discount,v_ids);
-  return (select jsonb_agg(jsonb_set(jsonb_set(value,'{discount_amount}',to_jsonb((select o.discount_amount from public.orders o where o.id=(value->>'order_id')::uuid)),'{total}',to_jsonb((select o.total from public.orders o where o.id=(value->>'order_id')::uuid))) order by ordinality from jsonb_array_elements(v_created) with ordinality);
+  return (select jsonb_agg(jsonb_set(jsonb_set(value,'{discount_amount}',to_jsonb((select o.discount_amount from public.orders o where o.id=(value->>'order_id')::uuid))),'{total}',to_jsonb((select o.total from public.orders o where o.id=(value->>'order_id')::uuid))) order by ordinality from jsonb_array_elements(v_created) with ordinality);
 end;
 $$;
 revoke all on function public.checkout_cart_with_voucher_secure(uuid,jsonb,text,text,numeric,numeric,jsonb,text) from public,anon,authenticated;
