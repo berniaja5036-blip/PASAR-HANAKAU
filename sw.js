@@ -1,5 +1,5 @@
-const CACHE_NAME = "pasar-hanakau-shell-v1";
-const APP_SHELL = ["./", "./manifest.webmanifest"];
+const CACHE_NAME = "pasar-hanakau-shell-v2";
+const APP_SHELL = ["./", "./manifest.webmanifest", "./icons/icon.svg", "./icons/icon-192.png", "./icons/icon-512.png"];
 
 self.addEventListener("install", event => {
   event.waitUntil((async () => {
@@ -48,7 +48,7 @@ self.addEventListener("push", event => {
   const title = payload.title || "Pasar Hanakau";
   const options = {
     body: payload.body || "Ada pembaruan pesanan untuk Anda.",
-    icon: payload.icon || "./icons/icon.svg",
+    icon: payload.icon || "./icons/icon-192.png",
     
     tag: payload.tag || "pasar-hanakau-update",
     data: { url: payload.url || "./" },
