@@ -650,7 +650,7 @@ function formatRupiah(n){return 'Rp '+Number(n||0).toLocaleString('id-ID');}
 function orderStatusLabel(s){return ({pending:'Menunggu konfirmasi',confirmed:'Dikonfirmasi',ready_for_pickup:'Siap dijemput driver',picked_up:'Sudah dijemput driver',delivered:'Terkirim',cancelled:'Dibatalkan'})[s]||s;}
 function renderCart(){
  const entries=Object.values(cart);let total=0;
- if(!entries.length){$('cartItems').textContent='Keranjang masih kosong. Pilih produk dari katalog.';$('cartTotal').textContent='';$('checkoutButton').disabled=true;return}
+ if(!entries.length){$('cartItems').textContent='Keranjang masih kosong. Pilih produk dari katalog.';$('cartTotal').textContent='';$('checkoutButton').disabled=true;const quoteBox=$('deliveryQuotePreview');if(quoteBox)quoteBox.textContent='Tambahkan barang ke keranjang untuk melihat estimasi ongkir.';deliveryQuoteSequence++;return}
  $('checkoutButton').disabled=false;
  $('cartItems').innerHTML=entries.map(p=>{const line=p.price*p.quantity;total+=line;return '<div class="cartline"><div style="flex:1"><b>'+escapeHtml(p.name)+'</b><div class="muted">'+escapeHtml(p.shopName)+' • '+formatRupiah(p.price)+'</div><div class="row"><button class="qtybtn" data-cart-minus="'+p.id+'">−</button><b>'+p.quantity+'</b><button class="qtybtn" data-cart-plus="'+p.id+'">+</button><button class="btn secondary" data-cart-remove="'+p.id+'">Hapus</button></div></div><b>'+formatRupiah(line)+'</b></div>'}).join('');
  $('cartTotal').textContent='Total barang: '+formatRupiah(total)+' (ongkos kirim akan ditampilkan terpisah)';
@@ -711,6 +711,9 @@ $('checkoutButton').addEventListener('click',async()=>{
  const items=Object.values(cart).map(p=>({product_id:p.id,quantity:p.quantity}));
  if(!items.length){message('checkoutMessage','Keranjang masih kosong.',true);return}
  if(!buyerDeliveryPoint){message('checkoutMessage','Ambil lokasi GPS HP di titik pengantaran sebelum membuat pesanan.',true);return}
+ const {data:feeSettings,error:feeSettingsError}=await supabase.from('delivery_fee_settings').select('enabled').eq('id',true).maybeSingle();
+ if(feeSettingsError){message('checkoutMessage','Pengaturan ongkir belum dapat diverifikasi. Coba lagi.',true);return}
+ if(feeSettings?.enabled){message('checkoutMessage','Ongkir sedang aktif, tetapi pengamanan penyimpanan ongkir pada transaksi belum selesai. Admin perlu menonaktifkannya sementara.',true);return}
  $('checkoutButton').disabled=true;message('checkoutMessage','Memeriksa stok dan membuat pesanan…');
  const {data,error}=await supabase.rpc('checkout_cart',{p_items:items,p_delivery_address:address,p_notes:$('orderNotes').value.trim(),p_delivery_latitude:buyerDeliveryPoint.latitude,p_delivery_longitude:buyerDeliveryPoint.longitude});
  $('checkoutButton').disabled=false;
