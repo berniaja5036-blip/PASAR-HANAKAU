@@ -765,12 +765,10 @@ $('checkoutButton').addEventListener('click',async()=>{
  try{
   let createdOrders=null;
   try{
-   const {data:feeSettings,error:feeSettingsError}=await supabase.from('delivery_fee_settings').select('enabled').eq('id',true).maybeSingle();
-   if(feeSettingsError){message('checkoutMessage','Pengaturan ongkir belum dapat diverifikasi. Coba lagi.',true);return}
-   if(feeSettings?.enabled){message('checkoutMessage','Ongkir sedang aktif, tetapi pengamanan penyimpanan ongkir pada transaksi belum selesai. Admin perlu menonaktifkannya sementara.',true);return}
-   const {data,error}=await supabase.rpc('checkout_cart',{p_items:items,p_delivery_address:address,p_notes:$('orderNotes').value.trim(),p_delivery_latitude:buyerDeliveryPoint.latitude,p_delivery_longitude:buyerDeliveryPoint.longitude});
-   if(error){message('checkoutMessage','Pesanan belum berhasil dibuat: '+error.message,true);return}
-   createdOrders=data||[];
+   const {data,error}=await supabase.functions.invoke('checkout-with-delivery',{body:{items,delivery_address:address,notes:$('orderNotes').value.trim(),delivery_latitude:buyerDeliveryPoint.latitude,delivery_longitude:buyerDeliveryPoint.longitude}});
+   if(error){message('checkoutMessage','Pesanan belum berhasil dibuat: '+(error.message||'Periksa koneksi dan coba lagi.'),true);return}
+   if(data?.error){message('checkoutMessage','Pesanan belum berhasil dibuat: '+data.error,true);return}
+   createdOrders=data?.orders||[];
   }catch(error){
    message('checkoutMessage','Pesanan belum berhasil diproses: '+(error?.message||'Terjadi kesalahan.'),true);
    return;
