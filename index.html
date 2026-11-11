@@ -624,26 +624,45 @@ function captureDeviceGps(buttonId,statusId,mapGetter,onCaptured){
   const status=$(statusId);
   if(!navigator.geolocation){if(status)status.textContent='Perangkat atau browser tidak mendukung lokasi GPS.';return;}
   button.disabled=true;
-  if(status)status.textContent='Sedang mengambil lokasi GPS presisi dari HP…';
-  navigator.geolocation.getCurrentPosition(position=>{
+  if(status)status.textContent='Mencari lokasi GPS presisi. Mohon tunggu hingga 45 detik…';
+  let finished=false;
+  const finish=()=>{finished=true;button.disabled=false;};
+  const acceptPosition=position=>{
+   if(finished)return;
    const latitude=Number(position.coords.latitude),longitude=Number(position.coords.longitude),accuracy=Number(position.coords.accuracy);
    if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||!Number.isFinite(accuracy)||latitude < -90||latitude > 90||longitude < -180||longitude > 180){
-    if(status)status.textContent='Data GPS tidak valid. Coba ambil lokasi sekali lagi.';
-    button.disabled=false;return;
+    if(status)status.textContent='Data GPS tidak valid. Periksa pengaturan lokasi HP lalu coba lagi.';
+    finish();return;
    }
    if(accuracy>100){
-    if(status)status.textContent='Akurasi GPS saat ini '+Math.round(accuracy)+' meter. Belum cukup akurat. Aktifkan Lokasi Presisi, coba di area terbuka, lalu ambil lokasi lagi.';
-    button.disabled=false;return;
+    if(status)status.textContent='Lokasi ditemukan, tetapi akurasinya '+Math.round(accuracy)+' meter. Aplikasi membutuhkan 100 meter atau lebih baik. Aktifkan Lokasi Presisi dan coba di area terbuka.';
+    finish();return;
    }
    const point={latitude:Number(latitude.toFixed(6)),longitude:Number(longitude.toFixed(6)),accuracy};
    setPickerMapPoint(mapGetter(),point);
    onCaptured(point);
-   button.disabled=false;
-  },error=>{
-   const reason=error.code===1?'Izin lokasi ditolak. Izinkan akses lokasi untuk Pasar Hanakau di pengaturan browser.':error.code===2?'Lokasi belum tersedia. Aktifkan GPS dan coba lagi.':'Pengambilan GPS melewati batas waktu. Coba lagi di area terbuka.';
-   if(status)status.textContent=reason;
-   button.disabled=false;
-  },{enableHighAccuracy:true,timeout:20000,maximumAge:0});
+   finish();
+  };
+  const failPosition=error=>{
+   if(finished)return;
+   if(error.code===1){
+    if(status)status.textContent='Izin lokasi ditolak. Izinkan lokasi untuk situs Pasar Hanakau melalui ikon pengaturan situs di Chrome.';
+    finish();return;
+   }
+   if(error.code===3){
+    if(status)status.textContent='GPS presisi belum merespons. Mencoba cara pencarian lokasi alternatif…';
+    navigator.geolocation.getCurrentPosition(acceptPosition,finalError=>{
+     if(finished)return;
+     const reason=finalError.code===1?'Izin lokasi ditolak. Izinkan lokasi untuk Pasar Hanakau di Chrome.':finalError.code===2?'Lokasi belum tersedia. Pastikan GPS/Lokasi HP aktif dan coba di area terbuka.':'GPS masih belum merespons. Aktifkan Lokasi HP, izinkan Chrome mengakses lokasi, lalu coba lagi di area terbuka.';
+     if(status)status.textContent=reason;
+     finish();
+    },{enableHighAccuracy:false,timeout:30000,maximumAge:60000});
+    return;
+   }
+   if(status)status.textContent='Lokasi belum tersedia. Pastikan GPS/Lokasi HP aktif, izinkan Chrome mengakses lokasi, lalu coba lagi di area terbuka.';
+   finish();
+  };
+  navigator.geolocation.getCurrentPosition(acceptPosition,failPosition,{enableHighAccuracy:true,timeout:45000,maximumAge:30000});
  });
 }
 function renderBuyerLocationStatus(){const box=$('buyerLocationStatus');if(box)box.textContent=buyerDeliveryPoint?'Lokasi GPS pengantaran tersimpan (akurasi '+Math.round(buyerDeliveryPoint.accuracy)+' m): '+buyerDeliveryPoint.latitude.toFixed(6)+', '+buyerDeliveryPoint.longitude.toFixed(6)+'.':'Belum ada lokasi GPS pengantaran. Tekan Ambil lokasi GPS HP saat berada di titik tujuan.';}
