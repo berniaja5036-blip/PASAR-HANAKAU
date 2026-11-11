@@ -564,12 +564,12 @@ function makePickerMap(elementId,existingMap,initialPoint){
  if(!element)return existingMap;
  if(!window.L){element.innerHTML='<div style="padding:14px;color:#9b3b32">Pustaka peta belum termuat. Periksa koneksi internet lalu muat ulang halaman.</div>';return existingMap;}
  if(existingMap){[150,500,1000].forEach(delay=>setTimeout(()=>{if(existingMap&&element.isConnected){existingMap.invalidateSize(true);if(existingMap._pasarHanakauMarker)existingMap.panTo(existingMap._pasarHanakauMarker.getLatLng());}},delay));return existingMap;}
- const map=L.map(element).setView(initialPoint?[initialPoint.latitude,initialPoint.longitude]:HANAKAU_CENTER,initialPoint?17:14);
+ const map=L.map(element,{zoomControl:true,scrollWheelZoom:true,doubleClickZoom:true,touchZoom:true,dragging:true}).setView(initialPoint?[initialPoint.latitude,initialPoint.longitude]:HANAKAU_CENTER,initialPoint?16:14);
  // CARTO sengaja tidak digunakan karena meminta API key dan menampilkan watermark.
  // Gunakan Esri terlebih dahulu, lalu OpenStreetMap sebagai cadangan.
  const providers=[
-  {name:'Esri',url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',options:{maxZoom:19,attribution:'Tiles © Esri'}},
-  {name:'OpenStreetMap',url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',options:{maxZoom:19,attribution:'© OpenStreetMap'}}
+  {name:'OpenStreetMap',url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',options:{maxZoom:22,maxNativeZoom:19,attribution:'© OpenStreetMap'}},
+  {name:'Esri',url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',options:{maxZoom:22,maxNativeZoom:19,attribution:'Tiles © Esri'}}
  ];
  let providerIndex=0,tiles=null,providerErrorCount=0,providerSwitching=false,providerTimer=null,providerLoaded=false;
  const mapStatusId=elementId==='legacyShopPickupMap'?'shopLocationStatus':elementId==='sellerPickupMap'?'sellerPickupStatus':elementId==='buyerDeliveryMap'?'buyerLocationStatus':null;
@@ -595,14 +595,14 @@ function makePickerMap(elementId,existingMap,initialPoint){
   tiles.on('tileload',()=>{
    providerLoaded=true;
    if(providerTimer)clearTimeout(providerTimer);
-   showMapStatus('Peta berhasil dimuat dari '+provider.name+'.');
+   showMapStatus('Peta sedang dimuat dari '+provider.name+'.');
   });
   tiles.on('tileerror',()=>{
    providerErrorCount++;
    if(providerErrorCount>=2)switchMapProvider();
   });
   tiles.addTo(map);
-  providerTimer=setTimeout(()=>{if(!providerLoaded)switchMapProvider();},10000);
+  providerTimer=setTimeout(()=>{if(!providerLoaded)switchMapProvider();else showMapStatus('Peta '+provider.name+' merespons. Jika gambar peta belum tampak, periksa koneksi atau coba muat ulang.');},10000);
  }
  loadProvider();
  map._pasarHanakauMarker=initialPoint?L.marker([initialPoint.latitude,initialPoint.longitude]).addTo(map):null;
@@ -664,11 +664,10 @@ function initBuyerMap(){
  buyerMap=makePickerMap('buyerDeliveryMap',buyerMap);
  if(buyerMap&&!buyerMap._pasarBuyerRefineBound){
   buyerMap.on('click',event=>{
-   if(!buyerMap._pasarNeedsRefinement)return;
    const point={latitude:Number(event.latlng.lat.toFixed(6)),longitude:Number(event.latlng.lng.toFixed(6)),accuracy:0,manuallyAdjusted:true};
    buyerDeliveryPoint=point;buyerMap._pasarNeedsRefinement=false;setPickerMapPoint(buyerMap,point);
    const status=$('buyerLocationStatus');
-   if(status)status.textContent='Titik pengantaran sudah Anda koreksi pada peta: '+point.latitude.toFixed(6)+', '+point.longitude.toFixed(6)+'. Titik ini akan digunakan untuk estimasi ongkir.';
+   if(status)status.textContent='Titik pengantaran dipilih pada peta: '+point.latitude.toFixed(6)+', '+point.longitude.toFixed(6)+'. Titik ini akan digunakan untuk estimasi ongkir.';
    renderBuyerLocationStatus();previewDeliveryQuote();
   });
   buyerMap._pasarBuyerRefineBound=true;
