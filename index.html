@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#176b45"><title>Pasar Hanakau</title>
+<meta name="theme-color" content="#176b45"><meta name="description" content="Pasar Hanakau — marketplace warga Desa Hanakau Jaya."><link rel="manifest" href="./manifest.webmanifest"><title>Pasar Hanakau</title>
 <style>
 :root{font-family:system-ui,-apple-system,sans-serif;color:#17251e;background:#f4f7f4}*{box-sizing:border-box}body{margin:0}.top{background:#176b45;color:#fff;padding:22px max(18px,calc((100% - 960px)/2))}.top small{opacity:.85}.top h1{margin:7px 0;font-size:27px}.wrap{max-width:960px;margin:auto;padding:18px}.panel,.tile{background:#fff;border:1px solid #e1e9e3;border-radius:14px;padding:16px;margin:14px 0}.notice{background:#fff6db;border:1px solid #f0dda0;padding:12px;border-radius:10px;font-size:13px;color:#604b12}.authgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.rolegrid{display:grid;grid-template-columns:1fr;gap:12px}.rolecard{display:flex;align-items:center;gap:14px;width:100%;padding:16px;border:1px solid #dce9df;border-radius:16px;background:#fff;color:#183329;text-align:left;font:inherit;cursor:pointer}.roleicon{width:48px;height:48px;display:grid;place-items:center;border-radius:14px;background:#e9f4eb;font-size:25px}.rolecard b{display:block}.rolecard small{display:block;color:#6b7d72;margin-top:3px}@media(min-width:650px){.rolegrid{grid-template-columns:1fr 1fr}}.field{width:100%;padding:12px;border:1px solid #ccd8cf;border-radius:9px;font:inherit;margin:5px 0 10px}.btn{border:0;background:#176b45;color:#fff;padding:12px 16px;border-radius:9px;font:inherit;font-weight:600;cursor:pointer}.btn.secondary{background:#e7efe9;color:#175c3c}.btn:disabled{opacity:.5}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row .field{flex:1;min-width:150px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.tile h3{margin:7px 0 4px;font-size:16px}.muted{color:#66766c;font-size:13px}.status{font-size:13px;margin-top:8px;min-height:18px}.hidden{display:none}.product{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.price{font-weight:700;color:#176b45}.section{margin:22px 0 8px}.formgrid{display:grid;grid-template-columns:1fr;gap:4px}.cartline{display:flex;justify-content:space-between;gap:10px;align-items:center;border-bottom:1px solid #e7eee9;padding:10px 0}.qtybtn{border:0;border-radius:7px;background:#e7efe9;color:#175c3c;padding:7px 11px;font-weight:700}.carttotal{font-size:18px;font-weight:800;color:#176b45}@media(min-width:650px){.formgrid{grid-template-columns:1fr 1fr}}footer{text-align:center;color:#718078;font-size:12px;padding:26px 10px}@media(min-width:650px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}.authgrid{grid-template-columns:1fr 1fr}}
 
@@ -967,4 +967,13 @@ document.addEventListener('visibilitychange',()=>{
  if(document.visibilityState==='visible')void refreshRoleData();
 });
 await refreshSession();await loadCatalog();
-</script></body></html>
+</script><script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js", { scope: "./" })
+      .then(() => console.info("Pasar Hanakau service worker aktif."))
+      .catch(error => console.warn("Service worker belum dapat diaktifkan:", error));
+  });
+}
+</script>
+</body></html>
