@@ -31,7 +31,7 @@ Deno.serve(async (req: Request) => {
   try { payload = await req.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
 
   if (payload?.action === "generate_vapid") {
-    const token = (req.headers.get("Authorization") || "").replace(/^Bearer\\s+/i, "");
+    const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
     if (!token) return json({ error: "Authentication required" }, 401);
     const pub = publishableKey();
     if (!pub) return json({ error: "Publishable key unavailable" }, 500);
@@ -47,7 +47,7 @@ Deno.serve(async (req: Request) => {
     return json({ publicKey, privateKey });
   }
 
-  const supplied = (req.headers.get("Authorization") || "").replace(/^Bearer\\s+/i, "");
+  const supplied = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
   if (!supplied || supplied !== service) return json({ error: "Unauthorized webhook" }, 401);
   const record = payload?.record;
   if (!record?.user_id || !record?.title || !record?.body) return json({ ok: true, skipped: true });
