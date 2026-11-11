@@ -504,7 +504,7 @@ $('createPromoVoucher').addEventListener('click',async()=>{
  const starts=startRaw?new Date(startRaw).toISOString():new Date().toISOString(),ends=endRaw?new Date(endRaw).toISOString():null;
  if(ends&&new Date(ends)<=new Date(starts)){message('promoVoucherMessage','Waktu berakhir harus setelah waktu mulai.',true);return}
  const btn=$('createPromoVoucher');btn.disabled=true;
- const {error}=await supabase.from('promo_vouchers').insert({code,description,discount_type:type,discount_value:value,min_subtotal:minimum,max_discount:max,usage_limit:usage,per_buyer_limit:perBuyer,starts_at:starts,ends_at:ends,active:$('promoActive').checked,created_by:currentUser?.id||null});
+ const {error}=await supabase.from('promo_vouchers').insert({code,description,discount_type:type,discount_value:value,min_subtotal:minimum,max_discount:max,usage_limit:usage,per_buyer_limit:perBuyer,starts_at:starts,ends_at:ends,active:$('promoActive').checked,created_by:activeAccountUserId||null});
  btn.disabled=false;
  if(error){message('promoVoucherMessage','Voucher gagal disimpan: '+error.message,true);return}
  message('promoVoucherMessage','Voucher '+code+' berhasil disimpan.');
