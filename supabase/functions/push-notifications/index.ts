@@ -30,6 +30,38 @@ Deno.serve(async (req: Request) => {
   let payload: any;
   try { payload = await req.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
 
+  const authToken = (req.headers.get("Authorization") || "").replace(/^Bearer\\s+/i, "");
+  const pubKey = publishableKey();
+  const authenticatedUser = async () => {
+    if (!authToken || !pubKey) return null;
+    const client = createClient(url, pubKey, { auth: { persistSession: false } });
+    const { data, error } = await client.auth.getUser(authToken);
+    return error ? null : data.user;
+  };
+
+  if (payload?.action === "register_subscription" || payload?.action === "remove_subscription") {
+    const user = await authenticatedUser();
+    if (!user) return json({ error: "Invalid session" }, 401);
+    const endpoint = payload?.subscription?.endpoint || payload?.endpoint;
+    if (typeof endpoint !== "string" || !endpoint.startsWith("https://")) return json({ error: "Invalid endpoint" }, 400);
+    if (payload.action === "remove_subscription") {
+      const { error } = await admin.from("push_subscriptions").delete().eq("user_id", user.id).eq("endpoint", endpoint);
+      if (error) return json({ error: "Could not remove subscription" }, 500);
+      return json({ ok: true });
+    }
+    const keys = payload?.subscription?.keys;
+    if (!keys?.p256dh || !keys?.auth) return json({ error: "Subscription keys missing" }, 400);
+    const { data: existing } = await admin.from("push_subscriptions").select("user_id").eq("endpoint", endpoint).maybeSingle();
+    if (existing && existing.user_id !== user.id) return json({ error: "Perangkat ini masih terhubung ke akun lain. Keluar dari akun lama terlebih dahulu, lalu coba lagi." }, 409);
+    const { error } = await admin.from("push_subscriptions").upsert({
+      user_id: user.id, endpoint, p256dh: keys.p256dh, auth_secret: keys.auth,
+      expiration_time: payload.subscription.expirationTime ? new Date(payload.subscription.expirationTime).toISOString() : null,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "endpoint" });
+    if (error) return json({ error: "Could not save device subscription" }, 500);
+    return json({ ok: true });
+  }
+
   if (payload?.action === "generate_vapid") {
     const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
     if (!token) return json({ error: "Authentication required" }, 401);
