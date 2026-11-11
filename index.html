@@ -696,6 +696,7 @@ async function previewDeliveryQuote(){
  if(!entries.length){box.textContent='Tambahkan barang ke keranjang untuk melihat estimasi ongkir.';return}
  if(!buyerDeliveryPoint){box.textContent='Ambil lokasi GPS di titik pengantaran untuk menghitung estimasi ongkir.';return}
  box.textContent='Menghitung jarak rute jalan…';
+ try{
  const {data:settings,error:settingsError}=await supabase.from('delivery_fee_settings').select('enabled,base_fee,per_km_fee,minimum_fee,max_distance_km').eq('id',true).maybeSingle();
  if(seq!==deliveryQuoteSequence)return;
  if(settingsError||!settings){box.textContent='Pengaturan ongkir belum dapat dibaca. Ongkir belum dihitung.';return}
@@ -718,6 +719,11 @@ async function previewDeliveryQuote(){
  if(quotes.some(q=>q.error)){box.textContent=quotes.map(q=>q.error||('Toko '+q.shop+': '+q.km.toFixed(2)+' km — '+formatRupiah(q.fee))).join(' ');return}
  const totalFee=quotes.reduce((sum,q)=>sum+q.fee,0);
  box.innerHTML='<b>'+(settings.enabled?'Estimasi ongkir berdasarkan rute jalan':'Simulasi ongkir (belum aktif)')+'</b>'+quotes.map(q=>'<div class="cartline"><span>'+escapeHtml(q.shop)+' • '+q.km.toFixed(2)+' km</span><b>'+formatRupiah(q.fee)+'</b></div>').join('')+'<div class="cartline"><b>Total estimasi ongkir</b><b>'+formatRupiah(totalFee)+'</b></div><p class="muted">'+(settings.enabled?'Estimasi ini belum ditagihkan.':'Simulasi untuk pengujian saja. Ongkir belum dikenakan kepada pembeli.')+'</p>';
+ }catch(error){
+  if(seq!==deliveryQuoteSequence)return;
+  box.textContent='Gagal menghitung estimasi rute. Periksa koneksi internet dan coba ambil lokasi tujuan kembali.';
+  console.error('Gagal menghitung ongkir:',error);
+ }
 }
 $('checkoutButton').addEventListener('click',async()=>{
  if(checkoutInProgress)return;
