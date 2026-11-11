@@ -75,7 +75,19 @@ Deno.serve(async (req: Request) => {
     const user = await authenticatedUser();
     if (!user) return json({ error: "Invalid session" }, 401);
     const endpoint = payload?.subscription?.endpoint || payload?.endpoint;
-    if (typeof endpoint !== "string" || !endpoint.startsWith("https://")) return json({ error: "Invalid endpoint" }, 400);
+    if (typeof endpoint !== "string" || endpoint.length > 4096) return json({ error: "Invalid endpoint" }, 400);
+    let endpointUrl: URL;
+    try { endpointUrl = new URL(endpoint); } catch { return json({ error: "Invalid endpoint" }, 400); }
+    const endpointHost = endpointUrl.hostname.toLowerCase();
+    const allowedPushHost =
+      endpointHost === "fcm.googleapis.com" ||
+      endpointHost === "updates.push.services.mozilla.com" ||
+      endpointHost === "push.services.mozilla.com" ||
+      endpointHost === "web.push.apple.com" ||
+      endpointHost.endsWith(".notify.windows.com");
+    if (endpointUrl.protocol !== "https:" || !allowedPushHost || endpointUrl.username || endpointUrl.password || (endpointUrl.port && endpointUrl.port !== "443")) {
+      return json({ error: "Unsupported push service endpoint" }, 400);
+    }
     if (payload.action === "remove_subscription") {
       const { error } = await admin.from("push_subscriptions").delete().eq("user_id", user.id).eq("endpoint", endpoint);
       if (error) return json({ error: "Could not remove subscription" }, 500);
