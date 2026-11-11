@@ -1,6 +1,19 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { generateVapidKey, vapidPublicKey, send } from "jsr:@daaku/webpush@0.2.0";
 
+// Compatibility for Deno Edge Runtime versions without Uint8Array.fromBase64.
+const uint8ArrayCompat = Uint8Array as unknown as { fromBase64?: (value: string) => Uint8Array };
+if (!uint8ArrayCompat.fromBase64) {
+  Object.defineProperty(Uint8Array, "fromBase64", {
+    value: (value: string) => {
+      const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+      const padded = normalized + "=".repeat((4 - normalized.length % 4) % 4);
+      return Uint8Array.from(atob(padded), (character) => character.charCodeAt(0));
+    },
+  });
+}
+
+
 const cors = {
   "Access-Control-Allow-Origin": "https://berniaja5036-blip.github.io",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
