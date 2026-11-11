@@ -419,6 +419,15 @@ function renderBuyerWishlist(){
  box.innerHTML=products.map(p=>'<div class="cartline"><span><b>'+escapeHtml(p.name)+'</b><div class="muted">'+escapeHtml(p.shops?.name||'Toko')+' • '+formatRupiah(p.price)+'</div></span><button class="btn secondary" type="button" data-wishlist-remove="'+p.id+'">Hapus</button></div>').join('');
 }
 $('refreshWishlist')?.addEventListener('click',loadBuyerWishlist);
+$('buyerWishlist')?.addEventListener('click',async e=>{
+ const button=e.target.closest('[data-wishlist-remove]');if(!button)return;
+ if(!activeBuyerId){message('catalogMessage','Silakan masuk sebagai pembeli.',true);return}
+ button.disabled=true;
+ const productId=button.dataset.wishlistRemove;
+ const {error}=await supabase.from('buyer_wishlist').delete().eq('buyer_id',activeBuyerId).eq('product_id',productId);
+ if(error){message('catalogMessage','Gagal menghapus favorit: '+error.message,true);button.disabled=false;return}
+ buyerWishlistIds.delete(productId);renderCatalog();renderBuyerWishlist();
+});
 function renderCatalog(){
  const query=$('catalogSearch')?.value.trim().toLocaleLowerCase('id-ID')||'';
  const sort=$('catalogSort')?.value||'newest';
