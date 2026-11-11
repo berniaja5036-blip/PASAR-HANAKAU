@@ -71,6 +71,19 @@ Deno.serve(async (req: Request) => {
       .select("id,role,account_status").eq("id", targetId).maybeSingle();
     if (targetError || !target || !["buyer", "seller", "driver"].includes(target.role)) return json({ error: "Akun tidak ditemukan atau tidak dapat dinonaktifkan." }, 404);
     if (target.account_status === "suspended") return json({ error: "Akun ini sudah dinonaktifkan." }, 409);
+    let ownedShops: any[] = [];
+    if (target.role === "seller") {
+      const { data: shops, error: shopsError } = await admin.from("shops").select("id,status").eq("owner_id", targetId);
+      if (shopsError) return json({ error: "Toko milik penjual tidak dapat diperiksa." }, 500);
+      ownedShops = shops || [];
+      const shopIds = ownedShops.map((s: any) => s.id);
+      if (shopIds.length) {
+        const { data: activeOrders, error: ordersError } = await admin.from("orders")
+          .select("id").in("shop_id", shopIds).in("status", ["pending", "confirmed", "ready_for_pickup", "picked_up"]).limit(1);
+        if (ordersError) return json({ error: "Pesanan aktif toko tidak dapat diperiksa." }, 500);
+        if (activeOrders?.length) return json({ error: "Toko masih memiliki pesanan berjalan. Selesaikan atau tangani pesanan melalui admin sebelum menonaktifkan akun." }, 409);
+      }
+    }
     if (target.role === "driver") {
       const { data: activeTasks, error: taskError } = await admin.from("deliveries")
         .select("id").eq("driver_id", targetId).in("status", ["assigned", "picked_up"]).limit(1);
@@ -87,16 +100,24 @@ Deno.serve(async (req: Request) => {
       await admin.auth.admin.updateUserById(targetId, { ban_duration: "none" });
       return json({ error: "Status akun gagal disimpan. Pemblokiran login dibatalkan; coba lagi." }, 500);
     }
-    if (target.role === "seller") {
-      const { data: ownedShops } = await admin.from("shops").select("id").eq("owner_id", targetId);
-      const shopIds = (ownedShops || []).map((s: any) => s.id);
-      if (shopIds.length) {
-        await admin.from("shops").update({ status: "suspended" }).in("id", shopIds);
-        await admin.from("products").update({ status: "draft" }).in("shop_id", shopIds);
+    let relatedError: string | null = null;
+    if (target.role === "seller" && ownedShops.length) {
+      const shopIds = ownedShops.map((s: any) => s.id);
+      const { error: shopUpdateError } = await admin.from("shops").update({ status: "suspended" }).in("id", shopIds);
+      const { error: productUpdateError } = await admin.from("products").update({ status: "draft" }).in("shop_id", shopIds);
+      if (shopUpdateError || productUpdateError) {
+        relatedError = "Status toko atau produk gagal diperbarui.";
+        for (const shop of ownedShops) await admin.from("shops").update({ status: shop.status }).eq("id", shop.id);
       }
     }
     if (target.role === "driver") {
-      await admin.from("driver_profiles").update({ approval_status: "suspended" }).eq("id", targetId);
+      const { error: driverUpdateError } = await admin.from("driver_profiles").update({ approval_status: "suspended" }).eq("id", targetId);
+      if (driverUpdateError) relatedError = "Status profil driver gagal diperbarui.";
+    }
+    if (relatedError) {
+      await admin.from("profiles").update({ account_status: "active", account_status_note: null, account_status_updated_at: null }).eq("id", targetId);
+      await admin.auth.admin.updateUserById(targetId, { ban_duration: "none" });
+      return json({ error: relatedError + " Penonaktifan dibatalkan." }, 500);
     }
     await admin.from("push_subscriptions").delete().eq("user_id", targetId);
     return json({ ok: true, message: "Akun dinonaktifkan. Riwayat pesanan dan transaksi tetap tersimpan." });
