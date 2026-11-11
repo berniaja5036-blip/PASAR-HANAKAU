@@ -1294,8 +1294,8 @@ async function loadChatMessages(conversationId,role){
   if(m.attachment_path){
    const {data:urlData}=await supabase.storage.from('chat-attachments').createSignedUrl(m.attachment_path,3600);
    if(urlData?.signedUrl){
-    if((m.attachment_mime||'').startsWith('image/'))attachment='<a href="'+urlData.signedUrl+'" target="_blank" rel="noopener"><img src="'+urlData.signedUrl+'" alt="Lampiran chat" style="max-width:180px;max-height:180px;border-radius:10px;display:block"></a>';
-    else attachment='<a href="'+urlData.signedUrl+'" target="_blank" rel="noopener">'+escapeHtml(m.attachment_name||'Unduh lampiran')+'</a>';
+    if((m.attachment_mime||'').startsWith('image/'))attachment='<a href="'+escapeHtml(urlData.signedUrl)+'" target="_blank" rel="noopener"><img src="'+escapeHtml(urlData.signedUrl)+'" alt="Lampiran chat" style="max-width:180px;max-height:180px;border-radius:10px;display:block"></a>';
+    else attachment=' <a href="'+escapeHtml(urlData.signedUrl)+'" target="_blank" rel="noopener">'+escapeHtml(m.attachment_name||'Unduh lampiran')+'</a>';
    }else attachment='<span class="muted">Lampiran tidak dapat dibuka.</span>';
   }
   html.push('<div style="margin:8px 0;padding:9px 11px;border-radius:10px;background:'+(m.sender_id===activeAccountUserId?'#e8f4ec':'#f1f3f5')+';max-width:92%;'+(m.sender_id===activeAccountUserId?'margin-left:auto':'')+'">'+(m.body?'<div style="white-space:pre-wrap;overflow-wrap:anywhere">'+escapeHtml(m.body)+'</div>':'')+(attachment?'<div style="margin-top:6px">'+attachment+'</div>':'')+'<div class="muted" style="font-size:11px;margin-top:5px">'+chatTime(m.created_at)+'</div></div>');
