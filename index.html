@@ -98,13 +98,17 @@ $('signUp').addEventListener('click',()=>{$('registrationDetails').classList.rem
 $('backToRoles').addEventListener('click',()=>{$('authPanel').classList.add('hidden');$('rolePanel').classList.remove('hidden');selectedEntryRole=null;});
 function message(id,text,isError=false){$(id).textContent=text;$(id).style.color=isError?'#b42318':'#176b45'}
 function validCredentials(){const email=$('email').value.trim(),password=$('password').value;if(!email||!password){message('authMessage','Isi email dan kata sandi terlebih dahulu.',true);return null}return {email,password}}
+let sessionRefreshSequence=0;
 async function refreshSession(){
+ const refreshId=++sessionRefreshSequence;
  activePanelRole=null;
  const {data:{session}}=await supabase.auth.getSession();
+ if(refreshId!==sessionRefreshSequence)return;
  $('rolePanel').classList.toggle('hidden',!!session);$('authPanel').classList.toggle('hidden',!!session || !selectedEntryRole);$('accountPanel').classList.toggle('hidden',!session);
  $('sellerPanel').classList.add('hidden');$('sellerProducts').classList.add('hidden');$('adminPanel').classList.add('hidden');$('buyerPanel').classList.add('hidden');$('driverPanel').classList.add('hidden');$('driverApplyPanel').classList.add('hidden');
  $('catalogPanel').classList.add('hidden');
  if(!session){sellerShopId=null;activeBuyerId=null;cart={};buyerDeliveryPoint=null;return}
+ $('catalogMessage').textContent='';
  activeBuyerId=null;cart={};
  $('accountEmail').textContent=session.user.email||'Akun aktif';
  const {data:profile}=await supabase.from('profiles').select('full_name,role,phone,full_address').eq('id',session.user.id).maybeSingle();
@@ -317,6 +321,8 @@ function renderCatalog(){
 $('catalogSearch').addEventListener('input',renderCatalog);
 $('catalogSort').addEventListener('change',renderCatalog);
 async function loadCatalog(){
+ $('catalog').innerHTML='<div class="tile muted">Menghubungkan ke katalog…</div>';
+ $('catalogMessage').textContent='';
  const {data,error}=await supabase.from('products').select('id,shop_id,name,description,price,stock,image_path,created_at,shops(name)').eq('status','active').gt('stock',0).order('created_at',{ascending:false}).limit(60);
  if(error){$('catalog').innerHTML='<div class="tile muted">Katalog belum dapat dimuat. Pastikan tabel database dan kebijakan akses sudah diterapkan.</div>';message('catalogMessage','Keterangan: '+error.message,true);return}
  catalogProducts=data||[];
