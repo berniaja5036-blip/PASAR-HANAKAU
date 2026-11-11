@@ -684,7 +684,6 @@ async function previewDeliveryQuote(){
  const {data:settings,error:settingsError}=await supabase.from('delivery_fee_settings').select('enabled,base_fee,per_km_fee,minimum_fee,max_distance_km').eq('id',true).maybeSingle();
  if(seq!==deliveryQuoteSequence)return;
  if(settingsError||!settings){box.textContent='Pengaturan ongkir belum dapat dibaca. Ongkir belum dihitung.';return}
- if(!settings.enabled){box.textContent='Ongkir masih nonaktif. Tarif tersimpan: dasar '+formatRupiah(settings.base_fee)+', per km '+formatRupiah(settings.per_km_fee)+', minimum '+formatRupiah(settings.minimum_fee)+'. Belum ada biaya yang dikenakan.';return}
  const shopIds=[...new Set(entries.map(p=>p.shopId))];
  const {data:shops,error:shopsError}=await supabase.from('shops').select('id,name,pickup_latitude,pickup_longitude').in('id',shopIds);
  if(seq!==deliveryQuoteSequence)return;
@@ -703,7 +702,7 @@ async function previewDeliveryQuote(){
  if(seq!==deliveryQuoteSequence)return;
  if(quotes.some(q=>q.error)){box.textContent=quotes.map(q=>q.error||('Toko '+q.shop+': '+q.km.toFixed(2)+' km — '+formatRupiah(q.fee))).join(' ');return}
  const totalFee=quotes.reduce((sum,q)=>sum+q.fee,0);
- box.innerHTML='<b>Estimasi ongkir berdasarkan rute jalan</b>'+quotes.map(q=>'<div class="cartline"><span>'+escapeHtml(q.shop)+' • '+q.km.toFixed(2)+' km</span><b>'+formatRupiah(q.fee)+'</b></div>').join('')+'<div class="cartline"><b>Total estimasi ongkir</b><b>'+formatRupiah(totalFee)+'</b></div><p class="muted">Estimasi ini belum ditagihkan. Integrasi pengamanan tarif pada transaksi masih dalam tahap berikutnya.</p>';
+ box.innerHTML='<b>'+(settings.enabled?'Estimasi ongkir berdasarkan rute jalan':'Simulasi ongkir (belum aktif)')+'</b>'+quotes.map(q=>'<div class="cartline"><span>'+escapeHtml(q.shop)+' • '+q.km.toFixed(2)+' km</span><b>'+formatRupiah(q.fee)+'</b></div>').join('')+'<div class="cartline"><b>Total estimasi ongkir</b><b>'+formatRupiah(totalFee)+'</b></div><p class="muted">'+(settings.enabled?'Estimasi ini belum ditagihkan.':'Simulasi untuk pengujian saja. Ongkir belum dikenakan kepada pembeli.')+'</p>';
 }
 $('checkoutButton').addEventListener('click',async()=>{
  if(!activeBuyerId){message('checkoutMessage','Silakan masuk sebagai pembeli.',true);return}
