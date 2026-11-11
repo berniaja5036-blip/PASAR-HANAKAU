@@ -90,7 +90,7 @@ footer{color:#829087;font-size:12px;padding:30px 10px}
 </section>
 <section id="catalogPanel" class="hidden"><div class="section"><h2>🛒 Jelajahi produk</h2><p class="muted">Temukan kebutuhan dari toko-toko sekitar Anda.</p></div>
 <div class="tile" id="buyerChatBox" style="display:none;margin:14px 0"><div class="row" style="justify-content:space-between"><h3 style="margin:0">💬 Chat dengan toko</h3><button id="buyerChatClose" class="btn secondary" type="button">Tutup</button></div><p id="buyerChatShopTitle" class="muted"></p><p class="muted">Pilih tombol Hubungi toko pada katalog untuk memulai percakapan. Anda dapat mengirim teks, foto, dan dokumen.</p><div id="buyerChatConversations" class="muted">Memuat percakapan…</div><div id="buyerChatMessages" class="chat-messages muted">Pilih percakapan untuk melihat pesan.</div><textarea id="buyerChatBody" class="field" rows="2" maxlength="5000" placeholder="Tulis pesan untuk toko…"></textarea><input id="buyerChatFile" class="field" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,text/plain,text/csv,.doc,.docx,.xls,.xlsx"><button id="buyerChatSend" class="btn" type="button">Kirim pesan</button><div id="buyerChatStatus" class="status" role="status"></div></div>
-<div class="panel" style="margin-top:10px"><label for="catalogSearch">Cari nama barang atau toko</label><input id="catalogSearch" class="field" type="search" placeholder="Contoh: beras, minyak, Toko Sumber Rezeki" autocomplete="off"><div class="row"><label for="catalogSort" class="muted">Urutkan:</label><select id="catalogSort" class="field" style="max-width:230px;margin:0"><option value="newest">Terbaru</option><option value="price-asc">Harga termurah</option><option value="price-desc">Harga termahal</option><option value="name-asc">Nama barang A–Z</option></select></div><div id="catalogCount" class="muted" style="margin-top:8px" aria-live="polite"></div></div>
+<div class="panel" style="margin:10px 0"><div class="row" style="justify-content:space-between"><h3 style="margin:0">❤️ Produk favorit saya</h3><button id="refreshWishlist" class="btn secondary" type="button">Muat ulang</button></div><div id="buyerWishlist" class="muted" style="margin-top:8px">Masuk sebagai pembeli untuk melihat favorit.</div></div><div class="panel" style="margin-top:10px"><label for="catalogSearch">Cari nama barang atau toko</label><input id="catalogSearch" class="field" type="search" placeholder="Contoh: beras, minyak, Toko Sumber Rezeki" autocomplete="off"><div class="row"><label for="catalogSort" class="muted">Urutkan:</label><select id="catalogSort" class="field" style="max-width:230px;margin:0"><option value="newest">Terbaru</option><option value="price-asc">Harga termurah</option><option value="price-desc">Harga termahal</option><option value="name-asc">Nama barang A–Z</option></select></div><div id="catalogCount" class="muted" style="margin-top:8px" aria-live="polite"></div></div>
 <div id="catalog" class="grid"><div class="tile muted">Menghubungkan ke katalog…</div></div>
 <div id="catalogMessage" class="status" role="status"></div></section>
 </main><footer>Pasar Hanakau • Uji coba awal<br><a href="./kebijakan-privasi.html">Kebijakan Privasi</a> · <a href="./syarat-ketentuan.html">Syarat dan Ketentuan</a><br>Kontak pengelola: <a href="mailto:yisunshin715@gmail.com">yisunshin715@gmail.com</a></footer>
@@ -402,6 +402,23 @@ $('addProduct').addEventListener('click',async()=>{
 $('signOut').addEventListener('click',async()=>{try{const registration=await navigator.serviceWorker?.ready;const subscription=await registration?.pushManager?.getSubscription();if(subscription){await callPushFunction({action:"remove_subscription",endpoint:subscription.endpoint});await subscription.unsubscribe();}}catch(error){console.warn("Pelepasan langganan notifikasi gagal:",error);}const {error}=await supabase.auth.signOut();if(error)message('catalogMessage',error.message,true);else{await refreshSession();message('catalogMessage','Anda sudah keluar.')}});
 supabase.auth.onAuthStateChange((event,session)=>{setTimeout(()=>{refreshSession().catch(error=>message('authMessage','Gagal memuat sesi akun: '+(error?.message||'Kesalahan tidak diketahui'),true));},0);});
 let catalogProducts=[];
+let buyerWishlistIds=new Set();
+async function loadBuyerWishlist(){
+ const box=$('buyerWishlist');
+ if(!activeBuyerId){if(box)box.textContent='Masuk sebagai pembeli untuk menyimpan produk favorit.';return}
+ if(box)box.textContent='Memuat produk favorit…';
+ const {data,error}=await supabase.from('buyer_wishlist').select('product_id,created_at').eq('buyer_id',activeBuyerId).order('created_at',{ascending:false});
+ if(error){if(box)box.textContent='Favorit belum dapat dimuat: '+error.message;return}
+ buyerWishlistIds=new Set((data||[]).map(row=>row.product_id));
+ renderCatalog();renderBuyerWishlist();
+}
+function renderBuyerWishlist(){
+ const box=$('buyerWishlist');if(!box)return;
+ const products=[...buyerWishlistIds].map(id=>catalogProducts.find(p=>p.id===id)).filter(Boolean);
+ if(!products.length){box.textContent=buyerWishlistIds.size?'Produk favorit tersimpan. Muat ulang katalog untuk melihat detailnya.':'Belum ada produk favorit. Tekan ❤️ pada produk untuk menyimpannya.';return}
+ box.innerHTML=products.map(p=>'<div class="cartline"><span><b>'+escapeHtml(p.name)+'</b><div class="muted">'+escapeHtml(p.shops?.name||'Toko')+' • '+formatRupiah(p.price)+'</div></span><button class="btn secondary" type="button" data-wishlist-remove="'+p.id+'">Hapus</button></div>').join('');
+}
+$('refreshWishlist')?.addEventListener('click',loadBuyerWishlist);
 function renderCatalog(){
  const query=$('catalogSearch')?.value.trim().toLocaleLowerCase('id-ID')||'';
  const sort=$('catalogSort')?.value||'newest';
@@ -412,7 +429,7 @@ function renderCatalog(){
  else items.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
  $('catalogCount').textContent=items.length+' dari '+catalogProducts.length+' produk ditampilkan';
  if(!items.length){$('catalog').innerHTML='<div class="tile muted">'+(catalogProducts.length?'Tidak ada produk yang cocok. Coba kata kunci lain.':'Belum ada produk aktif. Produk akan muncul setelah toko dan produk disetujui admin.')+'</div>';return}
- $('catalog').innerHTML=items.map(p=>'<article class="tile product"><div>'+productImageHtml(p.image_path)+'<h3>'+escapeHtml(p.name)+'</h3><div class="muted">'+escapeHtml(p.shops?.name||'Toko Pasar Hanakau')+'</div><p class="muted">'+escapeHtml(p.description||'')+'</p><div class="price">Rp '+Number(p.price).toLocaleString('id-ID')+'</div><div class="muted">Stok: '+p.stock+'</div><button class="btn" data-add-cart="'+p.id+'" data-name="'+escapeHtml(p.name)+'" data-price="'+Number(p.price)+'" data-stock="'+p.stock+'" data-shop="'+p.shop_id+'" data-shop-name="'+escapeHtml(p.shops?.name||'Toko')+'">Tambah ke keranjang</button><button class="btn secondary" style="margin-top:6px" data-chat-shop="'+p.shop_id+'" data-chat-shop-name="'+escapeHtml(p.shops?.name||'Toko')+'">Hubungi toko</button></div></article>').join('');
+ $('catalog').innerHTML=items.map(p=>'<article class="tile product"><div>'+productImageHtml(p.image_path)+'<h3>'+escapeHtml(p.name)+'</h3><div class="muted">'+escapeHtml(p.shops?.name||'Toko Pasar Hanakau')+'</div><p class="muted">'+escapeHtml(p.description||'')+'</p><div class="price">Rp '+Number(p.price).toLocaleString('id-ID')+'</div><div class="muted">Stok: '+p.stock+'</div><button class="btn secondary" style="margin-bottom:6px" type="button" data-wishlist-toggle="'+p.id+'">'+(buyerWishlistIds.has(p.id)?'❤️ Hapus dari favorit':'♡ Simpan favorit')+'</button><button class="btn" data-add-cart="'+p.id+'" data-name="'+escapeHtml(p.name)+'" data-price="'+Number(p.price)+'" data-stock="'+p.stock+'" data-shop="'+p.shop_id+'" data-shop-name="'+escapeHtml(p.shops?.name||'Toko')+'">Tambah ke keranjang</button><button class="btn secondary" style="margin-top:6px" data-chat-shop="'+p.shop_id+'" data-chat-shop-name="'+escapeHtml(p.shops?.name||'Toko')+'">Hubungi toko</button></div></article>').join('');
 }
 $('catalogSearch').addEventListener('input',renderCatalog);
 $('catalogSort').addEventListener('change',renderCatalog);
@@ -424,6 +441,7 @@ async function loadCatalog(){
   if(error)throw error;
   catalogProducts=data||[];
   renderCatalog();
+  if(activeBuyerId)await loadBuyerWishlist();
  }catch(error){
   $('catalog').innerHTML='<div class="tile muted">Katalog belum dapat dimuat. Periksa koneksi internet lalu coba muat ulang.</div>';
   message('catalogMessage','Keterangan: '+(error?.message||'Permintaan data katalog gagal.'),true);
@@ -859,6 +877,32 @@ function renderCart(){
  previewDeliveryQuote();
 }
 $('catalog').addEventListener('click',async e=>{
+ const favorite=e.target.closest('[data-wishlist-toggle]');
+ if(favorite){
+  if(!activeBuyerId){message('catalogMessage','Silakan masuk dengan akun pembeli untuk menyimpan favorit.',true);return}
+  favorite.disabled=true;
+  try{
+   const productId=favorite.dataset.wishlistToggle;
+   if(buyerWishlistIds.has(productId)){
+    const {error}=await supabase.from('buyer_wishlist').delete().eq('buyer_id',activeBuyerId).eq('product_id',productId);
+    if(error)throw error;
+    buyerWishlistIds.delete(productId);message('catalogMessage','Produk dihapus dari favorit.');
+   }else{
+    const {error}=await supabase.from('buyer_wishlist').insert({buyer_id:activeBuyerId,product_id:productId});
+    if(error&&error.code!=='23505')throw error;
+    buyerWishlistIds.add(productId);message('catalogMessage','Produk berhasil disimpan ke favorit.');
+   }
+   renderCatalog();renderBuyerWishlist();
+  }catch(error){message('catalogMessage','Favorit gagal diperbarui: '+(error.message||'Kesalahan tidak diketahui'),true);}
+  return;
+ }
+ const removeFavorite=e.target.closest('[data-wishlist-remove]');
+ if(removeFavorite){
+  const productId=removeFavorite.dataset.wishlistRemove;
+  const {error}=await supabase.from('buyer_wishlist').delete().eq('buyer_id',activeBuyerId).eq('product_id',productId);
+  if(error){message('catalogMessage','Gagal menghapus favorit: '+error.message,true);return}
+  buyerWishlistIds.delete(productId);renderCatalog();renderBuyerWishlist();return;
+ }
  const chat=e.target.closest('[data-chat-shop]');
  if(chat){const button=chat;button.disabled=true;button.textContent='Membuka chat…';try{await openBuyerChatWithShop(chat.dataset.chatShop,chat.dataset.chatShopName);}finally{button.disabled=false;button.textContent='Hubungi toko';}return;}
  const b=e.target.closest('[data-add-cart]');if(!b)return;
