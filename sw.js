@@ -48,8 +48,8 @@ self.addEventListener("push", event => {
   const title = payload.title || "Pasar Hanakau";
   const options = {
     body: payload.body || "Ada pembaruan pesanan untuk Anda.",
-    icon: payload.icon || "./icons/icon-192.png",
-    badge: payload.badge || "./icons/badge-72.png",
+    icon: payload.icon || "./icons/icon.svg",
+    
     tag: payload.tag || "pasar-hanakau-update",
     data: { url: payload.url || "./" },
     renotify: Boolean(payload.renotify)
