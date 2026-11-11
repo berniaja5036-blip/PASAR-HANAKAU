@@ -113,17 +113,24 @@ let activeAccountUserId=null;
 async function loadAccountAvatar(userId){
  const img=$('accountAvatar'),fallback=$('accountAvatarFallback');
  if(!img||!fallback)return;
- img.removeAttribute('src');img.classList.add('hidden');fallback.classList.remove('hidden');
+ const showFallback=()=>{
+  img.onload=null;img.onerror=null;img.removeAttribute('src');
+  img.classList.add('hidden');img.hidden=true;img.style.display='none';
+  fallback.classList.remove('hidden');fallback.hidden=false;fallback.style.display='grid';
+ };
+ const showPhoto=()=>{
+  fallback.classList.add('hidden');fallback.hidden=true;fallback.style.display='none';
+  img.classList.remove('hidden');img.hidden=false;img.style.display='block';
+ };
+ showFallback();
  const {data,error}=await supabase.from('user_public_profiles').select('avatar_path').eq('user_id',userId).maybeSingle();
  if(error){message('profileAvatarMessage','Foto profil belum dapat dimuat: '+error.message,true);return}
- if(data?.avatar_path){
-  const {data:urlData}=supabase.storage.from('profile-avatars').getPublicUrl(data.avatar_path);
-  img.onload=()=>fallback.classList.add('hidden');
-  img.onerror=()=>{img.removeAttribute('src');img.classList.add('hidden');fallback.classList.remove('hidden');message('profileAvatarMessage','Foto profil tidak dapat dimuat. Silakan unggah ulang foto.',true);};
-  fallback.classList.add('hidden');img.classList.remove('hidden');img.src=urlData.publicUrl;
- }else{
-  img.removeAttribute('src');img.classList.add('hidden');fallback.classList.remove('hidden');
- }
+ if(!data?.avatar_path)return;
+ const {data:urlData}=supabase.storage.from('profile-avatars').getPublicUrl(data.avatar_path);
+ img.onload=()=>showPhoto();
+ img.onerror=()=>{showFallback();message('profileAvatarMessage','Foto profil tidak dapat dimuat. Silakan unggah ulang foto.',true);};
+ img.src=urlData.publicUrl;
+ if(img.complete&&img.naturalWidth>0)showPhoto();
 }
 $('uploadProfileAvatar').addEventListener('click',async()=>{
  const file=$('profileAvatarInput').files?.[0];
