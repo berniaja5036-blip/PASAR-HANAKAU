@@ -648,10 +648,11 @@ function loadCart(){const key=cartStorageKey();if(!key){cart={};return}try{cart=
 function saveCart(){const key=cartStorageKey();if(key)localStorage.setItem(key,JSON.stringify(cart));}
 function formatRupiah(n){return 'Rp '+Number(n||0).toLocaleString('id-ID');}
 function orderStatusLabel(s){return ({pending:'Menunggu konfirmasi',confirmed:'Dikonfirmasi',ready_for_pickup:'Siap dijemput driver',picked_up:'Sudah dijemput driver',delivered:'Terkirim',cancelled:'Dibatalkan'})[s]||s;}
+let checkoutInProgress=false;
 function renderCart(){
  const entries=Object.values(cart);let total=0;
  if(!entries.length){$('cartItems').textContent='Keranjang masih kosong. Pilih produk dari katalog.';$('cartTotal').textContent='';$('checkoutButton').disabled=true;const quoteBox=$('deliveryQuotePreview');if(quoteBox)quoteBox.textContent='Tambahkan barang ke keranjang untuk melihat estimasi ongkir.';deliveryQuoteSequence++;return}
- $('checkoutButton').disabled=false;
+ $('checkoutButton').disabled=checkoutInProgress;
  $('cartItems').innerHTML=entries.map(p=>{const line=p.price*p.quantity;total+=line;return '<div class="cartline"><div style="flex:1"><b>'+escapeHtml(p.name)+'</b><div class="muted">'+escapeHtml(p.shopName)+' • '+formatRupiah(p.price)+'</div><div class="row"><button class="qtybtn" data-cart-minus="'+p.id+'">−</button><b>'+p.quantity+'</b><button class="qtybtn" data-cart-plus="'+p.id+'">+</button><button class="btn secondary" data-cart-remove="'+p.id+'">Hapus</button></div></div><b>'+formatRupiah(line)+'</b></div>'}).join('');
  $('cartTotal').textContent='Total barang: '+formatRupiah(total)+' (ongkos kirim akan ditampilkan terpisah)';
  previewDeliveryQuote();
@@ -659,13 +660,15 @@ function renderCart(){
 $('catalog').addEventListener('click',e=>{
  const b=e.target.closest('[data-add-cart]');if(!b)return;
  if(!activeBuyerId){message('catalogMessage','Silakan masuk dengan akun pembeli untuk menggunakan keranjang.',true);return}
- const id=b.dataset.addCart,stock=Number(b.dataset.stock),existing=cart[id]?.quantity||0;
+ if(checkoutInProgress){message('catalogMessage','Tunggu sampai proses checkout selesai.',true);return}
+  const id=b.dataset.addCart,stock=Number(b.dataset.stock),existing=cart[id]?.quantity||0;
  if(existing>=stock){message('catalogMessage','Jumlah di keranjang sudah mencapai stok tersedia.',true);return}
  cart[id]={id,name:b.dataset.name,price:Number(b.dataset.price),stock,shopId:b.dataset.shop,shopName:b.dataset.shopName,quantity:existing+1};
  saveCart();renderCart();message('catalogMessage','Produk ditambahkan ke keranjang.');
 });
 $('cartItems').addEventListener('click',e=>{
- const minus=e.target.closest('[data-cart-minus]'),plus=e.target.closest('[data-cart-plus]'),remove=e.target.closest('[data-cart-remove]');
+ if(checkoutInProgress)return;
+  const minus=e.target.closest('[data-cart-minus]'),plus=e.target.closest('[data-cart-plus]'),remove=e.target.closest('[data-cart-remove]');
  const id=minus?.dataset.cartMinus||plus?.dataset.cartPlus||remove?.dataset.cartRemove;
  if(!id||!cart[id])return;
  if(remove){delete cart[id];}
@@ -705,22 +708,40 @@ async function previewDeliveryQuote(){
  box.innerHTML='<b>'+(settings.enabled?'Estimasi ongkir berdasarkan rute jalan':'Simulasi ongkir (belum aktif)')+'</b>'+quotes.map(q=>'<div class="cartline"><span>'+escapeHtml(q.shop)+' • '+q.km.toFixed(2)+' km</span><b>'+formatRupiah(q.fee)+'</b></div>').join('')+'<div class="cartline"><b>Total estimasi ongkir</b><b>'+formatRupiah(totalFee)+'</b></div><p class="muted">'+(settings.enabled?'Estimasi ini belum ditagihkan.':'Simulasi untuk pengujian saja. Ongkir belum dikenakan kepada pembeli.')+'</p>';
 }
 $('checkoutButton').addEventListener('click',async()=>{
+ if(checkoutInProgress)return;
  if(!activeBuyerId){message('checkoutMessage','Silakan masuk sebagai pembeli.',true);return}
  const address=$('deliveryAddress').value.trim();if(address.length<8){message('checkoutMessage','Isi alamat pengantaran dengan lengkap.',true);return}
  const items=Object.values(cart).map(p=>({product_id:p.id,quantity:p.quantity}));
  if(!items.length){message('checkoutMessage','Keranjang masih kosong.',true);return}
  if(!buyerDeliveryPoint){message('checkoutMessage','Ambil lokasi GPS HP di titik pengantaran sebelum membuat pesanan.',true);return}
- const {data:feeSettings,error:feeSettingsError}=await supabase.from('delivery_fee_settings').select('enabled').eq('id',true).maybeSingle();
- if(feeSettingsError){message('checkoutMessage','Pengaturan ongkir belum dapat diverifikasi. Coba lagi.',true);return}
- if(feeSettings?.enabled){message('checkoutMessage','Ongkir sedang aktif, tetapi pengamanan penyimpanan ongkir pada transaksi belum selesai. Admin perlu menonaktifkannya sementara.',true);return}
- $('checkoutButton').disabled=true;message('checkoutMessage','Memeriksa stok dan membuat pesanan…');
- const {data,error}=await supabase.rpc('checkout_cart',{p_items:items,p_delivery_address:address,p_notes:$('orderNotes').value.trim(),p_delivery_latitude:buyerDeliveryPoint.latitude,p_delivery_longitude:buyerDeliveryPoint.longitude});
- $('checkoutButton').disabled=false;
- if(error){message('checkoutMessage','Pesanan belum berhasil dibuat: '+error.message,true);return}
- cart={};saveCart();renderCart();buyerDeliveryPoint=null;if(buyerMap){buyerMap.eachLayer(layer=>{if(layer instanceof L.Marker)buyerMap.removeLayer(layer);});}renderBuyerLocationStatus();$('orderNotes').value='';
- const nums=(data||[]).map(o=>o.order_number).join(', ');
- message('checkoutMessage','Pesanan berhasil dibuat: '+nums+'. Pembayaran belum dilakukan; tunggu konfirmasi admin/penjual.');
- await loadBuyerOrders();await loadCatalog();
+ checkoutInProgress=true;
+ const button=$('checkoutButton');
+ const originalButtonText=button.textContent;
+ button.disabled=true;
+ button.textContent='Memproses pesanan…';
+ try{
+  let createdOrders=null;
+  try{
+   const {data:feeSettings,error:feeSettingsError}=await supabase.from('delivery_fee_settings').select('enabled').eq('id',true).maybeSingle();
+   if(feeSettingsError){message('checkoutMessage','Pengaturan ongkir belum dapat diverifikasi. Coba lagi.',true);return}
+   if(feeSettings?.enabled){message('checkoutMessage','Ongkir sedang aktif, tetapi pengamanan penyimpanan ongkir pada transaksi belum selesai. Admin perlu menonaktifkannya sementara.',true);return}
+   const {data,error}=await supabase.rpc('checkout_cart',{p_items:items,p_delivery_address:address,p_notes:$('orderNotes').value.trim(),p_delivery_latitude:buyerDeliveryPoint.latitude,p_delivery_longitude:buyerDeliveryPoint.longitude});
+   if(error){message('checkoutMessage','Pesanan belum berhasil dibuat: '+error.message,true);return}
+   createdOrders=data||[];
+  }catch(error){
+   message('checkoutMessage','Pesanan belum berhasil diproses: '+(error?.message||'Terjadi kesalahan.'),true);
+   return;
+  }
+  cart={};saveCart();renderCart();buyerDeliveryPoint=null;if(buyerMap){buyerMap.eachLayer(layer=>{if(layer instanceof L.Marker)buyerMap.removeLayer(layer);});}renderBuyerLocationStatus();$('orderNotes').value='';
+  const nums=createdOrders.map(o=>o.order_number).join(', ');
+  message('checkoutMessage','Pesanan berhasil dibuat: '+nums+'. Pembayaran belum dilakukan; tunggu konfirmasi admin/penjual.');
+  try{await loadBuyerOrders();await loadCatalog();}
+  catch(refreshError){console.warn('Pesanan berhasil dibuat, tetapi penyegaran tampilan gagal:',refreshError);}
+ }finally{
+  checkoutInProgress=false;
+  button.textContent=originalButtonText;
+  button.disabled=Object.keys(cart).length===0;
+ }
 });
 async function loadBuyerOrders(){
  if(!activeBuyerId)return;
