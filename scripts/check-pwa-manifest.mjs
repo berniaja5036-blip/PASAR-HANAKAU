@@ -12,7 +12,7 @@ if (!["standalone", "fullscreen", "minimal-ui"].includes(manifest.display)) {
 if (!Array.isArray(manifest.icons)) throw new Error("Manifest icons must be an array.");
 
 for (const requiredSize of ["192x192", "512x512"]) {
-  const icon = manifest.icons.find(item => item.sizes?.split(/\\s+/).includes(requiredSize));
+  const icon = manifest.icons.find(item => item.sizes?.split(/\s+/).includes(requiredSize));
   if (!icon) throw new Error(`Manifest is missing required ${requiredSize} icon.`);
   const iconPath = path.resolve(path.dirname(manifestPath), icon.src);
   if (!fs.existsSync(iconPath)) throw new Error(`Missing icon file: ${icon.src}`);
