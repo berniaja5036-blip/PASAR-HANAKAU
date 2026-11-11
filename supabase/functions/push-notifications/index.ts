@@ -105,7 +105,7 @@ Deno.serve(async (req: Request) => {
     const { data: profile } = await admin.from("profiles").select("role").eq("id", authData.user.id).maybeSingle();
     if (profile?.role !== "admin") return json({ error: "Admin only" }, 403);
     const privateKey = await generateVapidKey();
-    const publicKey = vapidPublicKey(privateKey);
+    const publicKey = await vapidPublicKey(privateKey);
     const { error } = await admin.from("push_settings").upsert({ id: 1, public_key: publicKey, subject: "mailto:yisunshin715@gmail.com", updated_at: new Date().toISOString() });
     if (error) return json({ error: "Could not save public VAPID key" }, 500);
     return json({ publicKey, privateKey });
