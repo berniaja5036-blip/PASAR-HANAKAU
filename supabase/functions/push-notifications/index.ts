@@ -1,4 +1,4 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.119.0";
 import { generateVapidKey, vapidPublicKey, send } from "jsr:@daaku/webpush@0.2.0";
 
 // Deno 2.1 compatibility for Base64 typed-array methods used by @daaku/webpush.
