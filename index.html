@@ -62,7 +62,7 @@ footer{color:#829087;font-size:12px;padding:30px 10px}
 <div class="tile" style="margin-top:12px"><b>Notifikasi pesanan</b><p class="muted">Aktifkan agar pemberitahuan pesanan tetap masuk ke HP meskipun halaman Pasar Hanakau tidak sedang dibuka.</p><button class="btn secondary" id="enablePushNotifications" type="button">Aktifkan notifikasi di HP</button><div id="pushStatusMessage" class="status" role="status"></div></div>
 </section>
 <section id="buyerPanel" class="panel hidden"><h2>🧺 Keranjang belanja</h2><p class="muted">Periksa barang, jumlah, dan alamat sebelum membuat pesanan. Pembayaran belum diaktifkan. Riwayat pesanan diperbarui otomatis setiap 45 detik saat halaman aktif.</p><div id="cartItems" class="muted">Keranjang masih kosong.</div><div id="cartTotal" class="carttotal"></div><h3>Alamat pengantaran</h3><textarea id="deliveryAddress" class="field" rows="2" maxlength="500" placeholder="Nama jalan, RT/RW, patokan rumah, Desa Hanakau Jaya"></textarea><p class="muted">Gunakan GPS di lokasi tujuan. Jika akurasi GPS kurang baik, peta akan menampilkan perkiraan lokasi; perbesar peta lalu ketuk tepat pada titik tujuan untuk mengoreksinya sebelum menghitung ongkir.</p><div id="buyerDeliveryMap" aria-label="Peta lokasi pengantaran dari GPS"></div><button id="useBuyerGps" class="btn secondary" type="button">Ambil lokasi GPS HP</button><div id="buyerLocationStatus" class="muted" role="status">Belum ada titik pengantaran yang dipilih.</div><div id="deliveryQuotePreview" class="tile muted" aria-live="polite">Estimasi ongkir akan dihitung setelah lokasi tujuan dan keranjang tersedia.</div><label for="orderNotes">Catatan untuk penjual/kurir (opsional)</label><textarea id="orderNotes" class="field" rows="2" maxlength="500" placeholder="Catatan pesanan"></textarea><button id="checkoutButton" class="btn">Buat pesanan</button><div id="checkoutMessage" class="status" role="status"></div><div class="row" style="justify-content:space-between;margin-top:18px"><h3 style="margin:0">📦 Riwayat pesanan saya</h3><button class="btn secondary" id="refreshBuyerOrders" type="button">↻ Muat ulang</button></div><p class="muted">Pantau status dan lihat rincian setiap pesanan Anda.</p><div class="notice" style="margin:10px 0"><b>🔔 Pemberitahuan pesanan</b><div id="buyerNotifications" class="muted" style="margin-top:6px">Belum ada pemberitahuan.</div></div><div id="buyerOrders" class="muted">Memuat pesanan…</div>
-<div class="tile" id="buyerChatBox" style="margin-top:14px"><h3>💬 Chat dengan toko</h3><p class="muted">Pilih tombol Hubungi toko pada katalog untuk memulai percakapan. Anda dapat mengirim teks, foto, dan dokumen.</p><div id="buyerChatConversations" class="muted">Memuat percakapan…</div><div id="buyerChatMessages" class="chat-messages muted">Pilih percakapan untuk melihat pesan.</div><textarea id="buyerChatBody" class="field" rows="2" maxlength="5000" placeholder="Tulis pesan untuk toko…"></textarea><input id="buyerChatFile" class="field" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,text/plain,text/csv,.doc,.docx,.xls,.xlsx"><button id="buyerChatSend" class="btn" type="button">Kirim pesan</button><div id="buyerChatStatus" class="status" role="status"></div></div></section>
+</section>
 <section id="sellerPanel" class="panel hidden">
 <h2>🏬 Buka toko di Pasar Hanakau</h2><p class="muted">Ajukan toko Anda. Toko akan diperiksa admin sebelum dapat berjualan.</p>
 <label for="shopName">Nama toko</label><input class="field" id="shopName" maxlength="100" placeholder="Contoh: Toko Sumber Rezeki">
@@ -89,6 +89,7 @@ footer{color:#829087;font-size:12px;padding:30px 10px}
 <div class="tile" id="sellerChatBox" style="margin-top:14px"><h3>💬 Pesan dari pembeli</h3><p class="muted">Balas pertanyaan pembeli. Anda dapat mengirim teks, foto, dan dokumen.</p><div id="sellerChatConversations" class="muted">Memuat percakapan…</div><div id="sellerChatMessages" class="chat-messages muted">Pilih percakapan untuk melihat pesan.</div><textarea id="sellerChatBody" class="field" rows="2" maxlength="5000" placeholder="Tulis balasan untuk pembeli…"></textarea><input id="sellerChatFile" class="field" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,text/plain,text/csv,.doc,.docx,.xls,.xlsx"><button id="sellerChatSend" class="btn" type="button">Kirim pesan</button><div id="sellerChatStatus" class="status" role="status"></div></div>
 </section>
 <section id="catalogPanel" class="hidden"><div class="section"><h2>🛒 Jelajahi produk</h2><p class="muted">Temukan kebutuhan dari toko-toko sekitar Anda.</p></div>
+<div class="tile" id="buyerChatBox" style="display:none;margin:14px 0"><div class="row" style="justify-content:space-between"><h3 style="margin:0">💬 Chat dengan toko</h3><button id="buyerChatClose" class="btn secondary" type="button">Tutup</button></div><p id="buyerChatShopTitle" class="muted"></p><p class="muted">Pilih tombol Hubungi toko pada katalog untuk memulai percakapan. Anda dapat mengirim teks, foto, dan dokumen.</p><div id="buyerChatConversations" class="muted">Memuat percakapan…</div><div id="buyerChatMessages" class="chat-messages muted">Pilih percakapan untuk melihat pesan.</div><textarea id="buyerChatBody" class="field" rows="2" maxlength="5000" placeholder="Tulis pesan untuk toko…"></textarea><input id="buyerChatFile" class="field" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,text/plain,text/csv,.doc,.docx,.xls,.xlsx"><button id="buyerChatSend" class="btn" type="button">Kirim pesan</button><div id="buyerChatStatus" class="status" role="status"></div></div>
 <div class="panel" style="margin-top:10px"><label for="catalogSearch">Cari nama barang atau toko</label><input id="catalogSearch" class="field" type="search" placeholder="Contoh: beras, minyak, Toko Sumber Rezeki" autocomplete="off"><div class="row"><label for="catalogSort" class="muted">Urutkan:</label><select id="catalogSort" class="field" style="max-width:230px;margin:0"><option value="newest">Terbaru</option><option value="price-asc">Harga termurah</option><option value="price-desc">Harga termahal</option><option value="name-asc">Nama barang A–Z</option></select></div><div id="catalogCount" class="muted" style="margin-top:8px" aria-live="polite"></div></div>
 <div id="catalog" class="grid"><div class="tile muted">Menghubungkan ke katalog…</div></div>
 <div id="catalogMessage" class="status" role="status"></div></section>
@@ -859,7 +860,7 @@ function renderCart(){
 }
 $('catalog').addEventListener('click',async e=>{
  const chat=e.target.closest('[data-chat-shop]');
- if(chat){await openBuyerChatWithShop(chat.dataset.chatShop,chat.dataset.chatShopName);return;}
+ if(chat){const button=chat;button.disabled=true;button.textContent='Membuka chat…';try{await openBuyerChatWithShop(chat.dataset.chatShop,chat.dataset.chatShopName);}finally{button.disabled=false;button.textContent='Hubungi toko';}return;}
  const b=e.target.closest('[data-add-cart]');if(!b)return;
  if(!activeBuyerId){message('catalogMessage','Silakan masuk dengan akun pembeli untuk menggunakan keranjang.',true);return}
  if(checkoutInProgress){message('catalogMessage','Tunggu sampai proses checkout selesai.',true);return}
@@ -1047,17 +1048,32 @@ async function loadSellerChatConversations(){
  box.innerHTML=data.map(c=>'<button type="button" class="btn secondary" style="margin:4px" data-chat-open="'+c.id+'" data-chat-role="seller">'+escapeHtml(names.get(c.buyer_id)||'Pembeli')+' • '+chatTime(c.last_message_at)+'</button>').join('');
 }
 async function openBuyerChatWithShop(shopId,shopName){
- if(!activeBuyerId){message('catalogMessage','Silakan masuk dengan akun pembeli untuk menghubungi toko.',true);return;}
- let {data:conversation,error}=await supabase.from('chat_conversations').select('id').eq('buyer_id',activeBuyerId).eq('shop_id',shopId).maybeSingle();
- if(error){message('catalogMessage','Percakapan belum dapat dibuka: '+error.message,true);return;}
- if(!conversation){
-  const created=await supabase.from('chat_conversations').insert({buyer_id:activeBuyerId,shop_id:shopId}).select('id').single();
-  if(created.error){message('catalogMessage','Tidak dapat memulai chat: '+created.error.message,true);return;}
-  conversation=created.data;
+ const box=$('buyerChatBox');
+ box.style.display='block';
+ $('buyerChatShopTitle').textContent='Percakapan dengan '+(shopName||'toko');
+ $('buyerChatMessages').textContent='Membuka percakapan…';
+ box.scrollIntoView({behavior:'smooth',block:'start'});
+ try{
+  if(!activeBuyerId){
+   const {data:{session}}=await supabase.auth.getSession();
+   if(session?.user?.id)activeBuyerId=session.user.id;
+  }
+  if(!activeBuyerId){chatStatus('buyer','Silakan masuk dengan akun pembeli terlebih dahulu.',true);return;}
+  let {data:conversation,error}=await supabase.from('chat_conversations').select('id').eq('buyer_id',activeBuyerId).eq('shop_id',shopId).maybeSingle();
+  if(error)throw error;
+  if(!conversation){
+   const created=await supabase.from('chat_conversations').insert({buyer_id:activeBuyerId,shop_id:shopId}).select('id').single();
+   if(created.error)throw created.error;
+   conversation=created.data;
+  }
+  activeChatConversationId=conversation.id;activeChatRole='buyer';
+  await loadBuyerChatConversations();
+  await loadChatMessages(conversation.id,'buyer');
+  chatStatus('buyer','Chat dengan '+(shopName||'toko')+' siap digunakan.');
+ }catch(error){
+  chatStatus('buyer','Chat belum dapat dibuka: '+(error?.message||'Terjadi kesalahan.'),true);
+  $('buyerChatMessages').textContent='Percakapan belum dapat dimuat.';
  }
- activeChatConversationId=conversation.id;activeChatRole='buyer';
- await loadBuyerChatConversations();await loadChatMessages(conversation.id,'buyer');
- $('buyerChatBox').scrollIntoView({behavior:'smooth',block:'start'});
 }
 async function openChatConversation(conversationId,role){
  activeChatConversationId=conversationId;activeChatRole=role;
@@ -1116,6 +1132,7 @@ async function sendChatMessage(role){
 $('buyerChatConversations').addEventListener('click',e=>{const b=e.target.closest('[data-chat-open]');if(b)void openChatConversation(b.dataset.chatOpen,'buyer');});
 $('sellerChatConversations').addEventListener('click',e=>{const b=e.target.closest('[data-chat-open]');if(b)void openChatConversation(b.dataset.chatOpen,'seller');});
 $('buyerChatSend').addEventListener('click',()=>void sendChatMessage('buyer'));
+$('buyerChatClose').addEventListener('click',()=>{$('buyerChatBox').style.display='none';activeChatConversationId=null;activeChatRole=null;});
 $('sellerChatSend').addEventListener('click',()=>void sendChatMessage('seller'));
 
 await refreshSession();await loadCatalog();
