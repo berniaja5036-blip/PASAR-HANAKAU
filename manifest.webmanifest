@@ -1,0 +1,13 @@
+{
+  "id": "./",
+  "name": "Pasar Hanakau",
+  "short_name": "Pasar Hanakau",
+  "description": "Marketplace warga Desa Hanakau Jaya",
+  "lang": "id",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f7f2",
+  "theme_color": "#176b45",
+  "icons": []
+}
