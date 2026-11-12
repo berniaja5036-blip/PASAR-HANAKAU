@@ -30,7 +30,7 @@ Deno.serve(async (req: Request) => {
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
   const { data: adminProfile, error: adminProfileError } = await admin.from("profiles")
     .select("role,account_status").eq("id", authData.user.id).maybeSingle();
-  if (adminProfileError || adminProfile?.role !== "admin" || adminProfile.account_status === "suspended") {
+  if (adminProfileError || adminProfile?.role !== "admin" || adminProfile.account_status !== "active") {
     return json({ error: "Akses khusus admin ditolak." }, 403);
   }
 
