@@ -1,10 +1,10 @@
 name: Validate encrypted backups
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Storage backup (weekly and manual)"]
+    types: [completed]
     branches: [main]
-    paths:
-      - ".github/workflows/validate-backups.yml"
   schedule:
     # Run after both weekly backups (Monday 03:15 WIB / Sunday 20:15 UTC)
     - cron: "15 20 * * 0"
