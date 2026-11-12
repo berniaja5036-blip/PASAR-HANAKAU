@@ -983,13 +983,12 @@ function makePickerMap(elementId,existingMap,initialPoint){
  if(!window.L){element.innerHTML='<div style="padding:14px;color:#9b3b32">Pustaka peta belum termuat. Periksa koneksi internet lalu muat ulang halaman.</div>';return existingMap;}
  if(existingMap){[150,500,1000].forEach(delay=>setTimeout(()=>{if(existingMap&&element.isConnected){existingMap.invalidateSize(true);if(existingMap._pasarHanakauMarker)existingMap.panTo(existingMap._pasarHanakauMarker.getLatLng());}},delay));return existingMap;}
  const map=L.map(element,{zoomControl:true,scrollWheelZoom:true,doubleClickZoom:true,touchZoom:true,dragging:true}).setView(initialPoint?[initialPoint.latitude,initialPoint.longitude]:HANAKAU_CENTER,initialPoint?16:14);
- // CARTO sengaja tidak digunakan karena meminta API key dan menampilkan watermark.
- // Gunakan Esri terlebih dahulu, lalu OpenStreetMap sebagai cadangan.
+ // Gunakan URL resmi OSM tanpa subdomain; bila gagal, beralih ke Esri.
  const providers=[
-  {name:'OpenStreetMap',url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',options:{maxZoom:22,maxNativeZoom:19,attribution:'© OpenStreetMap'}},
+  {name:'OpenStreetMap',url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',options:{maxZoom:22,maxNativeZoom:19,attribution:'© OpenStreetMap contributors'}},
   {name:'Esri',url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',options:{maxZoom:22,maxNativeZoom:19,attribution:'Tiles © Esri'}}
  ];
- let providerIndex=0,tiles=null,providerErrorCount=0,providerSwitching=false,providerTimer=null,providerLoaded=false;
+ let providerIndex=0,tiles=null,providerErrorCount=0,providerSuccessCount=0,providerSwitching=false,providerTimer=null;
  const mapStatusId=elementId==='legacyShopPickupMap'?'shopLocationStatus':elementId==='sellerPickupMap'?'sellerPickupStatus':elementId==='buyerDeliveryMap'?'buyerLocationStatus':null;
  function showMapStatus(text){const status=mapStatusId&&$(mapStatusId);if(status)status.textContent=text;}
  function switchMapProvider(){
@@ -1000,8 +999,38 @@ function makePickerMap(elementId,existingMap,initialPoint){
    const previous=providers[providerIndex].name;
    if(tiles)map.removeLayer(tiles);
    providerIndex++;
-   showMapStatus('Peta '+previous+' tidak berhasil dimuat. Mencoba '+providers[providerIndex].name+'…');
+   showMapStatus('Gambar peta '+previous+' tidak berhasil dimuat dengan baik. Mencoba '+providers[providerIndex].name+'…');
    loadProvider();
+  }else{
+   showMapStatus('Gambar peta gagal dimuat dari OpenStreetMap maupun Esri. Koordinat GPS tetap terpisah; jangan simpan titik sebelum peta dapat diperiksa. Periksa koneksi internet atau coba jaringan lain.');
+  }
+ }
+ function loadProvider(){
+  const provider=providers[providerIndex];
+  providerErrorCount=0;providerSuccessCount=0;providerSwitching=false;
+  tiles=L.tileLayer(provider.url,{...provider.options,updateWhenIdle:true,keepBuffer:2});
+  tiles.on('tileload',()=>{providerSuccessCount++;});
+  tiles.on('tileerror',()=>{
+   providerErrorCount++;
+   if(providerErrorCount>=3&&providerSuccessCount===0)switchMapProvider();
+  });
+  tiles.on('load',()=>{
+   if(providerSuccessCount>0&&providerErrorCount<=providerSuccessCount){
+    if(providerTimer)clearTimeout(providerTimer);
+    showMapStatus('Peta '+provider.name+' berhasil dimuat.');
+   }else if(providerSuccessCount===0||providerErrorCount>providerSuccessCount){
+    switchMapProvider();
+   }else{
+    showMapStatus('Sebagian gambar peta '+provider.name+' gagal dimuat. Periksa koneksi sebelum menyimpan titik.');
+   }
+  });
+  tiles.addTo(map);
+  providerTimer=setTimeout(()=>{
+   if(providerSuccessCount===0||providerErrorCount>providerSuccessCount)switchMapProvider();
+   else if(providerSuccessCount>0)showMapStatus('Peta '+provider.name+' hanya termuat sebagian. Periksa tampilan peta sebelum menyimpan titik.');
+  },15000);
+ }
+ loadProvider();
   }else{
    showMapStatus('Peta gagal dimuat dari Esri dan OpenStreetMap. Periksa koneksi internet atau coba jaringan lain.');
   }
