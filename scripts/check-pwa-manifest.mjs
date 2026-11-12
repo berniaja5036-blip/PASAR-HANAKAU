@@ -46,4 +46,5 @@ for (const required of ["targetUrl.origin !== scopeUrl.origin", "targetUrl.pathn
     throw new Error("Notification click navigation is missing its app-scope security check.");
   }
 }
-\nconsole.log("PWA manifest, required icons, and service-worker security checks are valid.");
+
+console.log("PWA manifest, required icons, and service-worker security checks are valid.");
