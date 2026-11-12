@@ -57,7 +57,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo -u postgres createdb backup_restore_test
-sudo -u postgres psql -d backup_restore_test -v ON_ERROR_STOP=1 -c "DO \\$\\$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN CREATE ROLE anon NOLOGIN; END IF; IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticated') THEN CREATE ROLE authenticated NOLOGIN; END IF; IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'service_role') THEN CREATE ROLE service_role NOLOGIN; END IF; END \\$\\$;"
+          sudo -u postgres psql -d backup_restore_test -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN CREATE ROLE anon NOLOGIN; END IF; IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticated') THEN CREATE ROLE authenticated NOLOGIN; END IF; IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'service_role') THEN CREATE ROLE service_role NOLOGIN; END IF; END \$\$;"
           # Skip only CREATE EXTENSION entries unavailable on the generic runner;
           # the Supabase production project retains its own managed extensions.
           pg_restore --list backup/database/pasar-hanakau-db.dump | grep -v ' EXTENSION - ' | grep -v ' vault ' > backup/database/restore.list
