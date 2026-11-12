@@ -1036,6 +1036,7 @@ function setPickerMapPoint(map,point){
  }else map._pasarHanakauMarker=L.marker(latlng).addTo(map);
  map.setView(latlng,18);
 }
+function isBuyerLocationInServiceArea(latitude,longitude){const toRad=value=>value*Math.PI/180;const dLat=toRad(latitude-HANAKAU_CENTER[0]),dLon=toRad(longitude-HANAKAU_CENTER[1]);const a=Math.sin(dLat/2)**2+Math.cos(toRad(HANAKAU_CENTER[0]))*Math.cos(toRad(latitude))*Math.sin(dLon/2)**2;return 6371*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))<=20;}
 function captureDeviceGps(buttonId,statusId,mapGetter,onCaptured){
  const button=$(buttonId);if(!button)return;
  button.addEventListener('click',()=>{
@@ -1054,6 +1055,10 @@ function captureDeviceGps(buttonId,statusId,mapGetter,onCaptured){
   const deadline=setTimeout(()=>{
    if(finished)return;
    if(bestPosition){
+    if(buttonId==='useBuyerGps'&&!isBuyerLocationInServiceArea(bestPosition.coords.latitude,bestPosition.coords.longitude)){
+     if(status)status.textContent='Koordinat GPS yang diberikan HP berada jauh di luar wilayah layanan Hanakau Jaya. Titik tidak dipindahkan dan tidak digunakan. Aktifkan Lokasi Akurat/Google Location Accuracy, izinkan lokasi presisi untuk Chrome, lalu coba lagi atau pilih titik secara manual pada peta.';
+     finish();return;
+    }
     const accuracy=Math.round(bestPosition.coords.accuracy);
     const point={latitude:Number(bestPosition.coords.latitude.toFixed(6)),longitude:Number(bestPosition.coords.longitude.toFixed(6)),accuracy};
     const map=mapGetter();
@@ -1068,7 +1073,7 @@ function captureDeviceGps(buttonId,statusId,mapGetter,onCaptured){
    const c=position.coords,latitude=Number(c.latitude),longitude=Number(c.longitude),accuracy=Number(c.accuracy);
    if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||!Number.isFinite(accuracy)||latitude < -90||latitude > 90||longitude < -180||longitude > 180)return;
    if(!bestPosition||accuracy<bestPosition.coords.accuracy)bestPosition=position;
-   if(accuracy<=100){saveBest();return;}
+   if(accuracy<=100&& (buttonId!=='useBuyerGps'||isBuyerLocationInServiceArea(latitude,longitude))){saveBest();return;}
    if(status)status.textContent='Sinyal GPS sedang diperkuat. Akurasi terbaik sementara '+Math.round(bestPosition.coords.accuracy)+' meter; target 100 meter atau lebih baik…';
   },error=>{
    if(finished)return;
