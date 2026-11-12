@@ -59,7 +59,17 @@ self.addEventListener("push", event => {
 
 self.addEventListener("notificationclick", event => {
   event.notification.close();
-  const target = new URL(event.notification.data?.url || "./", self.registration.scope).href;
+  let targetUrl;
+  try {
+    targetUrl = new URL(event.notification.data?.url || "./", self.registration.scope);
+  } catch {
+    targetUrl = new URL("./", self.registration.scope);
+  }
+  const scopeUrl = new URL(self.registration.scope);
+  if (targetUrl.origin !== scopeUrl.origin || !targetUrl.pathname.startsWith(scopeUrl.pathname)) {
+    targetUrl = new URL("./", self.registration.scope);
+  }
+  const target = targetUrl.href;
   event.waitUntil((async () => {
     const windows = await clients.matchAll({ type: "window", includeUncontrolled: true });
     for (const client of windows) {
