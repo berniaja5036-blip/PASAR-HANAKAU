@@ -1,4 +1,5 @@
 name: Storage backup (weekly and manual)
+# Storage export is authenticated through SUPABASE_ACCESS_TOKEN in the runner environment.
 
 on:
   push:
