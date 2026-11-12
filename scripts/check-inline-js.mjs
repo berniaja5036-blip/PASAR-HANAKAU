@@ -221,4 +221,13 @@ if (!ratingAccessMigration.includes('from anon') ||
   process.exit(1);
 }
 
+
+const driverAssignmentGuardMigration = readMigration('guard_driver_assignment_active_profile');
+if (!driverAssignmentGuardMigration.includes("p.role = 'driver'") ||
+    !driverAssignmentGuardMigration.includes("p.account_status = 'active'") ||
+    !driverAssignmentGuardMigration.includes('for update')) {
+  console.error('Driver assignment must lock and verify an active driver profile before assigning work.');
+  process.exit(1);
+}
+
 console.log('JavaScript syntax check passed (' + moduleBlocks.length + ' inline module).');
