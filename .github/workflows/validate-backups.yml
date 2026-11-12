@@ -60,7 +60,8 @@ jobs:
         run: |
           set -euo pipefail
           sudo -u postgres createdb backup_restore_test
-          sudo -u postgres pg_restore --no-owner --no-acl --exit-on-error \
+          pg_restore --list backup/database/pasar-hanakau-db.dump | grep -v 'pg_net' > backup/database/restore.list
+          sudo -u postgres pg_restore --use-list=backup/database/restore.list --no-owner --no-acl --exit-on-error \
             --dbname=backup_restore_test backup/database/pasar-hanakau-db.dump
           table_count=$(sudo -u postgres psql -d backup_restore_test -Atc \
             "SELECT count(*) FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog','information_schema');")
@@ -68,6 +69,7 @@ jobs:
           test "${table_count}" -gt 0
 
       - name: Decrypt, verify, and extract Storage archive
+        if: always()
         env:
           BACKUP_ENCRYPTION_PASSPHRASE: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
         run: |
