@@ -4,7 +4,7 @@ Marketplace multi-penjual untuk tahap awal Desa Hanakau Jaya, Kecamatan Sungkai 
 
 ## Status saat ini
 
-Pasar Hanakau sudah memiliki prototipe web yang terhubung ke Supabase dan di-host melalui GitHub Pages. Fitur inti telah diuji secara bertahap dengan akun terpisah. Aplikasi masih dalam tahap uji coba terbatas dan **belum siap untuk transaksi atau pembayaran uang sungguhan**.
+Pasar Hanakau memiliki aplikasi web/PWA yang terhubung ke Supabase dan di-host melalui GitHub Pages. Fitur dikembangkan dan diperiksa bertahap. Aplikasi masih dalam tahap uji coba terbatas dan **belum siap untuk peluncuran publik atau transaksi uang sungguhan**.
 
 Website: https://berniaja5036-blip.github.io/PASAR-HANAKAU/
 
@@ -17,7 +17,7 @@ Website: https://berniaja5036-blip.github.io/PASAR-HANAKAU/
 - Riwayat pesanan Buyer dan daftar pesanan Seller.
 - Panel Admin untuk melihat pesanan, mengubah status, menyetujui pengajuan, dan menugaskan Driver.
 - Pengajuan, persetujuan, penjemputan, dan pengantaran oleh Driver.
-- Riwayat perubahan status dan panel pemberitahuan di dalam aplikasi untuk Buyer, Seller, dan Driver.
+- Riwayat perubahan status dan panel pemberitahuan di dalam aplikasi untuk Buyer, Seller, dan Driver.\n- Fondasi push notification berbasis Web Push/VAPID; setiap perangkat harus mengaktifkan langganan notifikasi kembali sebelum menerima push.
 
 ## Batasan yang masih berlaku
 
