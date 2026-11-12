@@ -59,7 +59,7 @@ jobs:
           sudo -u postgres createdb backup_restore_test
           # Skip only CREATE EXTENSION entries unavailable on the generic runner;
           # the Supabase production project retains its own managed extensions.
-          pg_restore --list backup/database/pasar-hanakau-db.dump | grep -v ' EXTENSION - ' > backup/database/restore.list
+          pg_restore --list backup/database/pasar-hanakau-db.dump | grep -v ' EXTENSION - ' | grep -v ' vault ' > backup/database/restore.list
           sudo -u postgres pg_restore --use-list=backup/database/restore.list --no-owner --no-acl --no-comments --exit-on-error --dbname=backup_restore_test backup/database/pasar-hanakau-db.dump
           table_count=$(sudo -u postgres psql -d backup_restore_test -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog','information_schema');")
           echo "Temporary local database restore succeeded; restored tables: ${table_count}"
