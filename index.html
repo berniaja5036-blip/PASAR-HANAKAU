@@ -1031,7 +1031,6 @@ function makePickerMap(elementId,existingMap,initialPoint){
   },15000);
  }
  loadProvider();
-  }else{
  map._pasarHanakauMarker=initialPoint?L.marker([initialPoint.latitude,initialPoint.longitude]).addTo(map):null;
  [150,500,1000].forEach(delay=>setTimeout(()=>{if(map&&element.isConnected){map.invalidateSize(true);if(map._pasarHanakauMarker)map.panTo(map._pasarHanakauMarker.getLatLng());}},delay));
  return map;
