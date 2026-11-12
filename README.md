@@ -45,14 +45,20 @@ Fitur-fitur tersebut sudah memiliki implementasi kode/database. Uji simulasi dat
 - Website: GitHub Pages melalui GitHub Actions.
 - Migrasi database berada di `supabase/migrations/`. Jangan menjalankan ulang migrasi yang sudah diterapkan atau menjalankan seluruh file SQL sebagai satu batch.
 
-### Backup database (manual)
+### Backup otomatis database dan Storage
 
-Workflow `.github/workflows/database-backup.yml` disiapkan untuk membuat dump PostgreSQL terenkripsi. Sebelum menjalankannya, tambahkan dua **Repository secrets** di GitHub (Settings → Secrets and variables → Actions):
+Dua workflow backup terpisah tersedia di GitHub Actions. Keduanya berjalan setiap Senin dini hari WIB dan dapat dijalankan manual dari tab Actions:
 
-1. `SUPABASE_DB_URL`: connection string database dari tombol **Connect** pada Supabase Dashboard. Gunakan session pooler bila koneksi langsung tidak tersedia dari runner.
-2. `BACKUP_ENCRYPTION_PASSPHRASE`: frasa sandi kuat khusus untuk mengenkripsi file backup. Simpan frasa ini di tempat aman terpisah; tanpa frasa tersebut backup tidak dapat dibuka.
+- **Database backup (weekly and manual):** dump PostgreSQL terenkripsi.
+- **Storage backup (weekly and manual):** mengunduh seluruh objek dari bucket `product-images`, `profile-avatars`, `driver-private-documents`, dan `chat-attachments`, lalu mengarsipkan dan mengenkripsinya.
 
-Jalankan workflow **Database backup (manual)** dari tab Actions. Hasilnya berupa artefak terenkripsi yang disimpan selama 14 hari; unduh dan simpan salinannya di tempat aman sebelum kedaluwarsa. Jangan kirim connection string, password database, atau frasa sandi ke chat atau commit ke repositori. Dump database tidak mencakup file objek yang disimpan melalui Supabase Storage. Backup belum dianggap selesai sampai workflow berhasil, file diunduh, dan prosedur pemulihannya diuji pada lingkungan terpisah.
+Pastikan Repository secrets berikut tersedia di GitHub (Settings → Secrets and variables → Actions):
+
+1. `SUPABASE_DB_URL`: connection string database dari tombol **Connect** di Supabase Dashboard. Gunakan session pooler bila koneksi langsung tidak tersedia dari runner.
+2. `SUPABASE_ACCESS_TOKEN`: Personal Access Token Supabase untuk mengakses Storage melalui CLI. Buat dari pengaturan akun Supabase; berikan hanya akses yang diperlukan dan jangan pernah menaruh token di chat atau commit.
+3. `BACKUP_ENCRYPTION_PASSPHRASE`: frasa sandi kuat khusus untuk mengenkripsi backup. Simpan di tempat aman terpisah; tanpa frasa ini backup tidak dapat dibuka.
+
+Setiap artefak disimpan GitHub selama 14 hari. Unduh salinan berkala ke tempat penyimpanan milik sendiri sebelum kedaluwarsa. Backup Storage berisi file objek; metadata bucket dan objek juga ada di database. Jangan kirim connection string, token, password, atau frasa sandi ke chat/repositori. Backup belum dianggap selesai sampai workflow berhasil, file diunduh, dan prosedur pemulihannya diuji pada lingkungan terpisah. Artefak backup GitHub bukan arsip permanen.
 
 ## Keamanan
 
@@ -63,8 +69,9 @@ Jalankan workflow **Database backup (manual)** dari tab Actions. Hasilnya berupa
 
 ## Tahap berikutnya
 
-1. Uji penerimaan Buyer–Seller–Admin–Driver menggunakan akun dan data uji khusus.
-2. Uji rute dan tarif ongkir tanpa mengaktifkan tarif pada pengguna umum.
-3. Aktifkan ulang dan uji notifikasi pada perangkat Android.
-4. Uji backup/pemulihan serta pemantauan operasional.
-5. Evaluasi PWA dan pengemasan Android setelah alur web stabil.
+1. Tambahkan GitHub secret `SUPABASE_ACCESS_TOKEN`, lalu jalankan workflow Storage backup secara manual untuk uji pertama.
+2. Uji penerimaan Buyer–Seller–Admin–Driver menggunakan akun dan data uji khusus.
+3. Uji rute dan tarif ongkir tanpa mengaktifkan tarif pada pengguna umum.
+4. Aktifkan ulang dan uji notifikasi pada perangkat Android.
+5. Uji backup/pemulihan serta pemantauan operasional.
+6. Evaluasi PWA dan pengemasan Android setelah alur web stabil.
