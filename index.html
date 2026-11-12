@@ -50,7 +50,12 @@ footer{color:#829087;font-size:12px;padding:30px 10px}
 <section id="authPanel" class="panel hidden">
 <button class="btn secondary" id="backToRoles" type="button">← Kembali pilih jenis akun</button><h2 id="authTitle">Masuk atau daftar</h2><p class="muted" id="authDescription">Gunakan email dan kata sandi.</p>
 <div id="registrationDetails" class="tile"><h3 id="registrationHeading">Data pendaftar</h3><label id="registerNameLabel" for="registerFullName">Nama lengkap</label><input class="field" id="registerFullName" maxlength="120" autocomplete="name" placeholder="Nama lengkap"><label id="registerAddressLabel" for="registerAddress">Alamat lengkap</label><textarea class="field" id="registerAddress" rows="2" maxlength="500" autocomplete="street-address" placeholder="Jalan, RT/RW, desa, kecamatan, kabupaten"></textarea><label id="registerPhoneLabel" for="registerPhone">Nomor WhatsApp aktif</label><input class="field" id="registerPhone" type="tel" maxlength="20" autocomplete="tel" placeholder="08xxxxxxxxxx"><p class="muted">Pastikan nomor WhatsApp aktif dan dapat dihubungi.</p></div><div class="authgrid"><div><label for="email">Alamat email</label><input class="field" id="email" type="email" autocomplete="email" placeholder="nama@email.com"></div><div><label for="password">Kata sandi</label><input class="field" id="password" type="password" autocomplete="current-password" placeholder="Minimal 6 karakter"></div></div>
-<div id="legalConsent" class="muted hidden" style="margin:12px 0"><label style="display:flex;gap:9px;align-items:flex-start"><input id="acceptLegal" type="checkbox" style="margin-top:5px;flex:0 0 auto"><span>Saya telah membaca dan menyetujui <a href="./syarat-ketentuan.html" target="_blank" rel="noopener">Syarat dan Ketentuan</a> serta <a href="./kebijakan-privasi.html" target="_blank" rel="noopener">Kebijakan Privasi</a> Pasar Hanakau.</span></label></div><div class="row"><button class="btn" id="signIn">Masuk</button><button class="btn secondary" id="signUp">Daftar akun</button></div><div id="authMessage" class="status" role="status"></div>
+<div id="legalConsent" class="muted hidden" style="margin:12px 0"><label style="display:flex;gap:9px;align-items:flex-start"><input id="acceptLegal" type="checkbox" style="margin-top:5px;flex:0 0 auto"><span>Saya telah membaca dan menyetujui <a href="./syarat-ketentuan.html" target="_blank" rel="noopener">Syarat dan Ketentuan</a> serta <a href="./kebijakan-privasi.html" target="_blank" rel="noopener">Kebijakan Privasi</a> Pasar Hanakau.</span></label></div><div class="row"><button class="btn" id="signIn">Masuk</button><button class="btn secondary" id="signUp">Daftar akun</button></div><p style="margin:10px 0 0"><button class="btn secondary" id="forgotPassword" type="button">Lupa kata sandi?</button></p><div id="authMessage" class="status" role="status"></div>
+</section>
+<section id="passwordRecoveryPanel" class="panel hidden">
+<h2 id="passwordRecoveryTitle">Buat kata sandi baru</h2><p class="muted" id="passwordRecoveryDescription">Masukkan kata sandi baru untuk akun Pasar Hanakau.</p>
+<div id="passwordRecoveryForm"><label for="newPassword">Kata sandi baru</label><input class="field" id="newPassword" type="password" autocomplete="new-password" minlength="8" maxlength="72" placeholder="Minimal 8 karakter"><label for="confirmNewPassword">Ulangi kata sandi baru</label><input class="field" id="confirmNewPassword" type="password" autocomplete="new-password" minlength="8" maxlength="72" placeholder="Ulangi kata sandi"><button class="btn" id="saveNewPassword" type="button">Simpan kata sandi baru</button></div>
+<div id="passwordRecoveryMessage" class="status" role="status"></div><button class="btn secondary hidden" id="backFromRecovery" type="button">Kembali ke halaman masuk</button>
 </section>
 <section id="accountPanel" class="panel hidden">
 <div class="row"><div style="flex:1"><b id="accountEmail"></b><div class="muted" id="accountRole"></div></div><button class="btn secondary" id="signOut">Keluar</button></div>
@@ -110,6 +115,42 @@ $('signUp').addEventListener('click',()=>{const opening=$('registrationDetails')
 $('backToRoles').addEventListener('click',()=>{$('authPanel').classList.add('hidden');$('rolePanel').classList.remove('hidden');selectedEntryRole=null;});
 function message(id,text,isError=false){$(id).textContent=text;$(id).style.color=isError?'#b42318':'#176b45'}
 function validCredentials(){const email=$('email').value.trim(),password=$('password').value;if(!email||!password){message('authMessage','Isi email dan kata sandi terlebih dahulu.',true);return null}return {email,password}}
+let passwordRecoveryMode=false;
+$('forgotPassword').addEventListener('click',async()=>{
+ const email=$('email').value.trim();
+ if(!email){message('authMessage','Masukkan alamat email akun terlebih dahulu.',true);$('email').focus();return}
+ const button=$('forgotPassword');button.disabled=true;message('authMessage','Mengirim tautan pemulihan…');
+ try{
+  const redirectTo=window.location.origin+window.location.pathname;
+  const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo});
+  if(error)throw error;
+  message('authMessage','Jika email terdaftar, tautan pemulihan telah dikirim. Periksa kotak masuk dan folder spam.');
+ }catch(error){message('authMessage','Tautan pemulihan gagal dikirim: '+(error?.message||'Periksa koneksi dan pengaturan email.'),true)}
+ finally{button.disabled=false}
+});
+$('saveNewPassword').addEventListener('click',async()=>{
+ const password=$('newPassword').value,confirmation=$('confirmNewPassword').value,button=$('saveNewPassword');
+ if(password.length<8){message('passwordRecoveryMessage','Kata sandi minimal 8 karakter.',true);return}
+ if(password!==confirmation){message('passwordRecoveryMessage','Ulangan kata sandi tidak sama.',true);return}
+ button.disabled=true;message('passwordRecoveryMessage','Menyimpan kata sandi baru…');
+ try{
+  const {error}=await supabase.auth.updateUser({password});
+  if(error)throw error;
+  await supabase.auth.signOut();
+  passwordRecoveryMode=false;$('passwordRecoveryForm').classList.add('hidden');$('backFromRecovery').classList.remove('hidden');
+  $('passwordRecoveryTitle').textContent='Kata sandi berhasil diubah';
+  $('passwordRecoveryDescription').textContent='Silakan masuk kembali menggunakan kata sandi baru.';
+  $('newPassword').value='';$('confirmNewPassword').value='';
+  message('passwordRecoveryMessage','Kata sandi akun Anda berhasil diperbarui.');
+ }catch(error){message('passwordRecoveryMessage','Gagal mengubah kata sandi: '+(error?.message||'Tautan mungkin sudah kedaluwarsa.'),true)}
+ finally{button.disabled=false}
+});
+$('backFromRecovery').addEventListener('click',()=>{
+ $('passwordRecoveryPanel').classList.add('hidden');$('rolePanel').classList.remove('hidden');
+ $('passwordRecoveryForm').classList.remove('hidden');$('backFromRecovery').classList.add('hidden');
+ $('passwordRecoveryTitle').textContent='Buat kata sandi baru';$('passwordRecoveryDescription').textContent='Masukkan kata sandi baru untuk akun Pasar Hanakau.';
+ $('passwordRecoveryMessage').textContent='';$('email').value='';$('password').value='';
+});
 let activeAccountUserId=null;
 async function loadAccountAvatar(userId){
  const img=$('accountAvatar'),fallback=$('accountAvatarFallback');
@@ -441,7 +482,7 @@ $('addProduct').addEventListener('click',async()=>{
  await loadSellerProducts();
 });
 $('signOut').addEventListener('click',async()=>{try{const registration=await navigator.serviceWorker?.ready;const subscription=await registration?.pushManager?.getSubscription();if(subscription){await callPushFunction({action:"remove_subscription",endpoint:subscription.endpoint});await subscription.unsubscribe();}}catch(error){console.warn("Pelepasan langganan notifikasi gagal:",error);}const {error}=await supabase.auth.signOut();if(error)message('catalogMessage',error.message,true);else{await refreshSession();message('catalogMessage','Anda sudah keluar.')}});
-supabase.auth.onAuthStateChange((event,session)=>{setTimeout(()=>{refreshSession().catch(error=>message('authMessage','Gagal memuat sesi akun: '+(error?.message||'Kesalahan tidak diketahui'),true));},0);});
+supabase.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY'){passwordRecoveryMode=true;$('rolePanel').classList.add('hidden');$('authPanel').classList.add('hidden');$('accountPanel').classList.add('hidden');$('passwordRecoveryPanel').classList.remove('hidden');$('passwordRecoveryForm').classList.remove('hidden');$('backFromRecovery').classList.add('hidden');$('passwordRecoveryTitle').textContent='Buat kata sandi baru';$('passwordRecoveryDescription').textContent='Masukkan kata sandi baru untuk akun Pasar Hanakau.';$('passwordRecoveryMessage').textContent='Tautan pemulihan valid. Silakan buat kata sandi baru.';return;}if(passwordRecoveryMode)return;setTimeout(()=>{refreshSession().catch(error=>message('authMessage','Gagal memuat sesi akun: '+(error?.message||'Kesalahan tidak diketahui'),true));},0);});
 let catalogProducts=[];
 let buyerWishlistIds=new Set();
 async function loadBuyerWishlist(){
