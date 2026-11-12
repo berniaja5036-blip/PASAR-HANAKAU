@@ -2,7 +2,7 @@
 
 Last reconciled: 2026-11-12.
 
-The live Supabase project reports 53 applied migrations. The repository contains 84 SQL migration files, including the original baseline and follow-up repair files. After removing the numeric filename prefixes, every applied database migration has a corresponding repository migration or a documented naming equivalent below.
+The live Supabase project reports 54 applied migrations. The repository contains 84 SQL migration files, including the original baseline and follow-up repair files. After removing the numeric filename prefixes, every applied database migration has a corresponding repository migration or a documented naming equivalent below.
 
 ## Naming equivalents
 
