@@ -210,7 +210,7 @@ async function refreshSession(){
  const {data:{session}}=await supabase.auth.getSession();
  if(refreshId!==sessionRefreshSequence)return;
  $('rolePanel').classList.toggle('hidden',!!session);$('authPanel').classList.toggle('hidden',!!session || !selectedEntryRole);$('accountPanel').classList.toggle('hidden',!session);
- $('sellerPanel').classList.add('hidden');$('sellerProducts').classList.add('hidden');$('adminPanel').classList.add('hidden');$('buyerPanel').classList.add('hidden');$('driverPanel').classList.add('hidden');$('driverApplyPanel').classList.add('hidden');
+ $('sellerPanel').classList.add('hidden');$('sellerPanel').classList.add('hidden');$('sellerProducts').classList.add('hidden');$('adminPanel').classList.add('hidden');$('buyerPanel').classList.add('hidden');$('driverPanel').classList.add('hidden');$('driverApplyPanel').classList.add('hidden');
  $('catalogPanel').classList.add('hidden');
  if(!session){sellerShopId=null;activeBuyerId=null;cart={};buyerDeliveryPoint=null;return}
  $('catalogMessage').textContent='';
@@ -346,7 +346,23 @@ async function loadSellerShop(){
  const {data:{session}}=await supabase.auth.getSession();if(!session)return;
  const {data:shop,error}=await supabase.from('shops').select('id,name,status,pickup_latitude,pickup_longitude').eq('owner_id',session.user.id).maybeSingle();
  if(error){message('productMessage','Gagal memeriksa toko: '+error.message,true);return}
- if(!shop){message('productMessage','Toko belum ditemukan. Hubungi admin untuk pemeriksaan pengajuan.',true);return}
+ if(!shop){
+  $('sellerPanel').classList.remove('hidden');
+  $('sellerProducts').classList.add('hidden');
+  const {data:profile}=await supabase.from('profiles').select('full_name,phone,full_address').eq('id',session.user.id).maybeSingle();
+  if(!$('shopName').value)$('shopName').value=profile?.full_name||'';
+  if(!$('shopAddress').value)$('shopAddress').value=profile?.full_address||'';
+  if(!$('shopPhone').value)$('shopPhone').value=profile?.phone||'';
+  const {data:application,error:applicationError}=await supabase.from('seller_applications').select('status').eq('user_id',session.user.id).maybeSingle();
+  if(applicationError){message('sellerMessage','Status pengajuan toko belum dapat diperiksa: '+applicationError.message,true);$('submitSeller').disabled=true;}
+  else if(application){
+   const statusText=application.status==='pending'?'Pengajuan toko sedang diperiksa admin. Anda tidak perlu mengirim ulang.':application.status==='approved'?'Pengajuan sudah disetujui. Muat ulang halaman untuk membuka panel toko.':'Pengajuan toko berstatus '+application.status+'. Hubungi admin untuk tindak lanjut.';
+   message('sellerMessage',statusText,application.status==='rejected');
+   $('submitSeller').disabled=true;
+  }else{$('submitSeller').disabled=false;message('sellerMessage','Lengkapi data toko dan pilih titik penjemputan pada peta, lalu kirim pengajuan.');}
+  return;
+}
+$('sellerPanel').classList.add('hidden');
  if(shop.status!=='approved'){message('productMessage','Status toko: '+shop.status+'. Produk dapat dikelola setelah toko disetujui admin.');return}
  sellerShopId=shop.id;$('accountEmail').textContent=shop.name||$('accountEmail').textContent;message('productMessage','Toko aktif: '+shop.name);const loc=$('shopLocationStatus');legacyShopPickupPoint=shop.pickup_latitude!=null&&shop.pickup_longitude!=null?{latitude:Number(shop.pickup_latitude),longitude:Number(shop.pickup_longitude),accuracy:null}:null;$('legacyShopLocationBox').classList.remove('hidden');if(loc)loc.textContent=legacyShopPickupPoint?'Titik penjemputan tersimpan. Ketuk lokasi baru pada peta jika ingin memindahkannya.':'Titik penjemputan belum tersimpan. Ketuk lokasi toko pada peta.';initLegacyShopMap(legacyShopPickupPoint);
  await loadSellerProducts();await loadSellerOrders();await loadSellerCommissionInvoices();await loadSellerChatConversations();
