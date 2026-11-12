@@ -1,4 +1,4 @@
-const CACHE_NAME = "pasar-hanakau-shell-v3";
+const CACHE_NAME = "pasar-hanakau-shell-v4";
 const APP_SHELL = ["./", "./manifest.webmanifest", "./icons/icon.svg", "./icons/icon-192.png", "./icons/icon-512.png"];
 
 self.addEventListener("install", event => {
@@ -21,7 +21,7 @@ self.addEventListener("fetch", event => {
   if (event.request.method !== "GET" || new URL(event.request.url).origin !== self.location.origin) return;
   event.respondWith((async () => {
     try {
-      const response = await fetch(event.request);
+      const response = await fetch(event.request, event.request.mode === "navigate" ? { cache: "no-cache" } : {});
       if (response && response.ok) {
         const cache = await caches.open(CACHE_NAME);
         cache.put(event.request, response.clone()).catch(() => {});
