@@ -45,7 +45,7 @@ Fitur-fitur tersebut sudah memiliki implementasi kode/database. Uji simulasi dat
 - Website: GitHub Pages melalui GitHub Actions.
 - Migrasi database berada di `supabase/migrations/`. Jangan menjalankan ulang migrasi yang sudah diterapkan atau menjalankan seluruh file SQL sebagai satu batch.
 
-**Peringatan migrasi (12 November 2026):** audit menemukan nama/versi file migrasi lokal belum selaras dengan riwayat `supabase_migrations.schema_migrations` di proyek aktif, dan terdapat beberapa awalan versi file yang duplikat. Karena itu, jangan menjalankan `supabase db push`, `migration up`, atau mengubah tabel riwayat migrasi sebelum seluruh file dibandingkan satu per satu dengan skema aktif dan riwayat penerapan. Penyesuaian otomatis berisiko menjalankan ulang perubahan lama atau membuat skema produksi tidak konsisten.
+**Status rekonsiliasi migrasi (12 November 2026):** direktori `supabase/migrations/` kini diselaraskan dengan 61 versi/nama migrasi yang tercatat di proyek aktif. Sebanyak 34 file lama dipindahkan tanpa perubahan SQL ke `supabase/migrations-archive/`. Sebelum perubahan database berikutnya, jalankan `supabase migration list --remote` dan pastikan tidak ada migrasi tak terduga yang tertunda. Jangan menjalankan arsip atau mengubah tabel riwayat migrasi secara manual. Lihat `DATABASE_MIGRATION_RECONCILIATION.md` untuk rincian dan prosedur aman.
 
 ### Backup otomatis database dan Storage
 
