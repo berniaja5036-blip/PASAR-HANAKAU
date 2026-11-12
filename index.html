@@ -583,7 +583,7 @@ $('adminAccounts')?.addEventListener('click',async event=>{
  if(reason.length<5){message('adminAccountsMessage','Tuliskan alasan penonaktifan minimal 5 karakter.',true);return;}
  if(!confirm('Nonaktifkan akun ini? Pengguna tidak dapat masuk lagi, toko/produk atau akses driver akan dihentikan, tetapi riwayat transaksi tetap disimpan.'))return;
  button.disabled=true;message('adminAccountsMessage','Menonaktifkan akun…');
- try{const result=await callAdminAccountFunction({action:'suspend_account',user_id:userId,reason});message('adminAccountsMessage',result.message||'Akun berhasil dinonaktifkan.');await loadAdminAccounts();}
+ try{const result=await callAdminAccountFunction({action:'suspend_account',user_id:userId,reason});message('adminAccountsMessage',result.warning||result.message||'Akun berhasil dinonaktifkan.',!!result.warning);await loadAdminAccounts();}
  catch(error){button.disabled=false;message('adminAccountsMessage',error.message,true);}
 });
 $('refreshAdminAccounts')?.addEventListener('click',loadAdminAccounts);
