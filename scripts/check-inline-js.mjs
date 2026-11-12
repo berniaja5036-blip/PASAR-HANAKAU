@@ -1,5 +1,16 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+
+const migrationDirectory = 'supabase/migrations';
+const migrationFiles = readdirSync(migrationDirectory).filter(file => file.endsWith('.sql'));
+function readMigration(name) {
+  const matches = migrationFiles.filter(file => file.endsWith('_' + name + '.sql'));
+  if (matches.length !== 1) {
+    console.error('Expected exactly one canonical migration for ' + name + '; found ' + matches.length + '.');
+    process.exit(1);
+  }
+  return readFileSync(migrationDirectory + '/' + matches[0], 'utf8');
+}
 
 const html = readFileSync('index.html', 'utf8');
 const blocks = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)];
@@ -79,8 +90,8 @@ if (!checkoutFunction.includes('select("role,account_status")') ||
 }
 
 
-const activeRlsMigration = readFileSync('supabase/migrations/202611120025_require_active_account_for_authenticated_rls.sql', 'utf8');
-const activeStorageMigration = readFileSync('supabase/migrations/202611120026_require_active_account_for_storage_access.sql', 'utf8');
+const activeRlsMigration = readMigration('require_active_account_for_authenticated_rls');
+const activeStorageMigration = readMigration('require_active_account_for_storage_access');
 const appSource = readFileSync('index.html', 'utf8');
 if (!appSource.includes("if(profile.account_status!=='active')")) {
   console.error('The client must fail closed for every non-active account state.');
@@ -99,7 +110,7 @@ if (!activeStorageMigration.includes('create policy active_account_required on s
 }
 
 
-const activeRpcMigration = readFileSync('supabase/migrations/202611120027_enforce_active_status_in_sensitive_definer_rpcs.sql', 'utf8');
+const activeRpcMigration = readMigration('enforce_active_status_in_sensitive_definer_rpcs');
 for (const rpc of [
   'buyer_confirm_delivery_fee',
   'buyer_confirm_order_received',
@@ -120,7 +131,7 @@ if (!activeRpcMigration.includes('public.current_user_is_active()') ||
 }
 
 
-const activeHelperMigration = readFileSync('supabase/migrations/202611120028_require_active_account_for_security_helpers.sql', 'utf8');
+const activeHelperMigration = readMigration('require_active_account_for_security_helpers');
 for (const helper of [
   'can_upload_product_image',
   'current_user_can_read_delivery_order',
@@ -133,7 +144,7 @@ for (const helper of [
   }
 }
 
-const anonymousWriteMigration = readFileSync('supabase/migrations/202611120029_revoke_anon_public_table_writes.sql', 'utf8');
+const anonymousWriteMigration = readMigration('revoke_anon_public_table_writes');
 if (!anonymousWriteMigration.includes('revoke insert, update, delete on table') ||
     !anonymousWriteMigration.includes('from anon')) {
   console.error('Anonymous users must not receive direct write privileges on public application tables.');
@@ -147,13 +158,13 @@ if (!routeFunction.includes('userClient.auth.getUser()') ||
   process.exit(1);
 }
 
-const commissionPeriodMigration = readFileSync('supabase/migrations/202611120030_fix_commission_period_to_wib.sql', 'utf8');
+const commissionPeriodMigration = readMigration('fix_commission_period_to_wib');
 if (!commissionPeriodMigration.includes("pg_catalog.now() at time zone 'Asia/Jakarta'")) {
   console.error('Seller commission periods must use Asia/Jakarta local time.');
   process.exit(1);
 }
 
-const statisticsTimezoneMigration = readFileSync('supabase/migrations/202611120031_fix_admin_statistics_wib_date_grouping.sql', 'utf8');
+const statisticsTimezoneMigration = readMigration('fix_admin_statistics_wib_date_grouping');
 if (!statisticsTimezoneMigration.includes("o.created_at at time zone 'Asia/Jakarta'") ||
     !statisticsTimezoneMigration.includes("p_from at time zone 'Asia/Jakarta'") ||
     statisticsTimezoneMigration.includes("greatest(p_from,now()-interval '30 days')")) {
@@ -168,7 +179,7 @@ if (!appSourceForDriverChecks.includes("application?.status==='approved'&&!!appl
   process.exit(1);
 }
 
-const notificationPrivilegesMigration = readFileSync('supabase/migrations/202611120032_restrict_notifications_to_read_only_clients.sql', 'utf8');
+const notificationPrivilegesMigration = readMigration('restrict_notifications_to_read_only_clients');
 if (!notificationPrivilegesMigration.includes('revoke update on table public.notifications from authenticated') ||
     !notificationPrivilegesMigration.includes('drop policy if exists notifications_update_own')) {
   console.error('Client notification records must remain read-only.');
@@ -179,13 +190,13 @@ if (!appSourceForDriverChecks.includes('accepted_terms_version:"2026-11-12"')) {
   console.error('Signup must record the current legal consent version.');
   process.exit(1);
 }
-const termsVersionMigration = readFileSync('supabase/migrations/202611120033_align_signup_terms_version_20261112.sql', 'utf8');
+const termsVersionMigration = readMigration('align_signup_terms_version_20261112');
 if (!termsVersionMigration.includes("v_terms_version <> '2026-11-12'")) {
   console.error('The database signup trigger must require the current legal consent version.');
   process.exit(1);
 }
 
-const productRatingMigration = readFileSync('supabase/migrations/202611120034_add_public_rating_summaries.sql', 'utf8');
+const productRatingMigration = readMigration('202611120034_add_public_rating_summaries');
 if (!productRatingMigration.includes('get_public_product_review_summaries') ||
     !productRatingMigration.includes('get_public_driver_rating_summaries') ||
     !productRatingMigration.includes("set search_path = ''") ||
@@ -202,7 +213,7 @@ if (!appSourceForDriverChecks.includes("get_public_product_review_summaries") ||
   process.exit(1);
 }
 
-const ratingAccessMigration = readFileSync('supabase/migrations/202611120035_limit_rating_summaries_to_signed_in_users.sql', 'utf8');
+const ratingAccessMigration = readMigration('202611120035_limit_rating_summaries_to_signed_in_users');
 if (!ratingAccessMigration.includes('from anon') ||
     !ratingAccessMigration.includes('get_public_product_review_summaries') ||
     !ratingAccessMigration.includes('get_public_driver_rating_summaries')) {
