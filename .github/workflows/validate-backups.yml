@@ -13,12 +13,13 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
-      - name: Install PostgreSQL client and GPG
+      - name: Install PostgreSQL server and GPG
         run: |
           sudo apt-get update
-          sudo apt-get install --yes postgresql-client gnupg
+          sudo apt-get install --yes postgresql postgresql-client gnupg
+          sudo service postgresql start
 
       - name: Download database backup artifact
         uses: actions/download-artifact@v4
@@ -55,7 +56,18 @@ jobs:
           grep -q "TABLE DATA" database-contents.txt
           echo "Database backup decrypted; checksum and PostgreSQL archive structure are valid."
 
-      - name: Decrypt and validate Storage archive
+      - name: Restore database into temporary local PostgreSQL
+        run: |
+          set -euo pipefail
+          sudo -u postgres createdb backup_restore_test
+          sudo -u postgres pg_restore --no-owner --no-acl --exit-on-error \
+            --dbname=backup_restore_test backup/database/pasar-hanakau-db.dump
+          table_count=$(sudo -u postgres psql -d backup_restore_test -Atc \
+            "SELECT count(*) FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog','information_schema');")
+          echo "Temporary local database restore succeeded; restored tables: ${table_count}"
+          test "${table_count}" -gt 0
+
+      - name: Decrypt, verify, and extract Storage archive
         env:
           BACKUP_ENCRYPTION_PASSPHRASE: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
         run: |
@@ -70,4 +82,10 @@ jobs:
           for bucket in product-images profile-avatars driver-private-documents chat-attachments; do
             grep -q "storage/${bucket}/" storage-contents.txt
           done
-          echo "Storage backup decrypted; checksum, tar archive, and all four bucket folders are valid."
+          mkdir -p /tmp/pasar-hanakau-storage-restore
+          tar -xzf pasar-hanakau-storage.tar.gz -C /tmp/pasar-hanakau-storage-restore
+          for bucket in product-images profile-avatars driver-private-documents chat-attachments; do
+            test -d "/tmp/pasar-hanakau-storage-restore/storage/${bucket}"
+          done
+          file_count=$(find /tmp/pasar-hanakau-storage-restore/storage -type f | wc -l)
+          echo "Storage archive extracted successfully; restored files: ${file_count}; all four bucket folders are present."
