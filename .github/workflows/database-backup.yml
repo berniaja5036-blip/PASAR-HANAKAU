@@ -1,6 +1,10 @@
 name: Database backup (weekly and manual)
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/database-backup.yml"
   schedule:
     # Every Monday at 02:00 WIB (Sunday 19:00 UTC)
     - cron: "0 19 * * 0"
