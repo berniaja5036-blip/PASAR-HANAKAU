@@ -168,4 +168,11 @@ if (!appSourceForDriverChecks.includes("application?.status==='approved'&&!!appl
   process.exit(1);
 }
 
+const notificationPrivilegesMigration = readFileSync('supabase/migrations/202611120032_restrict_notifications_to_read_only_clients.sql', 'utf8');
+if (!notificationPrivilegesMigration.includes('revoke update on table public.notifications from authenticated') ||
+    !notificationPrivilegesMigration.includes('drop policy if exists notifications_update_own')) {
+  console.error('Client notification records must remain read-only.');
+  process.exit(1);
+}
+
 console.log('JavaScript syntax check passed (' + moduleBlocks.length + ' inline module).');
