@@ -793,23 +793,27 @@ async function loadAdminDriverAvailability(drivers){
  if(!box)return statusMap;
  if(!drivers?.length){box.textContent='Belum ada driver yang disetujui.';return statusMap}
  const ids=drivers.map(d=>d.id);
- const [{data:tasks,error:taskError},{data:presence,error:presenceError},{data:profiles,error:profileError}]=await Promise.all([
+ const [{data:tasks,error:taskError},{data:presence,error:presenceError},{data:profiles,error:profileError},{data:applications,error:applicationError}]=await Promise.all([
   supabase.from('deliveries').select('order_id,driver_id,status,orders(order_number)').in('status',['assigned','picked_up']).not('driver_id','is',null),
   supabase.from('driver_presence').select('user_id,last_seen_at').in('user_id',ids),
-  supabase.from('user_public_profiles').select('user_id,display_name,avatar_path').in('user_id',ids)
+  supabase.from('user_public_profiles').select('user_id,display_name,avatar_path').in('user_id',ids),
+  supabase.from('driver_applications').select('user_id,status,ktp_image_path,face_image_path').in('user_id',ids)
  ]);
- if(taskError||presenceError||profileError){box.textContent='Status driver belum dapat dimuat: '+(taskError?.message||presenceError?.message||profileError?.message);return statusMap}
+ if(taskError||presenceError||profileError||applicationError){box.textContent='Status driver belum dapat dimuat: '+(taskError?.message||presenceError?.message||profileError?.message||applicationError?.message);return statusMap}
  const taskMap=new Map();
  (tasks||[]).forEach(t=>{if(!taskMap.has(t.driver_id))taskMap.set(t.driver_id,t)});
  const presenceMap=new Map((presence||[]).map(p=>[p.user_id,p.last_seen_at]));
  const profileMap=new Map((profiles||[]).map(p=>[p.user_id,p]));
+ const applicationMap=new Map((applications||[]).map(a=>[a.user_id,a]));
  box.innerHTML=drivers.map(d=>{
   const task=taskMap.get(d.id),lastSeen=presenceMap.get(d.id),online=!!lastSeen&&(Date.now()-new Date(lastSeen).getTime()<=120000);
-  const state=task?'Sedang bertugas':online?'Standby':'Offline';
-  statusMap.set(d.id,{busy:!!task,online,task,state});
+  const application=applicationMap.get(d.id);
+  const eligible=application?.status==='approved'&&!!application.ktp_image_path&&!!application.face_image_path;
+  const state=task?'Sedang bertugas':!eligible?'Dokumen belum lengkap':online?'Standby':'Offline';
+  statusMap.set(d.id,{busy:!!task,online,task,state,eligible});
   const profile=profileMap.get(d.id),name=profile?.display_name||d.profiles?.full_name||'Driver';
   const avatar=profile?.avatar_path?'<img src="'+escapeHtml(supabase.storage.from('profile-avatars').getPublicUrl(profile.avatar_path).data.publicUrl)+'" alt="Foto driver" style="width:48px;height:48px;border-radius:50%;object-fit:cover">':'<div style="width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:#e9f4eb;font-size:22px">🚚</div>';
-  const detail=task?'<p class="muted">Pesanan aktif: <b>'+escapeHtml(task.orders?.order_number||'Pesanan')+'</b> • '+(task.status==='picked_up'?'Dalam perjalanan':'Menunggu penjemputan')+'</p>':(online?'<p class="muted">Belum ada tugas aktif. Driver siap menerima pesanan.</p>':'<p class="muted">Terakhir aktif: '+(lastSeen?new Date(lastSeen).toLocaleString('id-ID'):'Belum pernah online melalui aplikasi')+'</p>');
+  const detail=task?'<p class="muted">Pesanan aktif: <b>'+escapeHtml(task.orders?.order_number||'Pesanan')+'</b> • '+(task.status==='picked_up'?'Dalam perjalanan':'Menunggu penjemputan')+'</p>':(!eligible?'<p class="muted">Dokumen KTP dan foto wajah belum lengkap/terverifikasi. Driver belum dapat ditugaskan.</p>':(online?'<p class="muted">Belum ada tugas aktif. Driver siap menerima pesanan.</p>':'<p class="muted">Terakhir aktif: '+(lastSeen?new Date(lastSeen).toLocaleString('id-ID'):'Belum pernah online melalui aplikasi')+'</p>'));
   return '<article class="tile"><div class="row" style="align-items:center">'+avatar+'<div style="flex:1"><b>'+escapeHtml(name)+'</b><div class="muted">'+escapeHtml(d.vehicle_type||'Kendaraan belum diisi')+' • '+escapeHtml(d.vehicle_plate||'-')+'</div></div><b style="color:'+(task?'#b45309':online?'#176b45':'#6b7280')+'">'+state+'</b></div>'+detail+'</article>';
  }).join('');
  return statusMap;
@@ -841,7 +845,7 @@ async function loadAdminOrders(){
   const pendingCancellation=(o.order_cancellation_requests||[]).find(r=>r.status==='pending');
   const statusActions=pendingCancellation?[]:(next[o.status]||[]);
   const cancellationPanel=pendingCancellation?'<div class="notice" style="margin:12px 0"><b>🔔 Permintaan pembatalan dari pembeli</b><p style="margin:7px 0"><b>Alasan:</b> '+escapeHtml(pendingCancellation.reason)+'</p><p class="muted">Diajukan '+new Date(pendingCancellation.created_at).toLocaleString('id-ID')+'</p><button class="btn" data-review-cancellation="'+pendingCancellation.id+'" data-approve-cancellation="true">Setujui pembatalan</button> <button class="btn secondary" data-review-cancellation="'+pendingCancellation.id+'" data-approve-cancellation="false">Tolak pembatalan</button></div>':'';
-  const assign=o.status==='ready_for_pickup'?(drivers?.length?'<div class="tile"><label for="driver-'+o.id+'">Pilih driver</label><select class="field" id="driver-'+o.id+'" data-driver-for="'+o.id+'"><option value="">Pilih driver yang disetujui</option>'+drivers.map(d=>{const availability=driverStatusMap.get(d.id),busyElsewhere=availability?.busy&&availability.task?.order_id!==o.id;const state=availability?.busy?(busyElsewhere?'Sedang bertugas':'Ditugaskan pada pesanan ini'):availability?.online?'Standby':'Offline';return '<option value="'+d.id+'" '+(delivery?.driver_id===d.id?'selected':'')+(busyElsewhere?' disabled':'')+'>'+escapeHtml(d.profiles?.full_name||'Driver')+' • '+escapeHtml(d.vehicle_type)+' • '+state+'</option>'}).join('')+'</select><button class="btn" data-assign-order="'+o.id+'">'+(delivery?.driver_id?'Simpan penugasan driver':'Tugaskan driver')+'</button></div>':'<p class="muted">Belum ada driver yang disetujui admin.</p>'):'';
+  const assign=o.status==='ready_for_pickup'?(drivers?.length?'<div class="tile"><label for="driver-'+o.id+'">Pilih driver</label><select class="field" id="driver-'+o.id+'" data-driver-for="'+o.id+'"><option value="">Pilih driver yang disetujui</option>'+drivers.map(d=>{const availability=driverStatusMap.get(d.id),busyElsewhere=availability?.busy&&availability.task?.order_id!==o.id;const state=availability?.busy?(busyElsewhere?'Sedang bertugas':'Ditugaskan pada pesanan ini'):availability?.online?'Standby':'Offline';return '<option value="'+d.id+'" '+(delivery?.driver_id===d.id?'selected':'')+(!availability?.eligible||busyElsewhere?' disabled':'')+'>'+escapeHtml(d.profiles?.full_name||'Driver')+' • '+escapeHtml(d.vehicle_type)+' • '+state+'</option>'}).join('')+'</select><button class="btn" data-assign-order="'+o.id+'">'+(delivery?.driver_id?'Simpan penugasan driver':'Tugaskan driver')+'</button></div>':'<p class="muted">Belum ada driver yang disetujui admin.</p>'):'';
   const searchable=[o.order_number,o.delivery_address,o.notes,...(o.order_items||[]).map(i=>i.product_name)].join(' ').toLocaleLowerCase('id-ID');
   const feeDisputePanel=o.delivery_fee_payment_status==='disputed'?'<div class="notice" style="margin:10px 0"><b>⚠️ Sengketa pembayaran ongkir</b><p>'+escapeHtml(o.delivery_fee_dispute_note||'Tidak ada keterangan')+'</p><button class="btn" data-resolve-fee-dispute="'+o.id+'" data-mark-fee-paid="true">Tandai sudah dibayar</button> <button class="btn secondary" data-resolve-fee-dispute="'+o.id+'" data-mark-fee-paid="false">Kembalikan ke belum dibayar</button></div>':'';
    const feePaymentLabel={unpaid:'Belum dibayar',buyer_confirmed:'Pembeli sudah konfirmasi',driver_confirmed:'Driver sudah konfirmasi',confirmed:'Terkonfirmasi',disputed:'Sengketa',not_required:'Tidak diperlukan'};
