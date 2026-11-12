@@ -133,4 +133,11 @@ for (const helper of [
   }
 }
 
+const anonymousWriteMigration = readFileSync('supabase/migrations/202611120029_revoke_anon_public_table_writes.sql', 'utf8');
+if (!anonymousWriteMigration.includes('revoke insert, update, delete on table') ||
+    !anonymousWriteMigration.includes('from anon')) {
+  console.error('Anonymous users must not receive direct write privileges on public application tables.');
+  process.exit(1);
+}
+
 console.log('JavaScript syntax check passed (' + moduleBlocks.length + ' inline module).');
