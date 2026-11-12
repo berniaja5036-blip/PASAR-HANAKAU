@@ -45,6 +45,8 @@ Fitur-fitur tersebut sudah memiliki implementasi kode/database. Uji simulasi dat
 - Website: GitHub Pages melalui GitHub Actions.
 - Migrasi database berada di `supabase/migrations/`. Jangan menjalankan ulang migrasi yang sudah diterapkan atau menjalankan seluruh file SQL sebagai satu batch.
 
+**Peringatan migrasi (12 November 2026):** audit menemukan nama/versi file migrasi lokal belum selaras dengan riwayat `supabase_migrations.schema_migrations` di proyek aktif, dan terdapat beberapa awalan versi file yang duplikat. Karena itu, jangan menjalankan `supabase db push`, `migration up`, atau mengubah tabel riwayat migrasi sebelum seluruh file dibandingkan satu per satu dengan skema aktif dan riwayat penerapan. Penyesuaian otomatis berisiko menjalankan ulang perubahan lama atau membuat skema produksi tidak konsisten.
+
 ### Backup otomatis database dan Storage
 
 Dua workflow backup terpisah tersedia di GitHub Actions. Keduanya berjalan setiap Senin dini hari WIB dan dapat dijalankan manual dari tab Actions:
