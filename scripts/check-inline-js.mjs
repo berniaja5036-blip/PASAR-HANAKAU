@@ -161,4 +161,11 @@ if (!statisticsTimezoneMigration.includes("o.created_at at time zone 'Asia/Jakar
   process.exit(1);
 }
 
+const appSourceForDriverChecks = readFileSync('index.html', 'utf8');
+if (!appSourceForDriverChecks.includes("application?.status==='approved'&&!!application.ktp_image_path&&!!application.face_image_path") ||
+    !appSourceForDriverChecks.includes("!availability?.eligible||busyElsewhere")) {
+  console.error('Admin driver assignment must exclude drivers without approved KTP and face-document paths.');
+  process.exit(1);
+}
+
 console.log('JavaScript syntax check passed (' + moduleBlocks.length + ' inline module).');
