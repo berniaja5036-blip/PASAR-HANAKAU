@@ -34,6 +34,13 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Akses khusus admin ditolak." }, 403);
   }
 
+  // Use the verified admin's JWT for writes guarded by is_admin() triggers.
+  // The service-role client remains reserved for Auth Admin and protected reads.
+  const adminSession = createClient(url, publishableKey, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false },
+  });
+
   let body: any;
   try { body = await req.json(); } catch { return json({ error: "Format permintaan tidak valid." }, 400); }
 
@@ -104,12 +111,12 @@ Deno.serve(async (req: Request) => {
     if (target.role === "seller" && ownedShops.length) {
       const shopIds = ownedShops.map((s: any) => s.id);
       const { data: oldProducts, error: oldProductsError } = await admin.from("products").select("id,status").in("shop_id", shopIds);
-      const { error: shopUpdateError } = await admin.from("shops").update({ status: "suspended" }).in("id", shopIds);
-      const { error: productUpdateError } = oldProductsError ? { error: oldProductsError } : await admin.from("products").update({ status: "draft" }).in("shop_id", shopIds);
+      const { error: shopUpdateError } = await adminSession.from("shops").update({ status: "suspended" }).in("id", shopIds);
+      const { error: productUpdateError } = oldProductsError ? { error: oldProductsError } : await adminSession.from("products").update({ status: "draft" }).in("shop_id", shopIds);
       if (shopUpdateError || productUpdateError) {
         relatedError = "Status toko atau produk gagal diperbarui.";
-        for (const shop of ownedShops) await admin.from("shops").update({ status: shop.status }).eq("id", shop.id);
-        for (const product of oldProducts || []) await admin.from("products").update({ status: product.status }).eq("id", product.id);
+        for (const shop of ownedShops) await adminSession.from("shops").update({ status: shop.status }).eq("id", shop.id);
+        for (const product of oldProducts || []) await adminSession.from("products").update({ status: product.status }).eq("id", product.id);
       }
     }
     if (target.role === "driver") {
