@@ -236,15 +236,11 @@ async function refreshSession(){
   $('accountRole').textContent='Peran: Penjual';
   activePanelRole='seller';$('sellerProducts').classList.remove('hidden');await loadSellerShop();return;
  }
- if(role==='driver'){
-  $('accountRole').textContent='Peran: Driver';
-  activePanelRole='driver';$('driverPanel').classList.remove('hidden');await refreshDriverPresence();await loadDriverTasks();return;
- }
- // Semua akun berperan buyer diperiksa lebih dahulu untuk memastikan akun
+  // Semua akun berperan buyer diperiksa lebih dahulu untuk memastikan akun
  // yang pernah mengajukan driver tidak masuk ke katalog sebelum disetujui.
  const {data:driverApplication,error:driverLookupError}=await supabase.from('driver_applications').select('status').eq('user_id',session.user.id).maybeSingle();
  if(driverLookupError){
-  if(requestedRole==='driver'){
+  if(requestedRole==='driver'||role==='driver'){
    $('accountRole').textContent='Peran: Driver • status menunggu pemeriksaan';
    $('driverApplyPanel').classList.remove('hidden');
    $('driverApplyMessage').textContent='Status pendaftaran belum dapat diperiksa. Akses belanja dikunci sementara demi keamanan. Muat ulang halaman atau hubungi admin.';
@@ -256,7 +252,11 @@ async function refreshSession(){
   $('accountRole').textContent='Peran: Pembeli';
   activePanelRole='buyer';$('buyerPanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');initBuyerMap();activeBuyerId=session.user.id;loadCart();renderBuyerLocationStatus();renderCart();await loadCatalog();await loadBuyerOrders();await loadBuyerChatConversations();return;
  }
- if(driverApplication || requestedRole==='driver'){
+ if(role==='driver' && driverApplication?.status==='approved'){
+  $('accountRole').textContent='Peran: Driver';
+  activePanelRole='driver';$('driverPanel').classList.remove('hidden');await refreshDriverPresence();await loadDriverTasks();return;
+ }
+ if(driverApplication || requestedRole==='driver' || role==='driver'){
   activePanelRole='driver-application';$('driverApplyPanel').classList.remove('hidden');
   const {data:driverProfile}=await supabase.from('profiles').select('full_name,phone,full_address').eq('id',session.user.id).maybeSingle();
   $('driverProfileSummary').textContent=(driverProfile?.full_name||'Nama belum diisi')+' • WA: '+(driverProfile?.phone||'Belum diisi')+' • '+(driverProfile?.full_address||'Alamat belum diisi');
