@@ -951,6 +951,15 @@ async function loadDriverTasks(){
     if(map._pasarHanakauMarker)map._pasarHanakauMarker.bindPopup('Titik penjemputan');
     const destination=L.marker([coords[2],coords[3]]).addTo(map).bindPopup('Titik pengantaran');
     map.fitBounds([[coords[0],coords[1]],[coords[2],coords[3]]],{padding:[24,24],maxZoom:15});
+    // makePickerMap menjadwalkan invalidateSize/panTo setelah inisialisasi.
+    // Atur ulang bounds setelah jadwal tersebut selesai agar kedua titik tetap terlihat.
+    setTimeout(()=>{
+     const mapElement=$(mapId);
+     if(mapElement&&mapElement.isConnected){
+      map.invalidateSize(true);
+      map.fitBounds([[coords[0],coords[1]],[coords[2],coords[3]]],{padding:[30,30],maxZoom:15});
+     }
+    },1300);
     const status=$('driver-route-status-'+d.id);
     if(status)status.textContent='Penjemputan dan pengantaran ditandai pada peta. Tombol Google Maps membuka navigasi jalan.';
    }
