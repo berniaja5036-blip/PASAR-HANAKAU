@@ -28,7 +28,7 @@ Fitur-fitur tersebut sudah memiliki implementasi kode/database, tetapi tetap mem
 - Backend Web Push sudah tersedia, tetapi pemeriksaan terakhir menemukan **0 langganan perangkat aktif**. Perangkat harus mengaktifkan notifikasi kembali; konfigurasi webhook dan pengiriman juga perlu diuji langsung.
 - WhatsApp belum terintegrasi.
 - Belum tersedia APK Android; versi sekarang digunakan melalui browser/PWA.
-- Ulasan produk dan penilaian driver baru dapat dikirim pembeli setelah pesanan diterima; ringkasan rating publik pada katalog/profil driver belum tersedia.
+- Ulasan produk dan penilaian driver dapat dikirim pembeli setelah pesanan diterima. Katalog kini menampilkan rata-rata dan jumlah ulasan produk; rincian pesanan menampilkan ringkasan rating driver. Teks ulasan dan identitas pembeli tetap tidak dibuka ke publik.
 - Backup dan pemulihan, privasi operasional, serta uji alur Buyer–Seller–Admin–Driver harus diselesaikan sebelum peluncuran publik.
 
 ## Peran
