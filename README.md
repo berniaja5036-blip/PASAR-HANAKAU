@@ -4,54 +4,57 @@ Marketplace multi-penjual untuk tahap awal Desa Hanakau Jaya, Kecamatan Sungkai 
 
 ## Status saat ini
 
-Pasar Hanakau memiliki aplikasi web/PWA yang terhubung ke Supabase dan di-host melalui GitHub Pages. Fitur dikembangkan dan diperiksa bertahap. Aplikasi masih dalam tahap uji coba terbatas dan **belum siap untuk peluncuran publik atau transaksi uang sungguhan**.
+Pasar Hanakau adalah aplikasi web/PWA yang terhubung ke Supabase dan di-host melalui GitHub Pages. Aplikasi masih dalam uji coba terbatas dan **belum siap untuk peluncuran publik atau transaksi uang sungguhan**.
 
 Website: https://berniaja5036-blip.github.io/PASAR-HANAKAU/
 
-## Fitur yang sudah tersedia
+## Fitur yang sudah dibangun
 
-- Login dan pendaftaran dengan pilihan peran Buyer, Seller, dan Driver; akses Admin terpisah.
-- Pengajuan toko dan persetujuan oleh Admin.
-- Etalase produk, unggah foto, persetujuan produk, serta pengubahan dan penghapusan produk oleh pemilik toko.
-- Keranjang dan checkout transaksional melalui Edge Function; stok, harga, ongkir, dan voucher diverifikasi di server, serta kunci idempotensi mencegah pesanan ganda ketika respons jaringan terputus.
-- Riwayat pesanan Buyer dan daftar pesanan Seller.
-- Panel Admin untuk melihat pesanan, mengubah status, menyetujui pengajuan, dan menugaskan Driver.
-- Pengajuan, persetujuan, penjemputan, dan pengantaran oleh Driver.
-- Riwayat perubahan status dan panel pemberitahuan di dalam aplikasi untuk Buyer, Seller, dan Driver.\n- Fondasi push notification berbasis Web Push/VAPID; setiap perangkat harus mengaktifkan langganan notifikasi kembali sebelum menerima push.
+- Login dan pendaftaran Buyer, Seller, dan Driver; akses Admin terpisah serta persetujuan peran Seller/Driver.
+- Pengajuan dan moderasi toko, katalog, persetujuan produk, serta pengelolaan produk oleh pemilik toko.
+- Pencarian dan filter produk, wishlist, keranjang multi-toko, dan fitur beli kembali dari pesanan sebelumnya.
+- Checkout melalui Edge Function; harga, stok, voucher, koordinat, dan ongkir diperiksa di server. Kunci idempotensi mencegah pesanan ganda saat permintaan diulang.
+- Riwayat pesanan, permintaan pembatalan, status pengiriman, penugasan driver, peta rute, dan ketersediaan driver.
+- Chat Buyer–Seller dengan lampiran privat, ulasan produk, dan penilaian driver.
+- Panel Admin untuk moderasi akun/toko/produk, statistik, laporan, voucher, pesanan, driver, dan tagihan komisi.
+- Notifikasi di dalam aplikasi dan backend Web Push/VAPID.
+
+Fitur-fitur tersebut sudah memiliki implementasi kode/database, tetapi tetap memerlukan uji penerimaan menyeluruh dengan akun uji sebelum dinyatakan siap dipakai publik.
 
 ## Batasan yang masih berlaku
 
-- Pembayaran online, COD yang terintegrasi, top-up, dan dompet saldo belum tersedia.
-- Biaya pengiriman pada checkout saat ini bernilai Rp0; jangan menganggapnya sebagai tarif final.
-- Pemberitahuan saat ini berupa daftar di dalam aplikasi, belum berupa push notification atau WhatsApp.
-- Belum ada aplikasi Android APK; versi saat ini dibuka melalui browser.
-- Uji coba belum menggantikan pemeriksaan keamanan, privasi, pemulihan data, dan kesiapan operasional sebelum peluncuran publik.
+- **Tarif ongkir masih nonaktif.** Checkout saat ini menghasilkan ongkir Rp0; jangan menganggapnya sebagai tarif final atau mengaktifkannya sebelum uji jarak jalan dan penyimpanan tarif selesai.
+- Pembayaran online, integrasi COD, top-up, dan dompet saldo belum tersedia. Pembayaran barang kepada penjual dan ongkir kepada driver masih di luar aplikasi.
+- Backend Web Push sudah tersedia, tetapi pemeriksaan terakhir menemukan **0 langganan perangkat aktif**. Perangkat harus mengaktifkan notifikasi kembali; konfigurasi webhook dan pengiriman juga perlu diuji langsung.
+- WhatsApp belum terintegrasi.
+- Belum tersedia APK Android; versi sekarang digunakan melalui browser/PWA.
+- Backup dan pemulihan, privasi operasional, serta uji alur Buyer–Seller–Admin–Driver harus diselesaikan sebelum peluncuran publik.
 
 ## Peran
 
-- **Admin:** moderasi toko/produk, pemantauan pesanan, pengaturan status, dan penugasan Driver.
-- **Buyer:** melihat katalog, mengelola keranjang, checkout, dan melacak pesanan.
-- **Seller:** mengelola toko/produk dan memproses pesanan tokonya.
-- **Driver:** melihat tugas yang ditugaskan dan memperbarui status penjemputan/pengantaran.
+- **Admin:** moderasi akun, toko, produk, pesanan, driver, voucher, statistik, dan komisi.
+- **Buyer:** melihat katalog, menyimpan wishlist, berbelanja, checkout, chat, dan melacak pesanan.
+- **Seller:** mengelola toko/produk, menerima pesanan, chat, dan melihat tagihan komisi.
+- **Driver:** melihat ketersediaan dan tugas yang ditugaskan, lalu memperbarui status penjemputan/pengantaran.
 
 ## Database dan deployment
 
-- Backend: Supabase (Auth, PostgreSQL, Row Level Security, Storage, RPC).
+- Backend: Supabase (Auth, PostgreSQL, Row Level Security, Storage, RPC, Edge Functions).
 - Repositori: `berniaja5036-blip/PASAR-HANAKAU`, branch `main`.
-- Deployment website: GitHub Pages melalui GitHub Actions.
-- Migrasi database berada di `supabase/migrations/`. Jalankan migrasi sesuai urutan pada proyek Supabase yang benar; jangan menjalankan ulang skrip yang tidak dirancang idempotent.
+- Website: GitHub Pages melalui GitHub Actions.
+- Migrasi database berada di `supabase/migrations/`. Jangan menjalankan ulang migrasi yang sudah diterapkan atau menjalankan seluruh file SQL sebagai satu batch.
 
 ## Keamanan
 
-- Jangan memasukkan kata sandi, service-role key, atau rahasia pembayaran ke repositori maupun browser.
-- Hak akses harus tetap ditegakkan oleh RLS dan fungsi database, bukan hanya tampilan.
-- Jangan mengaktifkan pembayaran atau saldo uang sungguhan sebelum integrasi penyedia pembayaran, verifikasi callback, rekonsiliasi, refund, dan pemeriksaan kepatuhan selesai.
+- Jangan memasukkan kata sandi, service-role key, atau rahasia ke repositori maupun browser.
+- Hak akses harus ditegakkan oleh RLS, hak SQL, dan fungsi database, bukan hanya tampilan.
+- Jangan mengaktifkan pembayaran uang sungguhan sebelum integrasi penyedia pembayaran, verifikasi callback, rekonsiliasi, refund, dan pemeriksaan kepatuhan selesai.
 - Pertahankan backup dan uji perubahan di lingkungan yang sesuai sebelum peluncuran.
 
-## Tahap pengembangan berikutnya
+## Tahap berikutnya
 
-1. Uji ulang notifikasi dan seluruh alur Buyer–Seller–Admin–Driver.
-2. Selesaikan pengaturan operasional seperti tarif pengiriman, pembatalan, dan penanganan kendala pesanan.
-3. Perkuat keamanan, validasi, privasi, backup, dan pemantauan.
-4. Rancang integrasi pembayaran yang sesuai sebelum menerima uang sungguhan.
+1. Uji penerimaan Buyer–Seller–Admin–Driver menggunakan akun dan data uji khusus.
+2. Uji rute dan tarif ongkir tanpa mengaktifkan tarif pada pengguna umum.
+3. Aktifkan ulang dan uji notifikasi pada perangkat Android.
+4. Uji backup/pemulihan serta pemantauan operasional.
 5. Evaluasi PWA dan pengemasan Android setelah alur web stabil.
