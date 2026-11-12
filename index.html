@@ -39,6 +39,13 @@ footer{color:#829087;font-size:12px;padding:30px 10px}
 @media(max-width:420px){.top h1{font-size:24px}.wrap{padding:13px}.panel{padding:14px}.authgrid{grid-template-columns:1fr}}
 
  #buyerDeliveryMap,#sellerPickupMap,#legacyShopPickupMap,.driverOrderMap{height:280px;width:100%;border-radius:12px;border:1px solid #dce6df;margin:10px 0}.leaflet-container{font:inherit}
+
+#productDetailDialog{width:min(92vw,560px);max-height:88vh;overflow:auto;border:0;border-radius:18px;padding:20px;box-shadow:0 18px 60px #102b1d55;color:#183329}
+#productDetailDialog::backdrop{background:#102b1d99}
+.product-open{display:block;width:100%;padding:0;border:0;background:transparent;text-align:left;color:inherit;font:inherit;cursor:pointer}
+.product-open:focus-visible{outline:3px solid #399568;outline-offset:4px;border-radius:12px}
+.product-open h3{margin:9px 0 4px}
+#productDetailImage img{width:100%!important;max-width:100%!important;max-height:340px;aspect-ratio:4/3;object-fit:contain;background:#f0f5f0;border-radius:12px}
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
@@ -98,6 +105,11 @@ footer{color:#829087;font-size:12px;padding:30px 10px}
 <div class="panel" style="margin:10px 0"><div class="row" style="justify-content:space-between"><h3 style="margin:0">❤️ Produk favorit saya</h3><button id="refreshWishlist" class="btn secondary" type="button">Muat ulang</button></div><div id="buyerWishlist" class="muted" style="margin-top:8px">Masuk sebagai pembeli untuk melihat favorit.</div></div><div class="panel" style="margin-top:10px"><label for="catalogSearch">Cari nama barang atau toko</label><input id="catalogSearch" class="field" type="search" placeholder="Contoh: beras, minyak, Toko Sumber Rezeki" autocomplete="off"><div class="row"><label for="catalogSort" class="muted">Urutkan:</label><select id="catalogSort" class="field" style="max-width:230px;margin:0"><option value="newest">Terbaru</option><option value="price-asc">Harga termurah</option><option value="price-desc">Harga termahal</option><option value="name-asc">Nama barang A–Z</option></select><label for="catalogShopFilter" class="muted">Toko:</label><select id="catalogShopFilter" class="field" style="max-width:230px;margin:0"><option value="">Semua toko</option></select></div><div class="row"><input id="catalogMinPrice" class="field" type="number" min="0" step="1000" inputmode="numeric" placeholder="Harga minimum (Rp)" aria-label="Harga minimum"><input id="catalogMaxPrice" class="field" type="number" min="0" step="1000" inputmode="numeric" placeholder="Harga maksimum (Rp)" aria-label="Harga maksimum"><button id="clearCatalogFilters" class="btn secondary" type="button">Reset filter</button></div><div id="catalogCount" class="muted" style="margin-top:8px" aria-live="polite"></div></div>
 <div id="catalog" class="grid"><div class="tile muted">Menghubungkan ke katalog…</div></div>
 <div id="catalogMessage" class="status" role="status"></div></section>
+
+<dialog id="productDetailDialog" aria-labelledby="productDetailTitle">
+ <div class="row" style="justify-content:space-between;align-items:center"><h2 id="productDetailTitle" style="margin:0;color:#104d34">Detail produk</h2><button class="btn secondary" id="closeProductDetail" type="button">Tutup ✕</button></div>
+ <div id="productDetailContent" style="margin-top:14px"></div>
+</dialog>
 </main><footer>Pasar Hanakau • Uji coba awal<br><a href="./kebijakan-privasi.html">Kebijakan Privasi</a> · <a href="./syarat-ketentuan.html">Syarat dan Ketentuan</a><br>Kontak pengelola: <a href="mailto:yisunshin715@gmail.com">yisunshin715@gmail.com</a></footer>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script type="module">
@@ -523,8 +535,10 @@ function renderCatalog(){
  else items.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
  $('catalogCount').textContent=items.length+' dari '+catalogProducts.length+' produk ditampilkan';
  if(!items.length){$('catalog').innerHTML='<div class="tile muted">'+(catalogProducts.length?'Tidak ada produk yang cocok. Coba kata kunci lain.':'Belum ada produk aktif. Produk akan muncul setelah toko dan produk disetujui admin.')+'</div>';return}
- $('catalog').innerHTML=items.map(p=>'<article class="tile product"><div>'+productImageHtml(p.image_path)+'<h3>'+escapeHtml(p.name)+'</h3><div class="muted">'+escapeHtml(p.shops?.name||'Toko Pasar Hanakau')+'</div><div class="muted">'+(Number(p.review_count)>0?'★ '+Number(p.average_rating).toFixed(1)+' ('+Number(p.review_count).toLocaleString('id-ID')+' ulasan)':'Belum ada ulasan')+'</div><p class="muted">'+escapeHtml(p.description||'')+'</p><div class="price">Rp '+Number(p.price).toLocaleString('id-ID')+'</div><div class="muted">Stok: '+p.stock+'</div><button class="btn secondary" style="margin-bottom:6px" type="button" data-wishlist-toggle="'+p.id+'">'+(buyerWishlistIds.has(p.id)?'❤️ Hapus dari favorit':'♡ Simpan favorit')+'</button><button class="btn" data-add-cart="'+p.id+'" data-name="'+escapeHtml(p.name)+'" data-price="'+Number(p.price)+'" data-stock="'+p.stock+'" data-shop="'+p.shop_id+'" data-shop-name="'+escapeHtml(p.shops?.name||'Toko')+'">Tambah ke keranjang</button><button class="btn secondary" style="margin-top:6px" data-chat-shop="'+p.shop_id+'" data-chat-shop-name="'+escapeHtml(p.shops?.name||'Toko')+'">Hubungi toko</button></div></article>').join('');
+ $('catalog').innerHTML=items.map(p=>'<article class="tile product"><div><button class="product-open" type="button" data-product-detail="'+p.id+'" aria-label="Lihat detail '+escapeHtml(p.name)+'">'+productImageHtml(p.image_path)+'<h3>'+escapeHtml(p.name)+'</h3></button><div class="muted">'+escapeHtml(p.shops?.name||'Toko Pasar Hanakau')+'</div><div class="muted">'+(Number(p.review_count)>0?'★ '+Number(p.average_rating).toFixed(1)+' ('+Number(p.review_count).toLocaleString('id-ID')+' ulasan)':'Belum ada ulasan')+'</div><p class="muted">'+escapeHtml(p.description||'')+'</p><div class="price">Rp '+Number(p.price).toLocaleString('id-ID')+'</div><div class="muted">Stok: '+p.stock+'</div><button class="btn secondary" style="margin-bottom:6px" type="button" data-wishlist-toggle="'+p.id+'">'+(buyerWishlistIds.has(p.id)?'❤️ Hapus dari favorit':'♡ Simpan favorit')+'</button><button class="btn" data-add-cart="'+p.id+'" data-name="'+escapeHtml(p.name)+'" data-price="'+Number(p.price)+'" data-stock="'+p.stock+'" data-shop="'+p.shop_id+'" data-shop-name="'+escapeHtml(p.shops?.name||'Toko')+'">Tambah ke keranjang</button><button class="btn secondary" style="margin-top:6px" data-chat-shop="'+p.shop_id+'" data-chat-shop-name="'+escapeHtml(p.shops?.name||'Toko')+'">Hubungi toko</button></div></article>').join('');
 }
+$('closeProductDetail').addEventListener('click',()=>$('productDetailDialog').close());
+$('productDetailDialog').addEventListener('click',e=>{if(e.target===$('productDetailDialog'))$('productDetailDialog').close();});
 $('catalogSearch').addEventListener('input',renderCatalog);
 $('catalogSort').addEventListener('change',renderCatalog);
 $('catalogShopFilter').addEventListener('change',renderCatalog);
@@ -1133,6 +1147,15 @@ function renderCart(){
  previewDeliveryQuote();
 }
 $('catalog').addEventListener('click',async e=>{
+ const detailButton=e.target.closest('[data-product-detail]');
+ if(detailButton){
+  const product=catalogProducts.find(item=>item.id===detailButton.dataset.productDetail);
+  if(!product){message('catalogMessage','Detail produk tidak ditemukan. Muat ulang katalog.',true);return;}
+  $('productDetailContent').innerHTML='<div id="productDetailImage">'+productImageHtml(product.image_path)+'</div><h3 style="font-size:20px;margin:14px 0 6px">'+escapeHtml(product.name)+'</h3><p class="muted">Toko: '+escapeHtml(product.shops?.name||'Toko Pasar Hanakau')+'</p><p class="price" style="font-size:22px">Rp '+Number(product.price).toLocaleString('id-ID')+'</p><p class="muted">Stok tersedia: '+Number(product.stock)+'</p><p class="muted">'+(Number(product.review_count)>0?'★ '+Number(product.average_rating).toFixed(1)+' dari '+Number(product.review_count).toLocaleString('id-ID')+' ulasan':'Belum ada ulasan')+'</p><h4>Deskripsi produk</h4><p style="white-space:pre-wrap;overflow-wrap:anywhere">'+escapeHtml(product.description||'Belum ada deskripsi produk.')+'</p>';
+  if(typeof $('productDetailDialog').showModal==='function')$('productDetailDialog').showModal();
+  else message('catalogMessage','Browser belum mendukung tampilan detail produk.',true);
+  return;
+ }
  const favorite=e.target.closest('[data-wishlist-toggle]');
  if(favorite){
   if(!activeBuyerId){message('catalogMessage','Silakan masuk dengan akun pembeli untuk menyimpan favorit.',true);return}
