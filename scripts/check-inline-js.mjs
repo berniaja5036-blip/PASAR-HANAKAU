@@ -185,4 +185,21 @@ if (!termsVersionMigration.includes("v_terms_version <> '2026-11-12'")) {
   process.exit(1);
 }
 
+const productRatingMigration = readFileSync('supabase/migrations/202611120034_add_public_rating_summaries.sql', 'utf8');
+if (!productRatingMigration.includes('get_public_product_review_summaries') ||
+    !productRatingMigration.includes('get_public_driver_rating_summaries') ||
+    !productRatingMigration.includes("set search_path = ''") ||
+    !productRatingMigration.includes('cardinality(p_product_ids) <= 100') ||
+    !productRatingMigration.includes('cardinality(p_driver_ids) <= 100')) {
+  console.error('Public rating summaries must expose aggregate-only data with bounded input arrays and a fixed search_path.');
+  process.exit(1);
+}
+if (!appSourceForDriverChecks.includes("get_public_product_review_summaries") ||
+    !appSourceForDriverChecks.includes("get_public_driver_rating_summaries") ||
+    !appSourceForDriverChecks.includes('Belum ada ulasan') ||
+    !appSourceForDriverChecks.includes('Belum ada penilaian')) {
+  console.error('Catalog and assigned-driver UI must display public aggregate rating summaries.');
+  process.exit(1);
+}
+
 console.log('JavaScript syntax check passed (' + moduleBlocks.length + ' inline module).');
