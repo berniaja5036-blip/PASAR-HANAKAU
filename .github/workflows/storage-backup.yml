@@ -1,6 +1,10 @@
 name: Storage backup (weekly and manual)
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/storage-backup.yml"
   schedule:
     # Every Monday at 02:30 WIB (Sunday 19:30 UTC)
     - cron: "30 19 * * 0"
