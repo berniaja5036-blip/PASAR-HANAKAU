@@ -113,4 +113,18 @@ if (!activeRpcMigration.includes('public.current_user_is_active()') ||
   process.exit(1);
 }
 
+
+const activeHelperMigration = readFileSync('supabase/migrations/202611120028_require_active_account_for_security_helpers.sql', 'utf8');
+for (const helper of [
+  'can_upload_product_image',
+  'current_user_can_read_delivery_order',
+  'current_user_is_assigned_driver'
+]) {
+  if (!activeHelperMigration.includes("'" + helper + "'") ||
+      !activeHelperMigration.includes('public.current_user_is_active() and exists')) {
+    console.error('Exposed security helper missing active-account check: ' + helper);
+    process.exit(1);
+  }
+}
+
 console.log('JavaScript syntax check passed (' + moduleBlocks.length + ' inline module).');
