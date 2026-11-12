@@ -175,4 +175,14 @@ if (!notificationPrivilegesMigration.includes('revoke update on table public.not
   process.exit(1);
 }
 
+if (!appSourceForDriverChecks.includes('accepted_terms_version:"2026-11-12"')) {
+  console.error('Signup must record the current legal consent version.');
+  process.exit(1);
+}
+const termsVersionMigration = readFileSync('supabase/migrations/202611120033_align_signup_terms_version_20261112.sql', 'utf8');
+if (!termsVersionMigration.includes("v_terms_version <> '2026-11-12'")) {
+  console.error('The database signup trigger must require the current legal consent version.');
+  process.exit(1);
+}
+
 console.log('JavaScript syntax check passed (' + moduleBlocks.length + ' inline module).');
