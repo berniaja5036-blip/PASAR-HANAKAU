@@ -523,7 +523,7 @@ function renderCatalog(){
  else items.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
  $('catalogCount').textContent=items.length+' dari '+catalogProducts.length+' produk ditampilkan';
  if(!items.length){$('catalog').innerHTML='<div class="tile muted">'+(catalogProducts.length?'Tidak ada produk yang cocok. Coba kata kunci lain.':'Belum ada produk aktif. Produk akan muncul setelah toko dan produk disetujui admin.')+'</div>';return}
- $('catalog').innerHTML=items.map(p=>'<article class="tile product"><div>'+productImageHtml(p.image_path)+'<h3>'+escapeHtml(p.name)+'</h3><div class="muted">'+escapeHtml(p.shops?.name||'Toko Pasar Hanakau')+'</div><p class="muted">'+escapeHtml(p.description||'')+'</p><div class="price">Rp '+Number(p.price).toLocaleString('id-ID')+'</div><div class="muted">Stok: '+p.stock+'</div><button class="btn secondary" style="margin-bottom:6px" type="button" data-wishlist-toggle="'+p.id+'">'+(buyerWishlistIds.has(p.id)?'❤️ Hapus dari favorit':'♡ Simpan favorit')+'</button><button class="btn" data-add-cart="'+p.id+'" data-name="'+escapeHtml(p.name)+'" data-price="'+Number(p.price)+'" data-stock="'+p.stock+'" data-shop="'+p.shop_id+'" data-shop-name="'+escapeHtml(p.shops?.name||'Toko')+'">Tambah ke keranjang</button><button class="btn secondary" style="margin-top:6px" data-chat-shop="'+p.shop_id+'" data-chat-shop-name="'+escapeHtml(p.shops?.name||'Toko')+'">Hubungi toko</button></div></article>').join('');
+ $('catalog').innerHTML=items.map(p=>'<article class="tile product"><div>'+productImageHtml(p.image_path)+'<h3>'+escapeHtml(p.name)+'</h3><div class="muted">'+escapeHtml(p.shops?.name||'Toko Pasar Hanakau')+'</div><div class="muted">'+(Number(p.review_count)>0?'★ '+Number(p.average_rating).toFixed(1)+' ('+Number(p.review_count).toLocaleString('id-ID')+' ulasan)':'Belum ada ulasan')+'</div><p class="muted">'+escapeHtml(p.description||'')+'</p><div class="price">Rp '+Number(p.price).toLocaleString('id-ID')+'</div><div class="muted">Stok: '+p.stock+'</div><button class="btn secondary" style="margin-bottom:6px" type="button" data-wishlist-toggle="'+p.id+'">'+(buyerWishlistIds.has(p.id)?'❤️ Hapus dari favorit':'♡ Simpan favorit')+'</button><button class="btn" data-add-cart="'+p.id+'" data-name="'+escapeHtml(p.name)+'" data-price="'+Number(p.price)+'" data-stock="'+p.stock+'" data-shop="'+p.shop_id+'" data-shop-name="'+escapeHtml(p.shops?.name||'Toko')+'">Tambah ke keranjang</button><button class="btn secondary" style="margin-top:6px" data-chat-shop="'+p.shop_id+'" data-chat-shop-name="'+escapeHtml(p.shops?.name||'Toko')+'">Hubungi toko</button></div></article>').join('');
 }
 $('catalogSearch').addEventListener('input',renderCatalog);
 $('catalogSort').addEventListener('change',renderCatalog);
@@ -538,6 +538,12 @@ async function loadCatalog(){
   const {data,error}=await supabase.from('products').select('id,shop_id,name,description,price,stock,image_path,created_at,shops(name)').eq('status','active').gt('stock',0).order('created_at',{ascending:false}).limit(60);
   if(error)throw error;
   catalogProducts=data||[];
+  if(catalogProducts.length){
+   const {data:ratingRows,error:ratingError}=await supabase.rpc('get_public_product_review_summaries',{p_product_ids:catalogProducts.map(p=>p.id)});
+   if(ratingError)console.warn('Ringkasan ulasan produk belum dapat dimuat:',ratingError.message);
+   const ratingMap=new Map((ratingRows||[]).map(row=>[row.product_id,row]));
+   catalogProducts=catalogProducts.map(product=>({...product,average_rating:ratingMap.get(product.id)?.average_rating??null,review_count:ratingMap.get(product.id)?.review_count??0}));
+  }
   const shopSelect=$('catalogShopFilter');const previousShop=shopSelect.value;const shopOptions=[...new Map(catalogProducts.map(p=>[p.shop_id,p.shops?.name||'Toko Pasar Hanakau'])).entries()].sort((a,b)=>a[1].localeCompare(b[1],'id'));
   shopSelect.innerHTML='<option value="">Semua toko</option>'+shopOptions.map(([id,name])=>'<option value="'+id+'">'+escapeHtml(name)+'</option>').join('');
   if(shopOptions.some(([id])=>id===previousShop))shopSelect.value=previousShop;
@@ -769,23 +775,26 @@ async function loadOrderDriverDetails(orderIds){
  if(deliveryError){console.warn('Informasi driver pesanan gagal dimuat:',deliveryError.message);return result}
  const driverIds=[...new Set((deliveries||[]).map(d=>d.driver_id).filter(Boolean))];
  if(!driverIds.length)return result;
- const [{data:drivers,error:driverError},{data:publicProfiles,error:publicError}]=await Promise.all([
+ const [{data:drivers,error:driverError},{data:publicProfiles,error:publicError},{data:ratingRows,error:ratingError}]=await Promise.all([
   supabase.from('driver_profiles').select('id,vehicle_type').in('id',driverIds),
-  supabase.from('user_public_profiles').select('user_id,display_name,avatar_path').in('user_id',driverIds)
+  supabase.from('user_public_profiles').select('user_id,display_name,avatar_path').in('user_id',driverIds),
+  supabase.rpc('get_public_driver_rating_summaries',{p_driver_ids:driverIds})
  ]);
  if(driverError||publicError){console.warn('Profil publik driver gagal dimuat:',driverError?.message||publicError?.message);return result}
+ if(ratingError)console.warn('Ringkasan penilaian driver belum dapat dimuat:',ratingError.message);
  const driverMap=new Map((drivers||[]).map(d=>[d.id,d]));
  const profileMap=new Map((publicProfiles||[]).map(p=>[p.user_id,p]));
+ const ratingMap=new Map((ratingRows||[]).map(row=>[row.driver_id,row]));
  (deliveries||[]).forEach(delivery=>{
   const driver=driverMap.get(delivery.driver_id),profile=profileMap.get(delivery.driver_id);
-  if(driver)result.set(delivery.order_id,{driver_id:delivery.driver_id,display_name:profile?.display_name||'Driver Pasar Hanakau',avatar_path:profile?.avatar_path||null,vehicle_type:driver.vehicle_type||'Jenis kendaraan belum diisi',status:delivery.status});
+  if(driver){const rating=ratingMap.get(delivery.driver_id);result.set(delivery.order_id,{driver_id:delivery.driver_id,display_name:profile?.display_name||'Driver Pasar Hanakau',avatar_path:profile?.avatar_path||null,vehicle_type:driver.vehicle_type||'Jenis kendaraan belum diisi',average_rating:rating?.average_rating??null,rating_count:rating?.rating_count??0,status:delivery.status});}
  });
  return result;
 }
 function renderOrderDriverInfo(info){
  if(!info)return '';
  const avatar=info.avatar_path?'<img src="'+escapeHtml(supabase.storage.from('profile-avatars').getPublicUrl(info.avatar_path).data.publicUrl)+'" alt="Foto driver" style="width:52px;height:52px;border-radius:50%;object-fit:cover">':'<div aria-hidden="true" style="width:52px;height:52px;border-radius:50%;display:grid;place-items:center;background:#e9f4eb;font-size:24px">🚚</div>';
- return '<div class="notice" style="margin:10px 0"><b>🚚 Driver penjemput dan pengantar</b><div class="row" style="margin-top:8px;align-items:center">'+avatar+'<div><b>'+escapeHtml(info.display_name)+'</b><div class="muted">'+escapeHtml(info.vehicle_type)+'</div></div></div></div>';
+ return '<div class="notice" style="margin:10px 0"><b>🚚 Driver penjemput dan pengantar</b><div class="row" style="margin-top:8px;align-items:center">'+avatar+'<div><b>'+escapeHtml(info.display_name)+'</b><div class="muted">'+escapeHtml(info.vehicle_type)+'</div><div class="muted">'+(Number(info.rating_count)>0?'★ '+Number(info.average_rating).toFixed(1)+' ('+Number(info.rating_count).toLocaleString('id-ID')+' penilaian)':'Belum ada penilaian')+'</div></div></div></div>';
 }
 async function loadAdminDriverAvailability(drivers){
  const box=$('adminDriverStatusList');
