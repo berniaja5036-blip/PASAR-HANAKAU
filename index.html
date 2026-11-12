@@ -268,10 +268,10 @@ async function refreshSession(){
  }
  $('accountEmail').textContent=profile.full_name||'Akun aktif';
  if(profile?.role==='seller'){if(!$('shopName').value)$('shopName').value=profile.full_name||'';if(!$('shopAddress').value)$('shopAddress').value=profile.full_address||'';if(!$('shopPhone').value)$('shopPhone').value=profile.phone||'';}
- if(profile?.account_status==='suspended'){
-  await supabase.auth.signOut();activeAccountUserId=null;activePanelRole=null;
+ if(profile.account_status!=='active'){
+  await supabase.auth.signOut();activeAccountUserId=null;activePanelRole=null;activeBuyerId=null;
   $('rolePanel').classList.remove('hidden');$('authPanel').classList.add('hidden');$('accountPanel').classList.add('hidden');
-  alert('Akun ini telah dinonaktifkan oleh admin. Hubungi pengelola Pasar Hanakau jika merasa ini kekeliruan.');return;
+  alert('Akun ini belum aktif atau telah dinonaktifkan. Hubungi pengelola Pasar Hanakau jika memerlukan bantuan.');return;
  }
  const role=profile?.role||'buyer';
  const requestedRole=selectedEntryRole||session.user.user_metadata?.requested_role||null;
