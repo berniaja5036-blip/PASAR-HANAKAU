@@ -140,4 +140,11 @@ if (!anonymousWriteMigration.includes('revoke insert, update, delete on table') 
   process.exit(1);
 }
 
+const routeFunction = readFileSync('supabase/functions/route-distance/index.ts', 'utf8');
+if (!routeFunction.includes('userClient.auth.getUser()') ||
+    !routeFunction.includes('profile?.account_status !== "active"')) {
+  console.error('Route distance must reject invalid sessions and non-active accounts.');
+  process.exit(1);
+}
+
 console.log('JavaScript syntax check passed (' + moduleBlocks.length + ' inline module).');
