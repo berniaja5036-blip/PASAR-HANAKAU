@@ -33,4 +33,11 @@ if (!checkoutFunction.includes('"Access-Control-Allow-Origin": "https://berniaja
   process.exit(1);
 }
 
+const pushFunction = readFileSync('supabase/functions/push-notifications/index.ts', 'utf8');
+if (!pushFunction.includes('select("role,account_status")') ||
+    !pushFunction.includes('profile.account_status === "suspended"')) {
+  console.error('Push key management must reject suspended admin accounts.');
+  process.exit(1);
+}
+
 console.log('JavaScript syntax check passed (' + moduleBlocks.length + ' inline module).');
