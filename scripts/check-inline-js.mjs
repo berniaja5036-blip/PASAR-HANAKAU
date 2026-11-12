@@ -153,4 +153,12 @@ if (!commissionPeriodMigration.includes("pg_catalog.now() at time zone 'Asia/Jak
   process.exit(1);
 }
 
+const statisticsTimezoneMigration = readFileSync('supabase/migrations/202611120031_fix_admin_statistics_wib_date_grouping.sql', 'utf8');
+if (!statisticsTimezoneMigration.includes("o.created_at at time zone 'Asia/Jakarta'") ||
+    !statisticsTimezoneMigration.includes("p_from at time zone 'Asia/Jakarta'") ||
+    statisticsTimezoneMigration.includes("greatest(p_from,now()-interval '30 days')")) {
+  console.error('Admin daily statistics and commission-paid dates must use the selected WIB date range.');
+  process.exit(1);
+}
+
 console.log('JavaScript syntax check passed (' + moduleBlocks.length + ' inline module).');
