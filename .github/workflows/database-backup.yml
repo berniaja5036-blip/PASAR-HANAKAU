@@ -49,9 +49,8 @@ jobs:
             echo "::error::Repository secret BACKUP_ENCRYPTION_PASSPHRASE has not been configured."
             exit 1
           fi
-          gpg --batch --yes --pinentry-mode loopback --symmetric --cipher-algo AES256 \\
-            --passphrase "${BACKUP_ENCRYPTION_PASSPHRASE}" \\
-            --output backup/pasar-hanakau-db.dump.gpg backup/pasar-hanakau-db.dump
+          printf '%s' "${BACKUP_ENCRYPTION_PASSPHRASE}" | gpg --batch --yes --pinentry-mode loopback --symmetric --cipher-algo AES256 \\
+            --passphrase-fd 0 --output backup/pasar-hanakau-db.dump.gpg backup/pasar-hanakau-db.dump
           rm backup/pasar-hanakau-db.dump
           cd backup
           sha256sum pasar-hanakau-db.dump.gpg > SHA256SUMS.txt
