@@ -8,6 +8,17 @@ const cors = {
 };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: cors });
 
+async function writeAuditLog(admin: ReturnType<typeof createClient>, entry: {
+  actor_id: string; action: string; target_type: string; target_id: string | null;
+  outcome: "success" | "failure"; details?: Record<string, unknown>;
+}) {
+  const { error } = await admin.from("admin_audit_logs").insert({
+    actor_id: entry.actor_id, action: entry.action, target_type: entry.target_type,
+    target_id: entry.target_id, outcome: entry.outcome, details: entry.details || {},
+  });
+  return !error;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -132,8 +143,17 @@ Deno.serve(async (req: Request) => {
       await admin.auth.admin.updateUserById(targetId, { ban_duration: "none" });
       return json({ error: relatedError + " Penonaktifan dibatalkan." }, 500);
     }
-    await admin.from("push_subscriptions").delete().eq("user_id", targetId);
-    return json({ ok: true, message: "Akun dinonaktifkan. Riwayat pesanan dan transaksi tetap tersimpan." });
+    const { error: pushDeleteError } = await admin.from("push_subscriptions").delete().eq("user_id", targetId);
+    const auditLogged = await writeAuditLog(admin, {
+      actor_id: authData.user.id, action: "suspend_account", target_type: "profile",
+      target_id: targetId, outcome: "success",
+      details: { target_role: target.role, reason, related_shop_count: ownedShops.length,
+        push_subscriptions_removed: !pushDeleteError },
+    });
+    return json({ ok: true, audit_logged: auditLogged,
+      warning: !auditLogged ? "Akun dinonaktifkan, tetapi pencatatan audit gagal." :
+        pushDeleteError ? "Akun dinonaktifkan, tetapi langganan notifikasi lama gagal dibersihkan." : null,
+      message: "Akun dinonaktifkan. Riwayat pesanan dan transaksi tetap tersimpan." });
   }
   return json({ error: "Aksi tidak dikenal." }, 400);
 });
