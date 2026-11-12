@@ -114,8 +114,8 @@ Deno.serve(async (req: Request) => {
     const client = createClient(url, pub, { auth: { persistSession: false } });
     const { data: authData, error: authError } = await client.auth.getUser(token);
     if (authError || !authData.user) return json({ error: "Invalid session" }, 401);
-    const { data: profile } = await admin.from("profiles").select("role").eq("id", authData.user.id).maybeSingle();
-    if (profile?.role !== "admin") return json({ error: "Admin only" }, 403);
+    const { data: profile, error: profileError } = await admin.from("profiles").select("role,account_status").eq("id", authData.user.id).maybeSingle();
+    if (profileError || profile?.role !== "admin" || profile.account_status === "suspended") return json({ error: "Admin only" }, 403);
     const privateKey = await generateVapidKey();
     const publicKey = await vapidPublicKey(privateKey);
     const { error } = await admin.from("push_settings").upsert({ id: 1, public_key: publicKey, subject: "mailto:yisunshin715@gmail.com", updated_at: new Date().toISOString() });
