@@ -50,8 +50,8 @@ Deno.serve(async (req: Request) => {
     const buyerId = authData.user.id;
 
     const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
-    const { data: profile, error: profileError } = await admin.from("profiles").select("role").eq("id", buyerId).maybeSingle();
-    if (profileError || profile?.role !== "buyer") return reply({ error: "Checkout hanya tersedia untuk akun pembeli." }, 403);
+    const { data: profile, error: profileError } = await admin.from("profiles").select("role,account_status").eq("id", buyerId).maybeSingle();
+    if (profileError || profile?.role !== "buyer" || profile.account_status !== "active") return reply({ error: "Checkout hanya tersedia untuk akun pembeli yang aktif." }, 403);
 
     const items = body.items;
     const address = typeof body.delivery_address === "string" ? body.delivery_address.trim() : "";
