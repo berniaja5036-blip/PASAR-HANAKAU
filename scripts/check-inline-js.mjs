@@ -92,4 +92,25 @@ if (!activeStorageMigration.includes('create policy active_account_required on s
   process.exit(1);
 }
 
+
+const activeRpcMigration = readFileSync('supabase/migrations/202611120027_enforce_active_status_in_sensitive_definer_rpcs.sql', 'utf8');
+for (const rpc of [
+  'buyer_confirm_delivery_fee',
+  'buyer_confirm_order_received',
+  'buyer_report_delivery_fee_dispute',
+  'buyer_request_order_cancellation',
+  'driver_confirm_delivery_fee',
+  'driver_update_delivery_status'
+]) {
+  if (!activeRpcMigration.includes("'" + rpc + "'")) {
+    console.error('Sensitive RPC missing active-account protection: ' + rpc);
+    process.exit(1);
+  }
+}
+if (!activeRpcMigration.includes('public.current_user_is_active()') ||
+    !activeRpcMigration.includes("account_status=''active''")) {
+  console.error('Sensitive RPC migration must also protect service-role checkout for active buyers.');
+  process.exit(1);
+}
+
 console.log('JavaScript syntax check passed (' + moduleBlocks.length + ' inline module).');
