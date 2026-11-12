@@ -1,6 +1,6 @@
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://berniaja5036-blip.github.io",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
@@ -68,6 +68,13 @@ Deno.serve(async (req) => {
     }
 
     const route = result.routes[0];
+    if (typeof route.distance !== "number" || !Number.isFinite(route.distance) || route.distance <= 0 ||
+        typeof route.duration !== "number" || !Number.isFinite(route.duration) || route.duration < 0) {
+      return new Response(JSON.stringify({ error: "Data rute tidak valid" }), {
+        status: 422,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     return new Response(
       JSON.stringify({
