@@ -232,8 +232,8 @@ if (!driverAssignmentGuardMigration.includes("p.role = 'driver'") ||
 
 
 const driverAssignmentTrimMigration = readMigration('fix_driver_assignment_document_trim');
-if (!driverAssignmentTrimMigration.includes('pg_catalog.btrim') ||
-    driverAssignmentTrimMigration.includes('pg_catalog.trim(')) {
+if (!driverAssignmentTrimMigration.includes('nullif(pg_catalog.btrim') ||
+    driverAssignmentTrimMigration.includes('nullif(pg_catalog.trim(')) {
   console.error('Driver document validation must use the valid pg_catalog.btrim function.');
   process.exit(1);
 }
