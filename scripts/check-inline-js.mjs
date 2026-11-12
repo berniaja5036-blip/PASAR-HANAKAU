@@ -81,6 +81,11 @@ if (!checkoutFunction.includes('select("role,account_status")') ||
 
 const activeRlsMigration = readFileSync('supabase/migrations/202611120025_require_active_account_for_authenticated_rls.sql', 'utf8');
 const activeStorageMigration = readFileSync('supabase/migrations/202611120026_require_active_account_for_storage_access.sql', 'utf8');
+const appSource = readFileSync('index.html', 'utf8');
+if (!appSource.includes("if(profile.account_status!=='active')")) {
+  console.error('The client must fail closed for every non-active account state.');
+  process.exit(1);
+}
 if (!activeRlsMigration.includes('public.current_user_is_active()') ||
     !activeRlsMigration.includes('as restrictive for all to authenticated') ||
     !activeRlsMigration.includes('active_account_read_self')) {
