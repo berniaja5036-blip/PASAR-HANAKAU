@@ -93,6 +93,21 @@ Deno.serve(async (req: Request) => {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([product_id, quantity]) => ({ product_id, quantity }));
 
+    const { data: previousResult, error: previousError } = await admin.rpc("get_checkout_idempotent_result_secure", {
+      p_buyer_id: buyerId,
+      p_idempotency_key: idempotencyKey,
+      p_items: sortedItems,
+      p_delivery_address: address,
+      p_notes: notes,
+      p_voucher_code: voucherCode || null,
+    });
+    if (previousError) {
+      const status = /kunci checkout/i.test(previousError.message || "") ? 409 : 500;
+      return reply({ error: previousError.message || "Status checkout sebelumnya belum dapat diverifikasi." }, status);
+    }
+    if (Array.isArray(previousResult)) return reply({ orders: previousResult });
+    if (previousResult && typeof previousResult === "object") return reply({ orders: previousResult });
+
     const { data: settings, error: settingsError } = await admin.from("delivery_fee_settings")
       .select("enabled,base_fee,per_km_fee,minimum_fee,max_distance_km").eq("id", true).single();
     if (settingsError || !settings) return reply({ error: "Pengaturan ongkir belum tersedia." }, 500);
