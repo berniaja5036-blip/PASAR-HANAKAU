@@ -38,4 +38,12 @@ for (const required of ["./icons/icon-192.png", "./icons/icon-512.png"]) {
   if (!serviceWorker.includes(required)) throw new Error(`Service worker does not cache/reference ${required}.`);
 }
 
-console.log("PWA manifest, required icons, and service-worker icon references are valid.");
+
+const notificationClickHandler = serviceWorker.match(/self\\.addEventListener\\("notificationclick"[\\s\\S]*?\\n\\}\\);/);
+if (!notificationClickHandler) throw new Error("Service worker is missing notification-click handling.");
+for (const required of ["targetUrl.origin !== scopeUrl.origin", "targetUrl.pathname.startsWith(scopeUrl.pathname)"]) {
+  if (!notificationClickHandler[0].includes(required)) {
+    throw new Error("Notification click navigation is missing its app-scope security check.");
+  }
+}
+\nconsole.log("PWA manifest, required icons, and service-worker security checks are valid.");
