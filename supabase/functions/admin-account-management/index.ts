@@ -85,8 +85,12 @@ Deno.serve(async (req: Request) => {
       ownedShops = shops || [];
       const shopIds = ownedShops.map((s: any) => s.id);
       if (shopIds.length) {
-        const { data: activeOrders, error: ordersError } = await admin.from("orders")
-          .select("id").in("shop_id", shopIds).in("status", ["pending", "confirmed", "ready_for_pickup", "picked_up"]).limit(1);
+        // Orders are related to shops through order_items; orders has no shop_id column.
+        const { data: activeOrders, error: ordersError } = await admin.from("order_items")
+          .select("id, orders!inner(status)")
+          .in("shop_id", shopIds)
+          .in("orders.status", ["pending", "confirmed", "ready_for_pickup", "picked_up"])
+          .limit(1);
         if (ordersError) return json({ error: "Pesanan aktif toko tidak dapat diperiksa." }, 500);
         if (activeOrders?.length) return json({ error: "Toko masih memiliki pesanan berjalan. Selesaikan atau tangani pesanan melalui admin sebelum menonaktifkan akun." }, 409);
       }
