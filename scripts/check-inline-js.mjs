@@ -36,8 +36,9 @@ if (!checkoutFunction.includes('"Access-Control-Allow-Origin": "https://berniaja
 const pushFunction = readFileSync('supabase/functions/push-notifications/index.ts', 'utf8');
 if (!pushFunction.includes('select("role,account_status")') ||
     !pushFunction.includes('profile.account_status !== "active"') ||
-    !pushFunction.includes('userProfile?.account_status !== "active"')) {
-  console.error('Push actions and key management must reject non-active accounts.');
+    !pushFunction.includes('userProfile?.account_status !== "active"') ||
+    !pushFunction.includes('recipientProfile?.account_status !== "active"')) {
+  console.error('Push registration, key management, and delivery must reject non-active accounts.');
   process.exit(1);
 }
 
