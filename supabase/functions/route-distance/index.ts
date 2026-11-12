@@ -1,3 +1,4 @@
+import { createClient } from "npm:@supabase/supabase-js@2.119.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://berniaja5036-blip.github.io",
@@ -17,6 +18,44 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get("Authorization") || "";
+    if (!authHeader.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Silakan masuk terlebih dahulu." }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const publishableKey = Deno.env.get("SUPABASE_ANON_KEY");
+    if (!supabaseUrl || !publishableKey) {
+      return new Response(JSON.stringify({ error: "Konfigurasi autentikasi tidak tersedia." }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userClient = createClient(supabaseUrl, publishableKey, {
+      global: { headers: { Authorization: authHeader } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data: authData, error: authError } = await userClient.auth.getUser();
+    if (authError || !authData.user) {
+      return new Response(JSON.stringify({ error: "Sesi login tidak valid." }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const { data: profile, error: profileError } = await userClient
+      .from("profiles")
+      .select("account_status")
+      .eq("id", authData.user.id)
+      .maybeSingle();
+    if (profileError || profile?.account_status !== "active") {
+      return new Response(JSON.stringify({ error: "Akun tidak aktif." }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== "object") {
       return new Response(JSON.stringify({ error: "Data rute tidak valid" }), {
