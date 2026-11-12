@@ -147,4 +147,10 @@ if (!routeFunction.includes('userClient.auth.getUser()') ||
   process.exit(1);
 }
 
+const commissionPeriodMigration = readFileSync('supabase/migrations/202611120030_fix_commission_period_to_wib.sql', 'utf8');
+if (!commissionPeriodMigration.includes("pg_catalog.now() at time zone 'Asia/Jakarta'")) {
+  console.error('Seller commission periods must use Asia/Jakarta local time.');
+  process.exit(1);
+}
+
 console.log('JavaScript syntax check passed (' + moduleBlocks.length + ' inline module).');
