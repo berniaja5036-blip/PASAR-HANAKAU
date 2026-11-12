@@ -1032,26 +1032,6 @@ function makePickerMap(elementId,existingMap,initialPoint){
  }
  loadProvider();
   }else{
-   showMapStatus('Peta gagal dimuat dari Esri dan OpenStreetMap. Periksa koneksi internet atau coba jaringan lain.');
-  }
- }
- function loadProvider(){
-  const provider=providers[providerIndex];
-  providerErrorCount=0;providerSwitching=false;providerLoaded=false;
-  tiles=L.tileLayer(provider.url,provider.options);
-  tiles.on('tileload',()=>{
-   providerLoaded=true;
-   if(providerTimer)clearTimeout(providerTimer);
-   showMapStatus('Peta sedang dimuat dari '+provider.name+'.');
-  });
-  tiles.on('tileerror',()=>{
-   providerErrorCount++;
-   if(providerErrorCount>=2)switchMapProvider();
-  });
-  tiles.addTo(map);
-  providerTimer=setTimeout(()=>{if(!providerLoaded)switchMapProvider();else showMapStatus('Peta '+provider.name+' merespons. Jika gambar peta belum tampak, periksa koneksi atau coba muat ulang.');},10000);
- }
- loadProvider();
  map._pasarHanakauMarker=initialPoint?L.marker([initialPoint.latitude,initialPoint.longitude]).addTo(map):null;
  [150,500,1000].forEach(delay=>setTimeout(()=>{if(map&&element.isConnected){map.invalidateSize(true);if(map._pasarHanakauMarker)map.panTo(map._pasarHanakauMarker.getLatLng());}},delay));
  return map;
