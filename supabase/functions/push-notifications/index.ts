@@ -74,6 +74,8 @@ Deno.serve(async (req: Request) => {
   if (payload?.action === "register_subscription" || payload?.action === "remove_subscription") {
     const user = await authenticatedUser();
     if (!user) return json({ error: "Invalid session" }, 401);
+    const { data: userProfile, error: userProfileError } = await admin.from("profiles").select("account_status").eq("id", user.id).maybeSingle();
+    if (userProfileError || userProfile?.account_status !== "active") return json({ error: "Account is not active" }, 403);
     const endpoint = payload?.subscription?.endpoint || payload?.endpoint;
     if (typeof endpoint !== "string" || endpoint.length > 4096) return json({ error: "Invalid endpoint" }, 400);
     let endpointUrl: URL;
@@ -115,7 +117,7 @@ Deno.serve(async (req: Request) => {
     const { data: authData, error: authError } = await client.auth.getUser(token);
     if (authError || !authData.user) return json({ error: "Invalid session" }, 401);
     const { data: profile, error: profileError } = await admin.from("profiles").select("role,account_status").eq("id", authData.user.id).maybeSingle();
-    if (profileError || profile?.role !== "admin" || profile.account_status === "suspended") return json({ error: "Admin only" }, 403);
+    if (profileError || profile?.role !== "admin" || profile.account_status !== "active") return json({ error: "Admin only" }, 403);
     const privateKey = await generateVapidKey();
     const publicKey = await vapidPublicKey(privateKey);
     const { error } = await admin.from("push_settings").upsert({ id: 1, public_key: publicKey, subject: "mailto:yisunshin715@gmail.com", updated_at: new Date().toISOString() });
