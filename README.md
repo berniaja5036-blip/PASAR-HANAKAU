@@ -45,6 +45,15 @@ Fitur-fitur tersebut sudah memiliki implementasi kode/database. Uji simulasi dat
 - Website: GitHub Pages melalui GitHub Actions.
 - Migrasi database berada di `supabase/migrations/`. Jangan menjalankan ulang migrasi yang sudah diterapkan atau menjalankan seluruh file SQL sebagai satu batch.
 
+### Backup database (manual)
+
+Workflow `.github/workflows/database-backup.yml` disiapkan untuk membuat dump PostgreSQL terenkripsi. Sebelum menjalankannya, tambahkan dua **Repository secrets** di GitHub (Settings → Secrets and variables → Actions):
+
+1. `SUPABASE_DB_URL`: connection string database dari tombol **Connect** pada Supabase Dashboard. Gunakan session pooler bila koneksi langsung tidak tersedia dari runner.
+2. `BACKUP_ENCRYPTION_PASSPHRASE`: frasa sandi kuat khusus untuk mengenkripsi file backup. Simpan frasa ini di tempat aman terpisah; tanpa frasa tersebut backup tidak dapat dibuka.
+
+Jalankan workflow **Database backup (manual)** dari tab Actions. Hasilnya berupa artefak terenkripsi yang disimpan selama 14 hari; unduh dan simpan salinannya di tempat aman sebelum kedaluwarsa. Jangan kirim connection string, password database, atau frasa sandi ke chat atau commit ke repositori. Dump database tidak mencakup file objek yang disimpan melalui Supabase Storage. Backup belum dianggap selesai sampai workflow berhasil, file diunduh, dan prosedur pemulihannya diuji pada lingkungan terpisah.
+
 ## Keamanan
 
 - Jangan memasukkan kata sandi, service-role key, atau rahasia ke repositori maupun browser.
