@@ -12,12 +12,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Install PostgreSQL client
+      - name: Install PostgreSQL client and GPG
         run: |
           sudo apt-get update
-          sudo apt-get install --yes postgresql-client
+          sudo apt-get install --yes postgresql-client gnupg
 
-      - name: Export Supabase database
+      - name: Export and verify Supabase database
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           PGSSLMODE: require
@@ -31,14 +31,31 @@ jobs:
           mkdir -p backup
           pg_dump --format=custom --no-owner --no-acl --file=backup/pasar-hanakau-db.dump "${SUPABASE_DB_URL}"
           test -s backup/pasar-hanakau-db.dump
-          sha256sum backup/pasar-hanakau-db.dump > backup/SHA256SUMS.txt
-          pg_restore --list backup/pasar-hanakau-db.dump > backup/RESTORE-CHECK.txt
+          pg_restore --list backup/pasar-hanakau-db.dump > /dev/null
           echo "Database dump created and archive structure verified."
 
-      - name: Upload encrypted-by-platform backup artifact
+      - name: Encrypt backup before artifact upload
+        env:
+          BACKUP_ENCRYPTION_PASSPHRASE: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BACKUP_ENCRYPTION_PASSPHRASE}" ]; then
+            echo "::error::Repository secret BACKUP_ENCRYPTION_PASSPHRASE has not been configured."
+            exit 1
+          fi
+          gpg --batch --yes --pinentry-mode loopback --symmetric --cipher-algo AES256 \
+            --passphrase "${BACKUP_ENCRYPTION_PASSPHRASE}" \
+            --output backup/pasar-hanakau-db.dump.gpg backup/pasar-hanakau-db.dump
+          rm backup/pasar-hanakau-db.dump
+          cd backup
+          sha256sum pasar-hanakau-db.dump.gpg > SHA256SUMS.txt
+
+      - name: Upload encrypted database backup
         uses: actions/upload-artifact@v4
         with:
           name: pasar-hanakau-database-backup-${{ github.run_id }}
-          path: backup/
+          path: |
+            backup/pasar-hanakau-db.dump.gpg
+            backup/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
