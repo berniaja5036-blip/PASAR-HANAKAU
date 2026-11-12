@@ -107,7 +107,8 @@ Deno.serve(async (req: Request) => {
     }
     if (previousResult && typeof previousResult === "object" && !Array.isArray(previousResult) && (previousResult as Record<string, unknown>)._checkout_in_progress === true) {
       return reply({ error: "Checkout dengan kunci ini masih diproses. Muat ulang riwayat pesanan sebelum mencoba lagi." }, 409);
-    }\n    if (Array.isArray(previousResult)) return reply({ orders: previousResult });
+    }
+    if (Array.isArray(previousResult)) return reply({ orders: previousResult });
     if (previousResult && typeof previousResult === "object") return reply({ orders: previousResult });
 
     const { data: settings, error: settingsError } = await admin.from("delivery_fee_settings")
