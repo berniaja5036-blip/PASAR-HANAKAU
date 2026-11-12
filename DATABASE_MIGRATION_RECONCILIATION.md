@@ -2,32 +2,51 @@
 
 Last reconciled: 2026-11-12.
 
-The live Supabase project reports 61 applied migrations. The repository contains 92 SQL migration files, including the original baseline and follow-up repair files. After removing the numeric filename prefixes, every applied database migration has a corresponding repository migration or a documented naming equivalent below.
+## Canonical migration history
 
-## Naming equivalents
+The live Supabase project has **61 applied migration records**. The repository previously had 95 SQL files directly inside `supabase/migrations/`, with duplicate version prefixes and local prefixes that did not match the live 14-digit migration versions.
 
-| Applied Supabase migration name | Repository file |
-| --- | --- |
-| `require_buyer_receipt_before_delivery_fee_confirmation` | `supabase/migrations/202611110006_require_receipt_before_delivery_fee_confirmation.sql` |
-| `require_buyer_receipt_before_delivery_fee_dispute` | `supabase/migrations/202611110009_require_receipt_before_delivery_fee_dispute.sql` |
-| `restrict_push_webhook_token_lookup_to_service_role` | `supabase/migrations/202611110022_restrict_push_webhook_token_lookup.sql` |
-| `fix_rating_insert_policy_qualification` | `supabase/migrations/202611120002_fix_rating_insert_policies.sql` |
-| `protect_active_driver_documents_from_owner_deletion` | `supabase/migrations/202611120020_protect_active_driver_documents.sql` |
+This reconciliation changes **filenames and locations only**; the SQL bodies of all files are preserved byte-for-byte:
 
-## Latest acceptance-test additions
+- 61 files are retained in `supabase/migrations/` and renamed to exactly match the live database's `version_name.sql` records.
+- 34 files are moved unchanged to `supabase/migrations-archive/`, outside the Supabase CLI migration scan directory.
+- No migration is applied to the production database by this reconciliation.
 
-- `202611120034_add_public_rating_summaries.sql` adds bounded, aggregate-only product and driver rating summaries. Individual review text and buyer identities are not exposed.
-- `202611120035_limit_rating_summaries_to_signed_in_users.sql` limits those summary RPCs to authenticated users.
+The five historical filename equivalents are now canonicalized to the exact live migration names:
 
-## Checkout rollout history
+| Live version | Live migration name | Previous repository filename |
+| --- | --- | --- |
+| `20261111151328` | `require_buyer_receipt_before_delivery_fee_confirmation` | `202611110006_require_receipt_before_delivery_fee_confirmation.sql` |
+| `20261111153148` | `require_buyer_receipt_before_delivery_fee_dispute` | `202611110009_require_receipt_before_delivery_fee_dispute.sql` |
+| `20261111172816` | `restrict_push_webhook_token_lookup_to_service_role` | `202611110022_restrict_push_webhook_token_lookup.sql` |
+| `20261111174121` | `fix_rating_insert_policy_qualification` | `202611120002_fix_rating_insert_policies.sql` |
+| `20261112033138` | `protect_active_driver_documents_from_owner_deletion` | `202611120020_protect_active_driver_documents.sql` |
 
-The two initial checkout migrations were missing from the repository and have now been mirrored:
+## Archived files
 
-- `202611110001_secure_server_side_delivery_checkout.sql`
-- `202611110002_restore_legacy_checkout_until_secure_checkout_rollout.sql`
+The 34 archived files are preserved unchanged:
 
-The next migration, `202611110003_revoke_legacy_checkout_rpc.sql`, removes browser execution rights from the temporary legacy checkout RPC. The secure checkout RPC remains service-role-only. The mirrored secure checkout definition includes the current active-buyer validation.
+- 27 legacy numbered migrations (`001`–`025`, including the duplicate `003` files) from the earlier schema lineage.
+- Two earlier bootstrap files (`202611060001_initial_schema.sql` and `202611060002_moderation_guard.sql`). Their old `stores`, `role_memberships`, and related table model is not present in the current production schema.
+- Five SQL files whose effects are already present in production but which are not recorded as separate migration-history rows: trigger-function permission hardening, profile write-column restrictions, active-account guards on rating-summary RPCs, and admin-only product/shop status update privileges. These were verified against the live catalog before archival.
 
-## Safety note
+The archive directory is for historical reference only. Do not copy archived files back into `supabase/migrations/` or execute them against production.
 
-This document records source-history reconciliation only. The live database already has these migrations applied. Do not manually replay these files against the current production database. Never apply all repository SQL files as a batch: the repository also retains historical baselines, repairs, and alternative migration paths.
+## Safe operating procedure
+
+1. Before any database deployment, run `supabase migration list --remote` with the intended project linked/selected explicitly.
+2. Confirm that all existing local and remote versions match and that there are **zero unexpected pending migrations**.
+3. Create future migrations with `supabase migration new <descriptive_name>`; keep the generated unique timestamp and filename.
+4. Apply each new migration once, through the reviewed migration workflow. Do not manually apply SQL and leave its migration file untracked.
+5. Never run all SQL files as a batch, and never edit `supabase_migrations.schema_migrations` manually to hide drift.
+
+Supabase CLI v3 changed database commands to target the local stack by default; use explicit `--remote` for a remote migration-list check and review the CLI v3 migration guide before changing automation.
+
+## Verification performed
+
+- Live migration history was read using the Supabase migration-list endpoint: 61 records.
+- Every live version/name pair has exactly one canonical repository file after this reconciliation.
+- The canonical directory has unique 14-digit version prefixes and no duplicate versions.
+- The five archived-but-applied SQL effects were checked in the live catalog: helper ACLs and `search_path`, profile column grants, rating-summary function definitions, and product/shop status grants plus guard triggers.
+- The two old bootstrap table names were confirmed absent from the current public schema.
+- No production schema, user, order, stock, payment, or Storage data was changed.
