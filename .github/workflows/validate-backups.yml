@@ -65,7 +65,7 @@ jobs:
             --passphrase "${BACKUP_ENCRYPTION_PASSPHRASE}" \
             --output pasar-hanakau-storage.tar.gz \
             --decrypt pasar-hanakau-storage.tar.gz.gpg
-          sha256sum -c SHA256SUMS.txt
+          awk '{ name=$2; sub(/^.*\\//, "", name); print $1 "  " name }' SHA256SUMS.txt | sha256sum -c -
           tar -tzf pasar-hanakau-storage.tar.gz > storage-contents.txt
           for bucket in product-images profile-avatars driver-private-documents chat-attachments; do
             grep -q "storage/${bucket}/" storage-contents.txt
