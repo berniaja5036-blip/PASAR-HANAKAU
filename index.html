@@ -219,8 +219,13 @@ async function refreshSession(){
  $('catalogMessage').textContent='';
  activeBuyerId=null;cart={};
  activeAccountUserId=session.user.id;await loadAccountAvatar(activeAccountUserId);
- const {data:profile}=await supabase.from('profiles').select('full_name,role,phone,full_address,account_status').eq('id',session.user.id).maybeSingle();
- $('accountEmail').textContent=profile?.full_name||'Akun aktif';
+ const {data:profile,error:profileError}=await supabase.from('profiles').select('full_name,role,phone,full_address,account_status').eq('id',session.user.id).maybeSingle();
+ if(profileError||!profile){
+  await supabase.auth.signOut();activeAccountUserId=null;activePanelRole=null;activeBuyerId=null;
+  $('accountPanel').classList.add('hidden');$('rolePanel').classList.remove('hidden');$('authPanel').classList.add('hidden');
+  alert('Data akun belum dapat diverifikasi. Demi keamanan, Anda telah dikeluarkan. Periksa koneksi lalu masuk kembali.');return;
+ }
+ $('accountEmail').textContent=profile.full_name||'Akun aktif';
  if(profile?.role==='seller'){if(!$('shopName').value)$('shopName').value=profile.full_name||'';if(!$('shopAddress').value)$('shopAddress').value=profile.full_address||'';if(!$('shopPhone').value)$('shopPhone').value=profile.phone||'';}
  if(profile?.account_status==='suspended'){
   await supabase.auth.signOut();activeAccountUserId=null;activePanelRole=null;
