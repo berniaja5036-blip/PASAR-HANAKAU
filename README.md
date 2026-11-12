@@ -29,7 +29,7 @@ Fitur-fitur tersebut sudah memiliki implementasi kode/database. Uji simulasi dat
 - WhatsApp belum terintegrasi.
 - Belum tersedia APK Android; versi sekarang digunakan melalui browser/PWA.
 - Ulasan produk dan penilaian driver dapat dikirim pembeli setelah pesanan diterima. Katalog kini menampilkan rata-rata dan jumlah ulasan produk; rincian pesanan menampilkan ringkasan rating driver. Teks ulasan dan identitas pembeli tetap tidak dibuka ke publik.
-- Backup dan pemulihan, privasi operasional, serta uji alur Buyer–Seller–Admin–Driver harus diselesaikan sebelum peluncuran publik.
+- Validasi arsip backup database/Storage dan pemulihan pada runner terisolasi telah lulus pada 12 November 2026 (72 tabel database dan 8 file dari 4 bucket Storage). Pemulihan ke proyek Supabase baru belum diuji. Uji penerimaan langsung di perangkat dan pemeriksaan privasi operasional tetap perlu sebelum peluncuran publik.
 
 ## Peran
 
@@ -69,7 +69,7 @@ Setiap artefak disimpan GitHub selama 14 hari. Unduh salinan berkala ke tempat p
 
 ## Tahap berikutnya
 
-1. Tambahkan GitHub secret `SUPABASE_ACCESS_TOKEN`, lalu jalankan workflow Storage backup secara manual untuk uji pertama.
+1. Unduh dan simpan artefak backup database serta Storage sebelum masa retensinya berakhir; lakukan uji pemulihan ke proyek Supabase terpisah sebelum peluncuran publik bila lingkungan uji tersedia.
 2. Uji penerimaan Buyer–Seller–Admin–Driver menggunakan akun dan data uji khusus.
 3. Uji rute dan tarif ongkir tanpa mengaktifkan tarif pada pengguna umum.
 4. Aktifkan ulang dan uji notifikasi pada perangkat Android.
