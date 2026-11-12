@@ -32,7 +32,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${SUPABASE_ACCESS_TOKEN}" ]; then
-            echo "::error::Repository secret SUPABASE_ACCESS_TOKEN is required. Add a Supabase Personal Access Token in GitHub Actions secrets."
+            echo "::error::Repository secret SUPABASE_ACCESS_TOKEN is required."
             exit 1
           fi
           if [ -z "${BACKUP_ENCRYPTION_PASSPHRASE}" ]; then
@@ -43,7 +43,7 @@ jobs:
           mkdir -p backup/storage
           for bucket in product-images profile-avatars driver-private-documents chat-attachments; do
             mkdir -p "backup/storage/${bucket}"
-            supabase storage cp --experimental --remote=wnnnhiocyyozlkfqupav --recursive "ss:///${bucket}" "backup/storage/${bucket}"
+            supabase storage cp --experimental --project-ref=wnnnhiocyyozlkfqupav --recursive "ss:///${bucket}" "backup/storage/${bucket}"
           done
           find backup/storage -type f -print
           if ! find backup/storage -type f -print -quit | grep -q .; then
