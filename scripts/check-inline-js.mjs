@@ -202,4 +202,12 @@ if (!appSourceForDriverChecks.includes("get_public_product_review_summaries") ||
   process.exit(1);
 }
 
+const ratingAccessMigration = readFileSync('supabase/migrations/202611120035_limit_rating_summaries_to_signed_in_users.sql', 'utf8');
+if (!ratingAccessMigration.includes('from anon') ||
+    !ratingAccessMigration.includes('get_public_product_review_summaries') ||
+    !ratingAccessMigration.includes('get_public_driver_rating_summaries')) {
+  console.error('Rating summary functions must not be executable by anonymous users.');
+  process.exit(1);
+}
+
 console.log('JavaScript syntax check passed (' + moduleBlocks.length + ' inline module).');
