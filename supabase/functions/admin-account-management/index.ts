@@ -62,12 +62,18 @@ Deno.serve(async (req: Request) => {
       .order("created_at", { ascending: false }).limit(500);
     if (error) return json({ error: "Daftar akun tidak dapat dimuat." }, 500);
     const ids = (profiles || []).map((p: any) => p.id);
-    const [{ data: authUsers, error: authUsersError }, { data: shops }, { data: drivers }] = await Promise.all([
+    const [
+      { data: authUsers, error: authUsersError },
+      { data: shops, error: shopsError },
+      { data: drivers, error: driversError },
+    ] = await Promise.all([
       admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
-      admin.from("shops").select("owner_id,name,status").in("owner_id", ids),
-      admin.from("driver_profiles").select("id,vehicle_type,vehicle_plate,approval_status").in("id", ids),
+      ids.length ? admin.from("shops").select("owner_id,name,status").in("owner_id", ids) : Promise.resolve({ data: [], error: null }),
+      ids.length ? admin.from("driver_profiles").select("id,vehicle_type,vehicle_plate,approval_status").in("id", ids) : Promise.resolve({ data: [], error: null }),
     ]);
-    if (authUsersError) return json({ error: "Informasi akun tidak dapat dimuat." }, 500);
+    if (authUsersError || shopsError || driversError) {
+      return json({ error: "Informasi akun, toko, atau driver tidak dapat dimuat secara lengkap." }, 500);
+    }
     const emailMap = new Map((authUsers.users || []).map((u: any) => [u.id, u.email || ""]));
     const shopMap = new Map((shops || []).map((s: any) => [s.owner_id, s]));
     const driverMap = new Map((drivers || []).map((d: any) => [d.id, d]));
