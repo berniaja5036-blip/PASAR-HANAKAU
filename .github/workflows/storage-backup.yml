@@ -1,0 +1,64 @@
+name: Storage backup (weekly and manual)
+
+on:
+  schedule:
+    # Every Monday at 02:30 WIB (Sunday 19:30 UTC)
+    - cron: "30 19 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Install Supabase CLI and GPG
+        run: |
+          set -euo pipefail
+          npm install --global supabase@2
+          sudo apt-get update
+          sudo apt-get install --yes gnupg
+
+      - name: Download all Storage buckets
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          BACKUP_ENCRYPTION_PASSPHRASE: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_ACCESS_TOKEN}" ]; then
+            echo "::error::Repository secret SUPABASE_ACCESS_TOKEN is required. Add a Supabase Personal Access Token in GitHub Actions secrets."
+            exit 1
+          fi
+          if [ -z "${BACKUP_ENCRYPTION_PASSPHRASE}" ]; then
+            echo "::error::Repository secret BACKUP_ENCRYPTION_PASSPHRASE is missing."
+            exit 1
+          fi
+          supabase login --token "${SUPABASE_ACCESS_TOKEN}"
+          mkdir -p backup/storage
+          for bucket in product-images profile-avatars driver-private-documents chat-attachments; do
+            mkdir -p "backup/storage/${bucket}"
+            supabase storage cp --experimental --remote=wnnnhiocyyozlkfqupav --recursive "ss:///${bucket}" "backup/storage/${bucket}"
+          done
+          find backup/storage -type f -print
+          if ! find backup/storage -type f -print -quit | grep -q .; then
+            echo "No Storage files were present; uploading a verified empty backup."
+          fi
+          tar -czf backup/pasar-hanakau-storage.tar.gz -C backup storage
+          test -s backup/pasar-hanakau-storage.tar.gz
+          sha256sum backup/pasar-hanakau-storage.tar.gz > backup/SHA256SUMS.txt
+          gpg --batch --yes --pinentry-mode loopback --symmetric --cipher-algo AES256 \
+            --passphrase "${BACKUP_ENCRYPTION_PASSPHRASE}" \
+            --output backup/pasar-hanakau-storage.tar.gz.gpg backup/pasar-hanakau-storage.tar.gz
+          rm -rf backup/storage backup/pasar-hanakau-storage.tar.gz
+
+      - name: Upload encrypted Storage backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: pasar-hanakau-storage-backup-${{ github.run_id }}
+          path: |
+            backup/pasar-hanakau-storage.tar.gz.gpg
+            backup/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
