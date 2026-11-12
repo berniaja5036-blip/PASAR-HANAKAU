@@ -13,7 +13,7 @@ Website: https://berniaja5036-blip.github.io/PASAR-HANAKAU/
 - Login dan pendaftaran dengan pilihan peran Buyer, Seller, dan Driver; akses Admin terpisah.
 - Pengajuan toko dan persetujuan oleh Admin.
 - Etalase produk, unggah foto, persetujuan produk, serta pengubahan dan penghapusan produk oleh pemilik toko.
-- Keranjang dan checkout melalui fungsi database yang memeriksa stok serta membuat pesanan terpisah untuk setiap toko.
+- Keranjang dan checkout transaksional melalui Edge Function; stok, harga, ongkir, dan voucher diverifikasi di server, serta kunci idempotensi mencegah pesanan ganda ketika respons jaringan terputus.
 - Riwayat pesanan Buyer dan daftar pesanan Seller.
 - Panel Admin untuk melihat pesanan, mengubah status, menyetujui pengajuan, dan menugaskan Driver.
 - Pengajuan, persetujuan, penjemputan, dan pengantaran oleh Driver.

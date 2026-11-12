@@ -1028,6 +1028,40 @@ function saveCart(){const key=cartStorageKey();if(key)localStorage.setItem(key,J
 function formatRupiah(n){return 'Rp '+Number(n||0).toLocaleString('id-ID');}
 function orderStatusLabel(s){return ({pending:'Menunggu konfirmasi',confirmed:'Dikonfirmasi',ready_for_pickup:'Siap dijemput driver',picked_up:'Sudah dijemput driver',delivered:'Terkirim',cancelled:'Dibatalkan'})[s]||s;}
 let checkoutInProgress=false;
+let memoryCheckoutAttempt=null;
+function checkoutAttemptStorageKey(){return activeBuyerId?'pasar-hanakau-checkout-attempt-'+activeBuyerId:null;}
+async function checkoutPayloadFingerprint(payload){
+ const canonical={
+  items:payload.items.map(item=>({product_id:item.product_id,quantity:item.quantity})).sort((a,b)=>a.product_id.localeCompare(b.product_id)),
+  delivery_address:payload.delivery_address,
+  notes:payload.notes,
+  voucher_code:payload.voucher_code||null
+ };
+ // Coordinates are intentionally omitted: a fresh GPS reading can drift slightly on a retry.
+ const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(canonical)));
+ return Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,'0')).join('');
+}
+async function getCheckoutIdempotencyKey(payload){
+ const fingerprint=await checkoutPayloadFingerprint(payload);
+ const storageKey=checkoutAttemptStorageKey();
+ const validKey=value=>typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+ if(storageKey){
+  try{
+   const saved=JSON.parse(localStorage.getItem(storageKey)||'null');
+   if(saved?.fingerprint===fingerprint&&validKey(saved.key)){memoryCheckoutAttempt=saved;return saved.key;}
+  }catch{}
+ }
+ if(memoryCheckoutAttempt?.fingerprint===fingerprint&&validKey(memoryCheckoutAttempt.key))return memoryCheckoutAttempt.key;
+ const attempt={key:crypto.randomUUID(),fingerprint};
+ memoryCheckoutAttempt=attempt;
+ if(storageKey){try{localStorage.setItem(storageKey,JSON.stringify(attempt));}catch{}}
+ return attempt.key;
+}
+function clearCheckoutIdempotencyKey(){
+ memoryCheckoutAttempt=null;
+ const storageKey=checkoutAttemptStorageKey();
+ if(storageKey){try{localStorage.removeItem(storageKey);}catch{}}
+}
 function renderCart(){
  const entries=Object.values(cart);let total=0;
  if(!entries.length){$('cartItems').textContent='Keranjang masih kosong. Pilih produk dari katalog.';$('cartTotal').textContent='';$('checkoutButton').disabled=true;const quoteBox=$('deliveryQuotePreview');if(quoteBox)quoteBox.textContent='Tambahkan barang ke keranjang untuk melihat estimasi ongkir.';deliveryQuoteSequence++;return}
@@ -1135,14 +1169,25 @@ $('checkoutButton').addEventListener('click',async()=>{
  try{
   let createdOrders=null;
   try{
-   const {data,error}=await supabase.functions.invoke('checkout-with-delivery',{body:{items,delivery_address:address,notes:$('orderNotes').value.trim(),delivery_latitude:buyerDeliveryPoint.latitude,delivery_longitude:buyerDeliveryPoint.longitude,voucher_code:$('buyerVoucherCode').value.trim().toUpperCase()||null}});
+   const checkoutPayload={
+    items,
+    delivery_address:address,
+    notes:$('orderNotes').value.trim(),
+    delivery_latitude:buyerDeliveryPoint.latitude,
+    delivery_longitude:buyerDeliveryPoint.longitude,
+    voucher_code:$('buyerVoucherCode').value.trim().toUpperCase()||null
+   };
+   const idempotencyKey=await getCheckoutIdempotencyKey(checkoutPayload);
+   const {data,error}=await supabase.functions.invoke('checkout-with-delivery',{body:{...checkoutPayload,idempotency_key:idempotencyKey}});
    if(error){message('checkoutMessage','Pesanan belum berhasil dibuat: '+(error.message||'Periksa koneksi dan coba lagi.'),true);return}
    if(data?.error){message('checkoutMessage','Pesanan belum berhasil dibuat: '+data.error,true);return}
-   createdOrders=data?.orders||[];
+   createdOrders=Array.isArray(data?.orders)?data.orders:[];
+   if(!createdOrders.length){message('checkoutMessage','Nomor pesanan belum diterima. Periksa riwayat pesanan sebelum mencoba lagi.',true);return}
   }catch(error){
    message('checkoutMessage','Pesanan belum berhasil diproses: '+(error?.message||'Terjadi kesalahan.'),true);
    return;
   }
+  clearCheckoutIdempotencyKey();
   cart={};saveCart();renderCart();$('buyerVoucherCode').value='';buyerDeliveryPoint=null;if(buyerMap){buyerMap.eachLayer(layer=>{if(layer instanceof L.Marker)buyerMap.removeLayer(layer);});}renderBuyerLocationStatus();$('orderNotes').value='';
   const nums=createdOrders.map(o=>o.order_number).join(', ');
   message('checkoutMessage','Pesanan berhasil dibuat: '+nums+'. Pembayaran belum dilakukan; tunggu konfirmasi admin/penjual.');

@@ -10,7 +10,7 @@ Untuk database baru, mulai dengan migrasi dasar berikut secara berurutan:
 2. `supabase/migrations/002_row_level_security.sql`
 3. `supabase/migrations/003_data_api_grants.sql`
 
-Fitur aplikasi saat ini juga memerlukan migrasi lanjutan `004` sampai `023` sesuai urutan nomor. Pada database yang sudah dipakai, jalankan hanya migrasi yang memang belum diterapkan—jangan mengulang migrasi lama. Khusus migrasi `023_secure_seller_order_read.sql`, jalankan satu kali setelah `022`; migrasi ini menambahkan RPC baca pesanan Seller yang membatasi data dan menghapus kebijakan baca langsung Seller pada tabel `orders`.
+Fitur aplikasi saat ini juga memerlukan migrasi lanjutan `004` sampai `023` sesuai urutan nomor. Migrasi `202611120015_checkout_request_idempotency.sql` menambahkan perlindungan kunci checkout agar percobaan ulang dengan isi keranjang dan alamat yang sama mengembalikan pesanan yang sudah dibuat, bukan membuat pesanan baru. Pada database yang sudah dipakai, jalankan hanya migrasi yang memang belum diterapkan—jangan mengulang migrasi lama. Khusus migrasi `023_secure_seller_order_read.sql`, jalankan satu kali setelah `022`; migrasi ini menambahkan RPC baca pesanan Seller yang membatasi data dan menghapus kebijakan baca langsung Seller pada tabel `orders`.
 
 Jangan jalankan file skema alternatif bertanggal `20261106...`; file tersebut memakai rancangan tabel berbeda dan bukan skema yang digunakan website saat ini.
 
