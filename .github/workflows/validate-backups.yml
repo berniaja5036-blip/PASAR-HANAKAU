@@ -5,6 +5,10 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/validate-backups.yml"
+  schedule:
+    # Run after both weekly backups (Monday 03:15 WIB / Sunday 20:15 UTC)
+    - cron: "15 20 * * 0"
+  workflow_dispatch:
 
 permissions:
   actions: read
@@ -15,28 +19,61 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      - name: Find latest successful database and Storage backups
+        id: latest
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const workflows = [
+              ["database", "database-backup.yml"],
+              ["storage", "storage-backup.yml"],
+            ];
+
+            for (const [key, workflow_id] of workflows) {
+              const response = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id,
+                per_page: 20,
+              });
+              const latest = response.data.workflow_runs[0];
+
+              if (!latest) {
+                core.setFailed(`No run found for ${workflow_id}; refusing to validate stale backups.`);
+                return;
+              }
+
+              if (latest.status !== "completed" || latest.conclusion !== "success") {
+                core.setFailed(`Latest ${workflow_id} run ${latest.id} is ${latest.status}/${latest.conclusion}; refusing to validate an older backup as current.`);
+                return;
+              }
+
+              core.setOutput(`${key}_run_id`, String(latest.id));
+              core.info(`Selected latest successful ${workflow_id} run: ${latest.id}`);
+            }
+
       - name: Install PostgreSQL server and GPG
         run: |
           sudo apt-get update
           sudo apt-get install --yes postgresql postgresql-client gnupg
           sudo service postgresql start
 
-      - name: Download database backup artifact
+      - name: Download latest database backup artifact
         uses: actions/download-artifact@v4
         with:
-          name: pasar-hanakau-database-backup-43195273305
+          name: pasar-hanakau-database-backup-${{ steps.latest.outputs.database_run_id }}
           path: backup/database
           repository: ${{ github.repository }}
-          run-id: 43195273305
+          run-id: ${{ steps.latest.outputs.database_run_id }}
           github-token: ${{ github.token }}
 
-      - name: Download Storage backup artifact
+      - name: Download latest Storage backup artifact
         uses: actions/download-artifact@v4
         with:
-          name: pasar-hanakau-storage-backup-43201334358
+          name: pasar-hanakau-storage-backup-${{ steps.latest.outputs.storage_run_id }}
           path: backup/storage
           repository: ${{ github.repository }}
-          run-id: 43201334358
+          run-id: ${{ steps.latest.outputs.storage_run_id }}
           github-token: ${{ github.token }}
 
       - name: Decrypt and validate database archive
@@ -47,11 +84,11 @@ jobs:
           test -n "${BACKUP_ENCRYPTION_PASSPHRASE}"
           cd backup/database
           sha256sum -c SHA256SUMS.txt
-          gpg --batch --yes --pinentry-mode loopback --passphrase "${BACKUP_ENCRYPTION_PASSPHRASE}" --output pasar-hanakau-db.dump  --decrypt pasar-hanakau-db.dump.gpg
+          gpg --batch --yes --pinentry-mode loopback --passphrase "${BACKUP_ENCRYPTION_PASSPHRASE}" --output pasar-hanakau-db.dump --decrypt pasar-hanakau-db.dump.gpg
           test -s pasar-hanakau-db.dump
           pg_restore --list pasar-hanakau-db.dump > database-contents.txt
           grep -q "TABLE DATA" database-contents.txt
-          echo "Database backup decrypted; checksum and PostgreSQL archive structure are valid."
+          echo "Latest database backup decrypted; checksum and PostgreSQL archive structure are valid."
 
       - name: Restore database into temporary local PostgreSQL
         run: |
@@ -67,13 +104,13 @@ jobs:
           test "${table_count}" -gt 0
 
       - name: Decrypt, verify, and extract Storage archive
-        if: always()
         env:
           BACKUP_ENCRYPTION_PASSPHRASE: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
         run: |
           set -euo pipefail
+          test -n "${BACKUP_ENCRYPTION_PASSPHRASE}"
           cd backup/storage
-          gpg --batch --yes --pinentry-mode loopback --passphrase "${BACKUP_ENCRYPTION_PASSPHRASE}" --output pasar-hanakau-storage.tar.gz  --decrypt pasar-hanakau-storage.tar.gz.gpg
+          gpg --batch --yes --pinentry-mode loopback --passphrase "${BACKUP_ENCRYPTION_PASSPHRASE}" --output pasar-hanakau-storage.tar.gz --decrypt pasar-hanakau-storage.tar.gz.gpg
           awk '{print $1 "  pasar-hanakau-storage.tar.gz"}' SHA256SUMS.txt | sha256sum -c -
           tar -tzf pasar-hanakau-storage.tar.gz > storage-contents.txt
           for bucket in product-images profile-avatars driver-private-documents chat-attachments; do
@@ -85,4 +122,4 @@ jobs:
             test -d "/tmp/pasar-hanakau-storage-restore/storage/${bucket}"
           done
           file_count=$(find /tmp/pasar-hanakau-storage-restore/storage -type f | wc -l)
-          echo "Storage archive extracted successfully; restored files: ${file_count}; all four bucket folders are present."
+          echo "Latest Storage archive extracted successfully; restored files: ${file_count}; all four bucket folders are present."
