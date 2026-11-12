@@ -47,9 +47,9 @@ jobs:
           test -n "${BACKUP_ENCRYPTION_PASSPHRASE}"
           cd backup/database
           sha256sum -c SHA256SUMS.txt
-          gpg --batch --yes --pinentry-mode loopback \
-            --passphrase "${BACKUP_ENCRYPTION_PASSPHRASE}" \
-            --output pasar-hanakau-db.dump \
+          gpg --batch --yes --pinentry-mode loopback \\
+            --passphrase "${BACKUP_ENCRYPTION_PASSPHRASE}" \\
+            --output pasar-hanakau-db.dump \\
             --decrypt pasar-hanakau-db.dump.gpg
           test -s pasar-hanakau-db.dump
           pg_restore --list pasar-hanakau-db.dump > database-contents.txt
@@ -60,10 +60,12 @@ jobs:
         run: |
           set -euo pipefail
           sudo -u postgres createdb backup_restore_test
-          pg_restore --list backup/database/pasar-hanakau-db.dump | grep -v 'pg_net' > backup/database/restore.list
-          sudo -u postgres pg_restore --use-list=backup/database/restore.list --no-owner --no-acl --exit-on-error \
+          # Skip only CREATE EXTENSION entries unavailable on the generic runner;
+          # the Supabase production project retains its own managed extensions.
+          pg_restore --list backup/database/pasar-hanakau-db.dump | grep -v ' EXTENSION - ' > backup/database/restore.list
+          sudo -u postgres pg_restore --use-list=backup/database/restore.list --no-owner --no-acl --exit-on-error \\
             --dbname=backup_restore_test backup/database/pasar-hanakau-db.dump
-          table_count=$(sudo -u postgres psql -d backup_restore_test -Atc \
+          table_count=$(sudo -u postgres psql -d backup_restore_test -Atc \\
             "SELECT count(*) FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog','information_schema');")
           echo "Temporary local database restore succeeded; restored tables: ${table_count}"
           test "${table_count}" -gt 0
@@ -75,9 +77,9 @@ jobs:
         run: |
           set -euo pipefail
           cd backup/storage
-          gpg --batch --yes --pinentry-mode loopback \
-            --passphrase "${BACKUP_ENCRYPTION_PASSPHRASE}" \
-            --output pasar-hanakau-storage.tar.gz \
+          gpg --batch --yes --pinentry-mode loopback \\
+            --passphrase "${BACKUP_ENCRYPTION_PASSPHRASE}" \\
+            --output pasar-hanakau-storage.tar.gz \\
             --decrypt pasar-hanakau-storage.tar.gz.gpg
           awk '{print $1 "  pasar-hanakau-storage.tar.gz"}' SHA256SUMS.txt | sha256sum -c -
           tar -tzf pasar-hanakau-storage.tar.gz > storage-contents.txt
