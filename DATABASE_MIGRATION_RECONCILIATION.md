@@ -2,7 +2,7 @@
 
 Last reconciled: 2026-11-12.
 
-The live Supabase project reports 59 applied migrations. The repository contains 90 SQL migration files, including the original baseline and follow-up repair files. After removing the numeric filename prefixes, every applied database migration has a corresponding repository migration or a documented naming equivalent below.
+The live Supabase project reports 61 applied migrations. The repository contains 92 SQL migration files, including the original baseline and follow-up repair files. After removing the numeric filename prefixes, every applied database migration has a corresponding repository migration or a documented naming equivalent below.
 
 ## Naming equivalents
 
@@ -13,6 +13,11 @@ The live Supabase project reports 59 applied migrations. The repository contains
 | `restrict_push_webhook_token_lookup_to_service_role` | `supabase/migrations/202611110022_restrict_push_webhook_token_lookup.sql` |
 | `fix_rating_insert_policy_qualification` | `supabase/migrations/202611120002_fix_rating_insert_policies.sql` |
 | `protect_active_driver_documents_from_owner_deletion` | `supabase/migrations/202611120020_protect_active_driver_documents.sql` |
+
+## Latest acceptance-test additions
+
+- `202611120034_add_public_rating_summaries.sql` adds bounded, aggregate-only product and driver rating summaries. Individual review text and buyer identities are not exposed.
+- `202611120035_limit_rating_summaries_to_signed_in_users.sql` limits those summary RPCs to authenticated users.
 
 ## Checkout rollout history
 
