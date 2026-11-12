@@ -40,7 +40,7 @@ for (const required of ["./icons/icon-192.png", "./icons/icon-512.png"]) {
 
 
 const notificationClickStart = serviceWorker.indexOf('self.addEventListener("notificationclick"');
-const notificationClickEnd = serviceWorker.indexOf("\\n});", notificationClickStart);
+const notificationClickEnd = serviceWorker.indexOf("\n});", notificationClickStart);
 if (notificationClickStart < 0 || notificationClickEnd < 0) throw new Error("Service worker is missing notification-click handling.");
 const notificationClickHandler = serviceWorker.slice(notificationClickStart, notificationClickEnd);
 for (const required of ["targetUrl.origin !== scopeUrl.origin", "targetUrl.pathname.startsWith(scopeUrl.pathname)"]) {
