@@ -1,0 +1,73 @@
+name: Validate encrypted backups
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/validate-backups.yml"
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Install PostgreSQL client and GPG
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client gnupg
+
+      - name: Download database backup artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: pasar-hanakau-database-backup-43195273305
+          path: backup/database
+          repository: ${{ github.repository }}
+          run-id: 43195273305
+          github-token: ${{ github.token }}
+
+      - name: Download Storage backup artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: pasar-hanakau-storage-backup-43201334358
+          path: backup/storage
+          repository: ${{ github.repository }}
+          run-id: 43201334358
+          github-token: ${{ github.token }}
+
+      - name: Decrypt and validate database archive
+        env:
+          BACKUP_ENCRYPTION_PASSPHRASE: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          test -n "${BACKUP_ENCRYPTION_PASSPHRASE}"
+          cd backup/database
+          sha256sum -c SHA256SUMS.txt
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase "${BACKUP_ENCRYPTION_PASSPHRASE}" \
+            --output pasar-hanakau-db.dump \
+            --decrypt pasar-hanakau-db.dump.gpg
+          test -s pasar-hanakau-db.dump
+          pg_restore --list pasar-hanakau-db.dump > database-contents.txt
+          grep -q "TABLE DATA" database-contents.txt
+          echo "Database backup decrypted; checksum and PostgreSQL archive structure are valid."
+
+      - name: Decrypt and validate Storage archive
+        env:
+          BACKUP_ENCRYPTION_PASSPHRASE: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          cd backup/storage
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase "${BACKUP_ENCRYPTION_PASSPHRASE}" \
+            --output pasar-hanakau-storage.tar.gz \
+            --decrypt pasar-hanakau-storage.tar.gz.gpg
+          sha256sum -c SHA256SUMS.txt
+          tar -tzf pasar-hanakau-storage.tar.gz > storage-contents.txt
+          for bucket in product-images profile-avatars driver-private-documents chat-attachments; do
+            grep -q "storage/${bucket}/" storage-contents.txt
+          done
+          echo "Storage backup decrypted; checksum, tar archive, and all four bucket folders are valid."
