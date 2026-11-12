@@ -133,6 +133,15 @@ Deno.serve(async (req: Request) => {
   }
   const record = payload?.record;
   if (!record?.user_id || !record?.title || !record?.body) return json({ ok: true, skipped: true });
+  const { data: recipientProfile, error: recipientProfileError } = await admin
+    .from("profiles")
+    .select("account_status")
+    .eq("id", record.user_id)
+    .maybeSingle();
+  if (recipientProfileError) return json({ error: "Could not verify notification recipient" }, 500);
+  if (recipientProfile?.account_status !== "active") {
+    return json({ ok: true, skipped: true, reason: "recipient_inactive" });
+  }
   const privateRaw = Deno.env.get("VAPID_PRIVATE_KEY");
   const subject = Deno.env.get("VAPID_SUBJECT") || "mailto:yisunshin715@gmail.com";
   if (!privateRaw) return json({ error: "VAPID_PRIVATE_KEY secret is not configured" }, 503);
