@@ -25,4 +25,12 @@ for (let index = 0; index < moduleBlocks.length; index += 1) {
   }
 }
 
+
+const checkoutFunction = readFileSync('supabase/functions/checkout-with-delivery/index.ts', 'utf8');
+if (!checkoutFunction.includes('"Access-Control-Allow-Origin": "https://berniaja5036-blip.github.io"') ||
+    checkoutFunction.includes('"Access-Control-Allow-Origin": "*"')) {
+  console.error('Checkout Edge Function must restrict CORS to the Pasar Hanakau site.');
+  process.exit(1);
+}
+
 console.log('JavaScript syntax check passed (' + moduleBlocks.length + ' inline module).');
