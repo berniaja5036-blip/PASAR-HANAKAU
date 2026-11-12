@@ -43,10 +43,14 @@ jobs:
           mkdir -p backup/storage
           for bucket in product-images profile-avatars driver-private-documents chat-attachments; do
             mkdir -p "backup/storage/${bucket}"
-            supabase storage cp --experimental --project-ref=wnnnhiocyyozlkfqupav --recursive "ss:///${bucket}" "backup/storage/${bucket}"
+            if ! supabase storage cp --experimental --project-ref=wnnnhiocyyozlkfqupav --recursive "ss:///${bucket}" "backup/storage/${bucket}" >/dev/null 2>&1; then
+              echo "::error::Storage download failed for bucket ${bucket}; object paths are intentionally not printed."
+              exit 1
+            fi
           done
-          find backup/storage -type f -print
-          if ! find backup/storage -type f -print -quit | grep -q .; then
+          file_count=$(find backup/storage -type f | wc -l)
+          echo "Storage objects downloaded: ${file_count} (object names and private paths suppressed)."
+          if [ "${file_count}" -eq 0 ]; then
             echo "No Storage files were present; uploading a verified empty backup."
           fi
           tar -czf backup/pasar-hanakau-storage.tar.gz -C backup storage
