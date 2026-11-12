@@ -39,7 +39,6 @@ jobs:
             echo "::error::Repository secret BACKUP_ENCRYPTION_PASSPHRASE is missing."
             exit 1
           fi
-          supabase login --token "${SUPABASE_ACCESS_TOKEN}"
           mkdir -p backup/storage
           for bucket in product-images profile-avatars driver-private-documents chat-attachments; do
             mkdir -p "backup/storage/${bucket}"
@@ -52,9 +51,8 @@ jobs:
           tar -czf backup/pasar-hanakau-storage.tar.gz -C backup storage
           test -s backup/pasar-hanakau-storage.tar.gz
           sha256sum backup/pasar-hanakau-storage.tar.gz > backup/SHA256SUMS.txt
-          gpg --batch --yes --pinentry-mode loopback --symmetric --cipher-algo AES256 \
-            --passphrase "${BACKUP_ENCRYPTION_PASSPHRASE}" \
-            --output backup/pasar-hanakau-storage.tar.gz.gpg backup/pasar-hanakau-storage.tar.gz
+          printf '%s' "${BACKUP_ENCRYPTION_PASSPHRASE}" | gpg --batch --yes --pinentry-mode loopback --symmetric --cipher-algo AES256 \
+            --passphrase-fd 0 --output backup/pasar-hanakau-storage.tar.gz.gpg backup/pasar-hanakau-storage.tar.gz
           rm -rf backup/storage backup/pasar-hanakau-storage.tar.gz
 
       - name: Upload encrypted Storage backup
