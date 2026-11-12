@@ -19,7 +19,7 @@ Website: https://berniaja5036-blip.github.io/PASAR-HANAKAU/
 - Panel Admin untuk moderasi akun/toko/produk, statistik, laporan, voucher, pesanan, driver, dan tagihan komisi.
 - Notifikasi di dalam aplikasi dan backend Web Push/VAPID.
 
-Fitur-fitur tersebut sudah memiliki implementasi kode/database, tetapi tetap memerlukan uji penerimaan menyeluruh dengan akun uji sebelum dinyatakan siap dipakai publik.
+Fitur-fitur tersebut sudah memiliki implementasi kode/database. Uji simulasi database dalam transaksi yang di-rollback telah lulus untuk pembatasan peran Buyer/Seller/Driver/Admin, pengiriman ulasan dan rating setelah pesanan diterima, serta checkout voucher 10%. Seluruh data simulasi dibatalkan dan tidak tertinggal. Uji penerimaan langsung di browser/perangkat pengguna, notifikasi push, dan pemulihan backup tetap harus diselesaikan sebelum peluncuran publik.
 
 ## Batasan yang masih berlaku
 
