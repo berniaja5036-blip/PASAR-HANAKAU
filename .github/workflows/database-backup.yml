@@ -1,0 +1,44 @@
+name: Database backup (manual)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+
+      - name: Export Supabase database
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGSSLMODE: require
+          PGCONNECT_TIMEOUT: "30"
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_DB_URL}" ]; then
+            echo "::error::Repository secret SUPABASE_DB_URL has not been configured."
+            exit 1
+          fi
+          mkdir -p backup
+          pg_dump --format=custom --no-owner --no-acl --file=backup/pasar-hanakau-db.dump "${SUPABASE_DB_URL}"
+          test -s backup/pasar-hanakau-db.dump
+          sha256sum backup/pasar-hanakau-db.dump > backup/SHA256SUMS.txt
+          pg_restore --list backup/pasar-hanakau-db.dump > backup/RESTORE-CHECK.txt
+          echo "Database dump created and archive structure verified."
+
+      - name: Upload encrypted-by-platform backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pasar-hanakau-database-backup-${{ github.run_id }}
+          path: backup/
+          if-no-files-found: error
+          retention-days: 14
