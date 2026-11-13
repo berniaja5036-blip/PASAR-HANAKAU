@@ -238,4 +238,60 @@ if (!driverAssignmentTrimMigration.includes('nullif(pg_catalog.btrim') ||
   process.exit(1);
 }
 
+
+const checkoutAttemptMigration = readMigration('checkout_request_idempotency');
+const checkoutRetryPreflightMigration = readMigration('checkout_idempotency_retry_preflight');
+const checkoutInProgressMigration = readMigration('checkout_idempotency_in_progress_response');
+if (!checkoutFunction.includes('get_checkout_idempotent_result_secure') ||
+    !checkoutFunction.includes('checkout_cart_idempotent_secure') ||
+    !checkoutFunction.includes('idempotency_key') ||
+    checkoutFunction.includes('rpc("checkout_cart_secure"')) {
+  console.error('Checkout Edge Function must use the protected idempotent server RPC path only.');
+  process.exit(1);
+}
+if (!checkoutAttemptMigration.includes('primary key (buyer_id, idempotency_key)') ||
+    !checkoutAttemptMigration.includes('on conflict (buyer_id, idempotency_key) do nothing') ||
+    !checkoutAttemptMigration.includes('for update') ||
+    !checkoutAttemptMigration.includes('to service_role') ||
+    !checkoutAttemptMigration.includes('from public, anon, authenticated, service_role')) {
+  console.error('Checkout idempotency must be unique per buyer, serialized, and inaccessible to client roles.');
+  process.exit(1);
+}
+if (!checkoutRetryPreflightMigration.includes("auth.role(), '') <> 'service_role'") ||
+    !checkoutRetryPreflightMigration.includes('to service_role') ||
+    !checkoutInProgressMigration.includes('_checkout_in_progress')) {
+  console.error('Checkout retry preflight must remain service-role-only and detect an in-progress attempt.');
+  process.exit(1);
+}
+if (!appSourceForDriverChecks.includes('async function getCheckoutIdempotencyKey(payload)') ||
+    !appSourceForDriverChecks.includes('function checkoutAttemptStorageKey(){return activeBuyerId?') ||
+    !appSourceForDriverChecks.includes('idempotency_key:idempotencyKey') ||
+    !appSourceForDriverChecks.includes('clearCheckoutIdempotencyKey();')) {
+  console.error('Buyer checkout must persist a per-account retry key and clear it only after success.');
+  process.exit(1);
+}
+
+const adminCancellationMigration = readMigration('restore_stock_on_admin_order_cancellation');
+if (!adminCancellationMigration.includes('public.is_admin()') ||
+    !adminCancellationMigration.includes('for update') ||
+    !adminCancellationMigration.includes("v_current_status = 'pending'") ||
+    !adminCancellationMigration.includes("v_current_status = 'confirmed'") ||
+    !adminCancellationMigration.includes('set stock = p.stock + item_totals.quantity') ||
+    !adminCancellationMigration.includes("status = 'failed'")) {
+  console.error('Admin cancellation must enforce status transitions and restore reserved stock atomically.');
+  process.exit(1);
+}
+
+const driverAssignmentMigration = readMigration('fix_driver_assignment_document_trim');
+if (!driverAssignmentMigration.includes('public.is_admin()') ||
+    !driverAssignmentMigration.includes("p.role = 'driver'") ||
+    !driverAssignmentMigration.includes("p.account_status = 'active'") ||
+    !driverAssignmentMigration.includes("dp.approval_status = 'approved'") ||
+    !driverAssignmentMigration.includes("so.bucket_id = 'driver-private-documents'") ||
+    !driverAssignmentMigration.includes("v_order_status <> 'ready_for_pickup'") ||
+    !driverAssignmentMigration.includes("d.status in ('assigned','picked_up')")) {
+  console.error('Admin dispatch must require an active, approved, documented, and available driver.');
+  process.exit(1);
+}
+
 console.log('JavaScript syntax check passed (' + moduleBlocks.length + ' inline module).');
