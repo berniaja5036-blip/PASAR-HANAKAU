@@ -58,10 +58,33 @@ data class NativeProduct(
 data class NativeCartItem(val product: NativeProduct, val quantity: Int)
 
 class NativeHomeActivity : ComponentActivity() {
+    private fun hideStatusBar() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(true)
+            window.insetsController?.let { controller ->
+                controller.hide(android.view.WindowInsets.Type.statusBars())
+                controller.systemBarsBehavior =
+                    android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility =
+                (android.view.View.SYSTEM_UI_FLAG_FULLSCREEN
+                    or android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                    or android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE)
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) hideStatusBar()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.statusBarColor = android.graphics.Color.rgb(7, 91, 50)
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.rgb(7, 70, 39)
+        hideStatusBar()
         setContent {
             MaterialTheme(colorScheme = lightColorScheme(
                 primary = PhGreen,
