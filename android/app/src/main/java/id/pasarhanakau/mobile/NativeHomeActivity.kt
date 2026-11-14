@@ -111,7 +111,6 @@ private fun NativeMarketplaceHome(onOpenMarketplace: () -> Unit) {
             product = selectedProduct!!,
             onBack = { selectedProduct = null },
             onAddToCart = {
-                val current = cart.firstOrNull { it.product.id == it.product.id }
                 cart = if (cart.any { it.product.id == selectedProduct!!.id }) {
                     cart.map { if (it.product.id == selectedProduct!!.id) it.copy(quantity = (it.quantity + 1).coerceAtMost(selectedProduct!!.stock)) else it }
                 } else cart + NativeCartItem(selectedProduct!!, 1)
