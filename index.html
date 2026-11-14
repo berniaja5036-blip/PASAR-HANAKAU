@@ -814,10 +814,11 @@ $('submitAdRequest')?.addEventListener('click',async()=>{
  for(const id of ['adTitle','adCaption'])$(id).value='';$('adBannerImage').value='';message('sellerAdMessage','Pengajuan iklan terkirim. Tunggu pemeriksaan dan penawaran biaya dari admin.');await loadSellerAds();await loadAdminAds();
 });
 
+let activePaymentMethods=[];
 async function loadPaymentMethods(admin=false){
  const {data,error}=await supabase.from('marketplace_payment_methods').select('id,label,bank_name,account_name,account_number,instructions,enabled,sort_order').order('sort_order',{ascending:true}).order('created_at',{ascending:true});
  if(error){const box=$(admin?'adminPaymentMethodsList':'sellerAdPaymentMethodsList');if(box)box.textContent='Rekening belum dapat dimuat: '+error.message;return [];}
- const methods=(data||[]).filter(x=>admin||x.enabled);
+ const methods=(data||[]).filter(x=>admin||x.enabled);if(!admin)activePaymentMethods=methods;
  if(admin){const box=$('adminPaymentMethodsList');if(box)box.innerHTML=data?.length?data.map(m=>'<article class="tile"><b>'+escapeHtml(m.label)+'</b> • '+(m.enabled?'<span class="success">Aktif</span>':'Nonaktif')+'<p class="muted">'+escapeHtml(m.bank_name)+' • '+escapeHtml(m.account_name)+'<br>'+escapeHtml(m.account_number)+'</p>'+(m.instructions?'<p class="muted">'+escapeHtml(m.instructions)+'</p>':'')+'<button class="btn secondary" type="button" data-toggle-payment-method="'+m.id+'" data-enabled="'+(!m.enabled)+'">'+(m.enabled?'Nonaktifkan':'Aktifkan rekening')+'</button></article>').join(''):'<p class="muted">Belum ada rekening yang disimpan.</p>';}
  else{const box=$('sellerAdPaymentMethodsList');if(box)box.innerHTML=methods.length?methods.map(m=>'<article class="tile"><b>'+escapeHtml(m.label)+'</b><p class="muted">'+escapeHtml(m.bank_name)+'<br>Atas nama: <b>'+escapeHtml(m.account_name)+'</b><br>Nomor rekening: <b>'+escapeHtml(m.account_number)+'</b></p>'+(m.instructions?'<p class="muted">'+escapeHtml(m.instructions)+'</p>':'')+'</article>').join(''):'<p class="notice">Admin belum mengaktifkan rekening pembayaran. Hubungi admin dan jangan transfer ke rekening lain.</p>';}
  return methods;
@@ -1606,11 +1607,24 @@ $('checkoutButton').addEventListener('click',async()=>{
   button.disabled=Object.keys(cart).length===0;
  }
 });
+function renderBuyerOrderPayment(order){
+ const raw=order.order_payment_submissions,sub=Array.isArray(raw)?raw[0]:raw,methods=activePaymentMethods||[];
+ if(sub?.status==='confirmed')return '<div class="notice"><b>✓ Pembayaran terverifikasi</b><p class="muted">Admin telah mengonfirmasi pembayaran.</p></div>';
+ if(sub?.status==='submitted')return '<div class="notice"><b>⏳ Konfirmasi transfer terkirim</b><p class="muted">Referensi: '+escapeHtml(sub.payment_reference)+' • Menunggu pemeriksaan admin.</p></div>';
+ if(!methods.length)return '<div class="notice"><b>Metode transfer belum tersedia</b><p class="muted">Admin belum mengaktifkan rekening pembayaran. Jangan transfer ke rekening yang tidak tercantum di aplikasi.</p></div>';
+ const selected=sub?.payment_method_id||methods[0].id;
+ return '<section class="tile"><b>💳 Pembayaran melalui transfer</b><p class="muted">Total yang perlu ditransfer: <b class="price">'+formatRupiah(order.total)+'</b></p>'+methods.map(m=>'<article class="tile"><b>'+escapeHtml(m.label)+'</b><p class="muted">'+escapeHtml(m.bank_name)+'<br>Atas nama: <b>'+escapeHtml(m.account_name)+'</b><br>Nomor rekening: <b>'+escapeHtml(m.account_number)+'</b></p>'+(m.instructions?'<p class="muted">'+escapeHtml(m.instructions)+'</p>':'')+'</article>').join('')+(sub?.status==='rejected'?'<p class="notice">Konfirmasi ditolak: '+escapeHtml(sub.admin_note||'Silakan periksa kembali transfer.')+'</p>':'')+'<label for="orderPayMethod-'+order.id+'">Pilih rekening tujuan</label><select class="field" id="orderPayMethod-'+order.id+'">'+methods.map(m=>'<option value="'+m.id+'" '+(m.id===selected?'selected':'')+'>'+escapeHtml(m.label)+' • '+escapeHtml(m.bank_name)+'</option>').join('')+'</select><label for="orderPayRef-'+order.id+'">Nomor referensi / berita transfer</label><input class="field" id="orderPayRef-'+order.id+'" maxlength="120" placeholder="Masukkan nomor referensi transfer"><button class="btn" type="button" data-submit-order-payment="'+order.id+'">'+(sub?.status==='rejected'?'Kirim ulang konfirmasi':'Saya sudah transfer')+'</button></section>';
+}
+function renderAdminOrderPayment(order){
+ const raw=order.order_payment_submissions,sub=Array.isArray(raw)?raw[0]:raw;if(!sub)return '<p class="muted">Belum ada konfirmasi transfer dari pembeli.</p>';const m=sub.marketplace_payment_methods||{};
+ return '<div class="tile"><b>💳 Pembayaran transfer pembeli</b><p class="muted">Metode: '+escapeHtml(m.label||m.bank_name||'Rekening')+'<br>Referensi: '+escapeHtml(sub.payment_reference)+'<br>Dikirim: '+new Date(sub.submitted_at).toLocaleString('id-ID')+'<br>Status: <b>'+({submitted:'Menunggu verifikasi',confirmed:'Terkonfirmasi',rejected:'Ditolak'}[sub.status]||sub.status)+'</b></p>'+(sub.status==='submitted'?'<button class="btn" type="button" data-review-order-payment="'+sub.id+'" data-payment-status="confirmed">Konfirmasi pembayaran diterima</button> <button class="btn secondary" type="button" data-review-order-payment="'+sub.id+'" data-payment-status="rejected">Tolak / minta ulang</button>':'')+(sub.admin_note?'<p class="muted">Catatan: '+escapeHtml(sub.admin_note)+'</p>':'')+'</div>';
+}
 async function loadBuyerOrders(){
  if(!activeBuyerId)return;
  const box=$('buyerOrders');box.textContent='Memuat riwayat pesanan…';
  const {data,error}=await supabase.from('orders').select('id,order_number,status,subtotal,delivery_fee,discount_amount,voucher_id,total,delivery_address,notes,created_at,buyer_received_at,delivery_fee_payment_status,delivery_fee_payment_method,delivery_fee_dispute_note,order_items(id,product_id,shop_id,product_name,quantity,line_total),order_status_history(from_status,to_status,changed_at),order_cancellation_requests(id,status,reason,admin_note,created_at),order_payment_submissions(id,payment_method_id,payment_reference,status,submitted_at,admin_note)').eq('buyer_id',activeBuyerId).order('created_at',{ascending:false}).limit(30);
  if(error){box.textContent='Pesanan belum dapat dimuat: '+error.message;return}
+ await loadPaymentMethods(false);
  const driverInfoByOrder=await loadOrderDriverDetails((data||[]).map(o=>o.id));
  const itemIds=(data||[]).flatMap(o=>(o.order_items||[]).map(i=>i.id));
  const [{data:productReviews,error:productReviewError},{data:driverRatings,error:driverRatingError}]=await Promise.all([
