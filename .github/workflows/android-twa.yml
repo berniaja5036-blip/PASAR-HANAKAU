@@ -23,6 +23,8 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools platforms;android-35 build-tools;35.0.0
       - name: Validate live PWA for Trusted Web Activity
         run: |
           npm install --global @bubblewrap/cli
@@ -52,6 +54,8 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools platforms;android-35 build-tools;35.0.0
       - name: Install Bubblewrap
         run: npm install --global @bubblewrap/cli
       - name: Generate Android project from the live PWA
