@@ -40,6 +40,16 @@ public class MainActivity extends Activity {
 
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Color.rgb(243, 247, 242));
+        // Keep WebView content clear of Android system bars on Android 15+.
+        root.setOnApplyWindowInsetsListener((view, insets) -> {
+            view.setPadding(
+                insets.getSystemWindowInsetLeft(),
+                insets.getSystemWindowInsetTop(),
+                insets.getSystemWindowInsetRight(),
+                insets.getSystemWindowInsetBottom()
+            );
+            return insets;
+        });
 
         webView = new WebView(this);
         webView.setBackgroundColor(Color.rgb(243, 247, 242));
