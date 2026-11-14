@@ -119,6 +119,17 @@ body.ph-buyer-mode main.wrap{padding-bottom:100px}
 body.ph-buyer-mode .notice{font-size:12px}
 @media(min-width:760px){.ph-bottom-nav{left:50%;right:auto;transform:translateX(-50%);width:min(100%,560px);border:1px solid #e4ebe4;border-bottom:0;border-radius:18px 18px 0 0}}
 
+
+/* Compact workspaces for seller and admin */
+.workspace-group{margin:12px 0;border:1px solid #e4ece4;border-radius:15px;background:#fff;overflow:hidden;box-shadow:0 3px 12px #18332908}
+.workspace-group>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 15px;color:#145b35;font-weight:800;font-size:14px;background:#f8fbf7;cursor:pointer}
+.workspace-group>summary::-webkit-details-marker{display:none}
+.workspace-group>summary:after{content:'＋';font-size:18px;color:#168447}
+.workspace-group[open]>summary:after{content:'−'}
+.workspace-group[open]>summary{background:#eff8ef;border-bottom:1px solid #e4ece4}
+.workspace-content{padding:12px}
+.workspace-content>.tile{margin:8px 0}
+
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
@@ -423,11 +434,11 @@ async function refreshSession(){
  if(requestedRole && requestedRole!==role && !(role==='buyer' && ['seller','driver'].includes(requestedRole))){$('accountRole').textContent='Akun ini terdaftar sebagai '+role+'. Silakan keluar dan pilih akses yang sesuai.';return}
  if(role==='admin'){
   $('accountRole').textContent='Peran: Admin';
-  activePanelRole='admin';$('adminPanel').classList.remove('hidden');await loadAdminPanel();return;
+  activePanelRole='admin';$('adminPanel').classList.remove('hidden');setupAdminWorkspace();await loadAdminPanel();return;
  }
  if(role==='seller'){
   $('accountRole').textContent='Peran: Penjual';
-  activePanelRole='seller';$('sellerProducts').classList.remove('hidden');await loadSellerShop();return;
+  activePanelRole='seller';$('sellerProducts').classList.remove('hidden');setupSellerWorkspace();await loadSellerShop();return;
  }
   // Semua akun berperan buyer diperiksa lebih dahulu untuk memastikan akun
  // yang pernah mengajukan driver tidak masuk ke katalog sebelum disetujui.
@@ -447,7 +458,7 @@ async function refreshSession(){
  }
  if(role==='driver' && driverApplication?.status==='approved'){
   $('accountRole').textContent='Peran: Driver';
-  activePanelRole='driver';$('driverPanel').classList.remove('hidden');await refreshDriverPresence();await loadDriverTasks();return;
+  activePanelRole='driver';$('driverPanel').classList.remove('hidden');setupDriverWorkspace();await refreshDriverPresence();await loadDriverTasks();return;
  }
  if(driverApplication || requestedRole==='driver' || role==='driver'){
   activePanelRole='driver-application';$('driverApplyPanel').classList.remove('hidden');
@@ -1722,7 +1733,41 @@ function setupBuyerWorkspace(){
 }
 function hideBuyerWorkspace(){
  document.body.classList.remove('ph-buyer-mode');
- const nav=document.querySelector('.ph-bottom-nav');if(nav)nav.classList.add('hidden');
+ document.querySelectorAll('.ph-bottom-nav').forEach(nav=>nav.classList.add('hidden'));
+}
+
+
+function collapseWorkspaceHeadings(panelId){
+ const panel=$(panelId);if(!panel||panel.dataset.sectionsReady==='yes')return;
+ const nodes=[...panel.childNodes];let index=0;
+ while(index<nodes.length){
+  const heading=nodes[index];
+  if(heading.nodeType!==1||!heading.matches('h3')){index++;continue;}
+  const title=heading.textContent.trim();
+  const details=document.createElement('details');details.className='workspace-group';
+  const summary=document.createElement('summary');summary.textContent=title;
+  const content=document.createElement('div');content.className='workspace-content';
+  details.append(summary,content);panel.insertBefore(details,heading);heading.remove();
+  index++;
+  while(index<nodes.length){const node=nodes[index];if(node.nodeType===1&&node.matches('h3'))break;content.appendChild(node);index++;}
+ }
+ panel.dataset.sectionsReady='yes';
+}
+function setupSellerWorkspace(){
+ collapseWorkspaceHeadings('sellerProducts');
+ const location=$('legacyShopLocationBox');if(location&&!location.dataset.collapsible){const d=document.createElement('details');d.className='workspace-group';d.dataset.collapsible='yes';const summary=document.createElement('summary');summary.textContent='Lokasi penjemputan toko';const content=document.createElement('div');content.className='workspace-content';location.parentNode.insertBefore(d,location);d.append(summary,content);content.append(location);}
+ const chat=$('sellerChatBox');if(chat&&!chat.dataset.collapsible){const d=document.createElement('details');d.className='workspace-group';d.dataset.collapsible='yes';const summary=document.createElement('summary');summary.textContent='Pesan dari pembeli';const content=document.createElement('div');content.className='workspace-content';chat.parentNode.insertBefore(d,chat);d.append(summary,content);content.append(chat);}
+}
+function setupAdminWorkspace(){collapseWorkspaceHeadings('adminPanel');}
+let phDriverWorkspaceReady=false;
+function showDriverWorkspacePage(page){
+ $('driverPanel').classList.toggle('hidden',page!=='tasks');$('accountPanel').classList.toggle('hidden',page!=='account');
+ document.querySelectorAll('.ph-driver-nav [data-driver-page]').forEach(button=>button.setAttribute('aria-current',button.dataset.driverPage===page?'page':'false'));
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+function setupDriverWorkspace(){
+ if(!phDriverWorkspaceReady){const nav=document.createElement('nav');nav.className='ph-bottom-nav ph-driver-nav';nav.setAttribute('aria-label','Navigasi driver');nav.innerHTML='<button type="button" data-driver-page="tasks"><span class="ph-nav-icon">🚚</span>Tugas</button><button type="button" data-driver-page="account"><span class="ph-nav-icon">☺</span>Akun</button>';document.body.appendChild(nav);nav.addEventListener('click',event=>{const button=event.target.closest('[data-driver-page]');if(button)showDriverWorkspacePage(button.dataset.driverPage)});phDriverWorkspaceReady=true;}
+ document.body.classList.add('ph-buyer-mode');document.querySelector('.ph-driver-nav')?.classList.remove('hidden');showDriverWorkspacePage('tasks');
 }
 
 await refreshSession();await loadCatalog();
