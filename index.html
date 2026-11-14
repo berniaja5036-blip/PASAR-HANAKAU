@@ -368,21 +368,26 @@ function pushBase64ToBytes(value){
  return Uint8Array.from(atob(base64),ch=>ch.charCodeAt(0));
 }
 $("enablePushNotifications").addEventListener("click",async()=>{
- const button=$("enablePushNotifications");button.disabled=true;
+ const button=$("enablePushNotifications");button.disabled=true;let pushStage="memeriksa dukungan browser";
  try{
   if(!("serviceWorker" in navigator)||!("PushManager" in window)||!("Notification" in window))throw new Error("Browser ini belum mendukung notifikasi web. Gunakan Chrome Android dan pasang Pasar Hanakau ke layar utama.");
   if(!activeAccountUserId)throw new Error("Silakan masuk terlebih dahulu.");
+  pushStage="meminta izin notifikasi";
   const permission=await Notification.requestPermission();
   if(permission!=="granted")throw new Error("Izin notifikasi belum diberikan. Izinkan notifikasi Pasar Hanakau melalui pengaturan situs di Chrome.");
+  pushStage="mengambil kunci notifikasi dari server";
   const {data:settings,error}=await supabase.from("push_settings").select("public_key").eq("id",1).maybeSingle();
   if(error)throw error;
   if(!settings?.public_key)throw new Error("Admin belum membuat kunci notifikasi. Silakan hubungi admin.");
+  pushStage="menyiapkan service worker";
   const registration=await navigator.serviceWorker.ready;
+  pushStage="memeriksa langganan push Chrome";
   let subscription=await registration.pushManager.getSubscription();
-  if(!subscription)subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:pushBase64ToBytes(settings.public_key)});
+  if(!subscription){pushStage="mendaftarkan perangkat ke layanan push Chrome";subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:pushBase64ToBytes(settings.public_key)});}
+  pushStage="menyimpan langganan perangkat ke server";
   await callPushFunction({action:"register_subscription",subscription:subscription.toJSON()});
   message("pushStatusMessage","Notifikasi berhasil diaktifkan pada perangkat ini.");
- }catch(error){message("pushStatusMessage",error.message||"Notifikasi gagal diaktifkan.",true);}
+ }catch(error){const detail=error?.message||String(error)||"Kesalahan tidak diketahui";const name=error?.name?error.name+": ":"";message("pushStatusMessage","Gagal saat "+pushStage+". "+name+detail,true);console.error("Push registration diagnostic:",pushStage,error);}
  finally{button.disabled=false;}
 });
 $("generateVapidKey").addEventListener("click",async()=>{
