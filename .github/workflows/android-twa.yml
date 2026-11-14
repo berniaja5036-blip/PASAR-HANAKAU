@@ -1,12 +1,12 @@
-name: Android TWA build
+name: Build Pasar Hanakau Android App
 
 on:
-  workflow_dispatch:
   push:
     branches: [main]
     paths:
       - 'android/**'
       - '.github/workflows/android-twa.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -16,120 +16,68 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  validate-pwa:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-      - uses: android-actions/setup-android@v3
-        with:
-          packages: platform-tools platforms;android-35 build-tools;36.1.0
-      - name: Validate live PWA manifest and app assets
-        run: |
-          set -eu
-          curl --fail --silent --show-error "https://berniaja5036-blip.github.io/PASAR-HANAKAU/manifest.webmanifest" -o /tmp/manifest.json
-          curl --fail --silent --show-error "https://berniaja5036-blip.github.io/PASAR-HANAKAU/sw.js" -o /tmp/sw.js
-          node -e "const m=require('/tmp/manifest.json'); for (const k of ['name','short_name','start_url','scope','display','icons']) if (!m[k]) throw new Error('Manifest missing '+k); if(!m.icons.some(i=>i.src.includes('icon-192')) || !m.icons.some(i=>i.src.includes('icon-512'))) throw new Error('Required PWA icons missing'); if(m.display!=='standalone') throw new Error('PWA display must be standalone');"
-          grep -q "addEventListener" /tmp/sw.js
-          echo "PWA manifest and service worker are reachable and structurally valid."
-
   build-android:
-    needs: validate-pwa
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check release secrets and Digital Asset Links
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          set -eu
-          test -n "$ANDROID_KEYSTORE_PASSWORD" || { echo "::error::Secret ANDROID_KEYSTORE_PASSWORD belum diatur."; exit 1; }
-          test -n "$ANDROID_KEY_PASSWORD" || { echo "::error::Secret ANDROID_KEY_PASSWORD belum diatur."; exit 1; }
-          curl --fail --silent --show-error "https://berniaja5036-blip.github.io/.well-known/assetlinks.json" -o /tmp/assetlinks.json
-          echo "Digital Asset Links tersedia di origin root."
-      - name: Set up Java
+
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
         with:
           packages: platform-tools platforms;android-35 build-tools;35.0.0
-      - name: Install Bubblewrap
-        run: npm install --global @bubblewrap/cli
-      - name: Restore persistent Android signing key
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Restore the existing app signing key
         uses: actions/cache/restore@v4
         with:
           path: android/android-keystore/pasar-hanakau.keystore
           key: pasar-hanakau-signing-keystore-v1
-      - name: Generate Android project from the verified TWA manifest
+
+      - name: Prepare signing and launcher icon
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -eu
-          mkdir -p "$HOME/.bubblewrap"
-          # Bubblewrap validates that the SDK root contains a top-level bin/ directory.
-          # GitHub's Android SDK image keeps sdkmanager under cmdline-tools/<version>/bin.
-          SDKMANAGER_DIR=$(find "$ANDROID_HOME/cmdline-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
-          test -x "$SDKMANAGER_DIR/bin/sdkmanager"
-          mkdir -p "$ANDROID_HOME/bin"
-          ln -sf "$SDKMANAGER_DIR/bin/sdkmanager" "$ANDROID_HOME/bin/sdkmanager"
-          echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > "$HOME/.bubblewrap/config.json"
-          mkdir -p android/android-keystore
-          cp android/twa-manifest.template.json android/twa-manifest.json
+          mkdir -p android/android-keystore android/app/src/main/res/drawable-nodpi
           if [ ! -s android/android-keystore/pasar-hanakau.keystore ]; then
-            echo "Signing key cache empty; creating a persistent PKCS12 signing key."
-            keytool -genkeypair -v -storetype PKCS12 -keystore android/android-keystore/pasar-hanakau.keystore -alias pasar-hanakau -keyalg RSA -keysize 2048 -validity 10000 -storepass "$ANDROID_KEYSTORE_PASSWORD" -keypass "$ANDROID_KEY_PASSWORD" -dname "CN=Pasar Hanakau, OU=Mobile, O=Pasar Hanakau, L=Lampung Utara, ST=Lampung, C=ID"
-          else
-            echo "Using restored persistent signing key."
+            echo "::error::Kunci tanda tangan aplikasi yang lama tidak ditemukan di cache. Build dihentikan agar APK tidak memakai kunci baru dan tetap dapat memperbarui versi sebelumnya."
+            exit 1
           fi
-          test -s android/android-keystore/pasar-hanakau.keystore
-          cd android
-          bubblewrap doctor
-          bubblewrap update --skipVersionUpgrade --manifest=./twa-manifest.json
-      - name: Save persistent Android signing key
-        uses: actions/cache/save@v4
-        with:
-          path: android/android-keystore/pasar-hanakau.keystore
-          key: pasar-hanakau-signing-keystore-v1
-      - name: Verify signing certificate and report Digital Asset Links fingerprint
-        env:
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          test -n "$ANDROID_KEYSTORE_PASSWORD"
+          test -n "$ANDROID_KEY_PASSWORD"
+          keytool -list -keystore android/android-keystore/pasar-hanakau.keystore -storetype PKCS12 -storepass "$ANDROID_KEYSTORE_PASSWORD" >/dev/null
+          cat > android/key.properties <<EOF
+          storeFile=android-keystore/pasar-hanakau.keystore
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=pasar-hanakau
+          keyPassword=$ANDROID_KEY_PASSWORD
+          EOF
+          curl --fail --silent --show-error "https://berniaja5036-blip.github.io/PASAR-HANAKAU/icons/icon-512.png" -o android/app/src/main/res/drawable-nodpi/launcher.png
+          file android/app/src/main/res/drawable-nodpi/launcher.png
+
+      - name: Build signed standalone APK and Android App Bundle
         run: |
-          set -eu
-          if ! keytool -list -v -keystore android/android-keystore/pasar-hanakau.keystore -storepass "$ANDROID_KEYSTORE_PASSWORD" > /tmp/cert.txt 2>&1; then
-            cat /tmp/cert.txt
-            echo "::error::Keystore tidak dapat dibaca. Periksa format dan password signing key."
-            exit 1
-          fi
-          echo "Signing certificate entries (alias and SHA-256 only):"
-          grep -E 'Alias name:|SHA256:' /tmp/cert.txt || true
-          FINGERPRINT=$(awk -v wanted='pasar-hanakau' '/Alias name: / { current=$0; sub(/^.*Alias name: /,"",current) } /SHA256:/ && current==wanted { sub(/^.*SHA256:[[:space:]]*/,""); gsub(/:/,""); print; exit }' /tmp/cert.txt | tr -d '[:space:]')
-          if [ -z "$FINGERPRINT" ]; then
-            echo "::error::Alias signing key 'pasar-hanakau' tidak ditemukan atau SHA-256 tidak dapat dibaca. Lihat daftar alias di atas."
-            exit 1
-          fi
-          echo "Selected signing certificate SHA-256: $FINGERPRINT"
-          PACKAGE='id.pasarhanakau.mobile'
-          node -e "const a=require('/tmp/assetlinks.json'); const p=process.argv[1], f=process.argv[2]; const ok=a.some(x=>x.target?.package_name===p && x.target?.sha256_cert_fingerprints?.some(v=>v.replace(/:/g,'').toLowerCase()===f.toLowerCase())); console.log(ok ? 'Digital Asset Links fingerprint cocok.' : '::warning::Perbarui assetlinks.json dengan fingerprint di atas sebelum rilis final.')" "$PACKAGE" "$FINGERPRINT"
-      - name: Build signed APK and AAB
-        env:
-          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: cd android && bubblewrap build --manifest=./twa-manifest.json --signingKeyPath=./android-keystore/pasar-hanakau.keystore --signingKeyAlias=pasar-hanakau
+          cd android
+          gradle --no-daemon clean assembleRelease bundleRelease
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/release/app-release.apk
+
       - name: Upload Android release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: pasar-hanakau-android-release
+          name: pasar-hanakau-android-standalone
           path: |
-            android/app-release-signed.apk
-            android/app-release-bundle.aab
+            android/app/build/outputs/apk/release/app-release.apk
+            android/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
+          retention-days: 90
