@@ -51,6 +51,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - uses: android-actions/setup-android@v3
       - name: Install Bubblewrap
         run: npm install --global @bubblewrap/cli
       - name: Generate Android project from the live PWA
