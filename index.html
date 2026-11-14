@@ -106,6 +106,19 @@ main:has(#catalogPanel:not(.hidden))>#buyerPanel{order:2}
 #sellerProducts,#adminPanel{padding-top:18px}
 @media(max-width:520px){.workspace-group>summary{padding:14px;font-size:13px}.workspace-group>.workspace-content{padding:11px}}
 
+
+/* Simplified buyer workspace: one clear task per screen */
+#buyerPanel{border:0!important;background:transparent!important;box-shadow:none!important;padding:0!important;margin:0!important}
+#buyerCartPage,#buyerOrdersPage{background:#fff;border:1px solid #e7eee7;border-radius:18px;padding:16px;margin:12px 0;box-shadow:0 4px 16px #18332908}
+#buyerCartPage>h2,#buyerOrdersPage>h2{margin-top:2px}
+.ph-bottom-nav{position:fixed;z-index:1000;left:0;right:0;bottom:0;display:flex;justify-content:space-around;gap:4px;padding:8px 6px calc(8px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #e4ebe4;box-shadow:0 -5px 20px #18332912}
+.ph-bottom-nav button{flex:1;min-width:0;border:0;background:transparent;color:#718078;border-radius:12px;padding:7px 3px 5px;font:inherit;font-size:10px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:3px}
+.ph-bottom-nav button .ph-nav-icon{font-size:20px;line-height:1.2}
+.ph-bottom-nav button[aria-current="page"]{color:#075b32;background:#eff8ef}
+body.ph-buyer-mode main.wrap{padding-bottom:100px}
+body.ph-buyer-mode .notice{font-size:12px}
+@media(min-width:760px){.ph-bottom-nav{left:50%;right:auto;transform:translateX(-50%);width:min(100%,560px);border:1px solid #e4ebe4;border-bottom:0;border-radius:18px 18px 0 0}}
+
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
@@ -386,6 +399,7 @@ async function refreshSession(){
  $('rolePanel').classList.toggle('hidden',!!session);$('authPanel').classList.toggle('hidden',!!session || !selectedEntryRole);$('accountPanel').classList.toggle('hidden',!session);
  $('sellerPanel').classList.add('hidden');$('sellerPanel').classList.add('hidden');$('sellerProducts').classList.add('hidden');$('adminPanel').classList.add('hidden');$('buyerPanel').classList.add('hidden');$('driverPanel').classList.add('hidden');$('driverApplyPanel').classList.add('hidden');
  $('catalogPanel').classList.add('hidden');
+ hideBuyerWorkspace();
  if(!session){sellerShopId=null;activeBuyerId=null;cart={};buyerDeliveryPoint=null;return}
  $('catalogMessage').textContent='';
  activeBuyerId=null;cart={};
@@ -429,7 +443,7 @@ async function refreshSession(){
    return;
   }
   $('accountRole').textContent='Peran: Pembeli';
-  activePanelRole='buyer';$('buyerPanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');initBuyerMap();activeBuyerId=session.user.id;loadCart();renderBuyerLocationStatus();renderCart();await loadCatalog();await loadBuyerOrders();await loadBuyerChatConversations();return;
+  activePanelRole='buyer';$('buyerPanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');setupBuyerWorkspace();initBuyerMap();activeBuyerId=session.user.id;loadCart();renderBuyerLocationStatus();renderCart();await loadCatalog();await loadBuyerOrders();await loadBuyerChatConversations();return;
  }
  if(role==='driver' && driverApplication?.status==='approved'){
   $('accountRole').textContent='Peran: Driver';
@@ -468,7 +482,7 @@ async function refreshSession(){
   return;
  }
  $('accountRole').textContent='Peran: Pembeli';
- activePanelRole='buyer';$('buyerPanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');initBuyerMap();activeBuyerId=session.user.id;loadCart();renderBuyerLocationStatus();renderCart();await loadCatalog();await loadBuyerOrders();
+ activePanelRole='buyer';$('buyerPanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');setupBuyerWorkspace();initBuyerMap();activeBuyerId=session.user.id;loadCart();renderBuyerLocationStatus();renderCart();await loadCatalog();await loadBuyerOrders();
 }
 $('signIn').addEventListener('click',async()=>{const c=validCredentials();if(!c)return; $('signIn').disabled=true;message('authMessage','Sedang masuk…');const {error}=await supabase.auth.signInWithPassword(c);$('signIn').disabled=false;if(error)message('authMessage',error.message,true);else{message('authMessage','Berhasil masuk.');await refreshSession();}});
 $('signUp').addEventListener('click',async()=>{if(signupFormJustOpened){signupFormJustOpened=false;return;}const c=validCredentials();if(!c)return;if(!$('acceptLegal').checked){message('authMessage','Centang persetujuan Syarat dan Ketentuan serta Kebijakan Privasi sebelum mendaftar.',true);return;}const full_name=$('registerFullName').value.trim(),phone=$('registerPhone').value.trim(),full_address=$('registerAddress').value.trim();if(c.password.length<8){message('authMessage','Kata sandi minimal 8 karakter.',true);return}if(full_name.length<3||phone.replace(/\D/g,'').length<9||full_address.length<10){message('authMessage',selectedEntryRole==='seller'?'Lengkapi nama toko, alamat toko, dan nomor WhatsApp aktif.':'Lengkapi nama, alamat, dan nomor WhatsApp aktif.',true);return}$('signUp').disabled=true;message('authMessage','Sedang membuat akun…');if(!['buyer','seller','driver'].includes(selectedEntryRole)){message('authMessage','Pendaftaran admin tidak tersedia melalui halaman publik.',true);return}const {data,error}=await supabase.auth.signUp({email:c.email,password:c.password,options:{data:{full_name,phone,full_address,requested_role:selectedEntryRole,accepted_terms_at:new Date().toISOString(),accepted_terms_version:"2026-11-12"}}});$('signUp').disabled=false;if(error)message('authMessage',error.message,true);else if(data.session){await supabase.from('profiles').update({full_name,phone,full_address}).eq('id',data.user.id);message('authMessage','Akun berhasil dibuat.');await refreshSession();}else message('authMessage','Pendaftaran diterima. Periksa email untuk konfirmasi, lalu masuk. Data profil akan tersimpan saat akun dibuat.');});
@@ -1676,6 +1690,40 @@ $('sellerChatConversations').addEventListener('click',e=>{const b=e.target.close
 $('buyerChatSend').addEventListener('click',()=>void sendChatMessage('buyer'));
 $('buyerChatClose').addEventListener('click',()=>{$('buyerChatBox').style.display='none';activeChatConversationId=null;activeChatRole=null;});
 $('sellerChatSend').addEventListener('click',()=>void sendChatMessage('seller'));
+
+
+/* Buyer navigation: separate catalog, cart, orders, and account without changing data logic. */
+let phBuyerWorkspaceReady=false;
+function showBuyerWorkspacePage(page){
+ const pages={home:$('catalogPanel'),cart:$('buyerCartPage'),orders:$('buyerOrdersPage'),account:$('accountPanel')};
+ Object.entries(pages).forEach(([key,node])=>{if(node)node.classList.toggle('hidden',key!==page)});
+ document.querySelectorAll('.ph-bottom-nav [data-ph-page]').forEach(button=>button.setAttribute('aria-current',button.dataset.phPage===page?'page':'false'));
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+function setupBuyerWorkspace(){
+ const buyer=$('buyerPanel');if(!buyer)return;
+ if(!phBuyerWorkspaceReady){
+  const nodes=[...buyer.childNodes];
+  const split=nodes.findIndex(node=>node.nodeType===1&&node.matches('h3')&&node.textContent.toLowerCase().includes('riwayat pesanan saya'));
+  const cart=document.createElement('section');cart.id='buyerCartPage';cart.className='';
+  const orders=document.createElement('section');orders.id='buyerOrdersPage';orders.className='hidden';
+  nodes.forEach((node,index)=>{(split>=0&&index>=split?orders:cart).appendChild(node)});
+  buyer.append(cart,orders);
+  const nav=document.createElement('nav');nav.className='ph-bottom-nav';nav.setAttribute('aria-label','Navigasi pembeli');
+  nav.innerHTML='<button type="button" data-ph-page="home"><span class="ph-nav-icon">⌂</span>Beranda</button><button type="button" data-ph-page="orders"><span class="ph-nav-icon">▤</span>Pesanan</button><button type="button" data-ph-page="cart"><span class="ph-nav-icon">🛒</span>Keranjang</button><button type="button" data-ph-page="account"><span class="ph-nav-icon">☺</span>Akun</button>';
+  document.body.appendChild(nav);
+  nav.addEventListener('click',event=>{const button=event.target.closest('[data-ph-page]');if(button)showBuyerWorkspacePage(button.dataset.phPage)});
+  const cartButton=document.querySelector('.market-cart');if(cartButton){cartButton.removeAttribute('onclick');cartButton.addEventListener('click',()=>showBuyerWorkspacePage('cart'));}
+  phBuyerWorkspaceReady=true;
+ }
+ document.body.classList.add('ph-buyer-mode');
+ const nav=document.querySelector('.ph-bottom-nav');if(nav)nav.classList.remove('hidden');
+ showBuyerWorkspacePage('home');
+}
+function hideBuyerWorkspace(){
+ document.body.classList.remove('ph-buyer-mode');
+ const nav=document.querySelector('.ph-bottom-nav');if(nav)nav.classList.add('hidden');
+}
 
 await refreshSession();await loadCatalog();
 </script><script>
