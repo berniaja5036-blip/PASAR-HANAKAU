@@ -88,6 +88,7 @@ jobs:
           set -eu
           keytool -list -v -keystore android/android-keystore/pasar-hanakau.keystore -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias pasar-hanakau > /tmp/cert.txt
           FINGERPRINT=$(sed -n 's/.*SHA256: //p' /tmp/cert.txt | head -n 1 | tr -d ':')
+echo "Signing certificate SHA-256: $FINGERPRINT"
           PACKAGE='id.pasarhanakau.mobile'
           node -e "const a=require('/tmp/assetlinks.json'); const p=process.argv[1], f=process.argv[2]; if(!a.some(x=>x.target?.package_name===p && x.target?.sha256_cert_fingerprints?.some(v=>v.replace(/:/g,'').toLowerCase()===f.toLowerCase()))) process.exit(1)" "$PACKAGE" "$FINGERPRINT" || { echo "::error::Fingerprint atau package ID tidak cocok dengan assetlinks.json."; exit 1; }
       - name: Build signed APK and AAB
