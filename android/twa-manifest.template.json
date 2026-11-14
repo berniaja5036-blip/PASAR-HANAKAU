@@ -21,7 +21,7 @@
   },
   "appVersion": "1.0.0",
   "appVersionCode": 1,
-  "minSdkVersion": 23,
+  "minSdkVersion": 24,
   "orientation": "portrait",
   "fallbackType": "customtabs",
   "webManifestUrl": "https://berniaja5036-blip.github.io/PASAR-HANAKAU/manifest.webmanifest",
