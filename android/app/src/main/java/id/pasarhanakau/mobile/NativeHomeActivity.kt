@@ -47,7 +47,9 @@ data class NativeProduct(
     val name: String,
     val price: Long,
     val shopName: String,
-    val imageUrl: String
+    val imageUrl: String,
+    val description: String,
+    val stock: Int
 )
 
 class NativeHomeActivity : ComponentActivity() {
@@ -77,6 +79,7 @@ private fun NativeMarketplaceHome(onOpenMarketplace: () -> Unit) {
     var products by remember { mutableStateOf<List<NativeProduct>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    var selectedProduct by remember { mutableStateOf<NativeProduct?>(null) }
 
     LaunchedEffect(Unit) {
         try {
@@ -89,7 +92,13 @@ private fun NativeMarketplaceHome(onOpenMarketplace: () -> Unit) {
         }
     }
 
-    Column(
+    if (selectedProduct != null) {
+        NativeProductDetail(
+            product = selectedProduct!!,
+            onBack = { selectedProduct = null },
+            onOpenMarketplace = onOpenMarketplace
+        )
+    } else Column(
         modifier = Modifier.fillMaxSize().background(PhBackground)
     ) {
         Column(
@@ -166,7 +175,7 @@ private fun NativeMarketplaceHome(onOpenMarketplace: () -> Unit) {
                         LazyVerticalGrid(columns = GridCells.Fixed(2), contentPadding = PaddingValues(bottom = 18.dp),
                             horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             items(shown, key = { it.id }) { product ->
-                                ProductCard(product = product, onClick = onOpenMarketplace)
+                                ProductCard(product = product, onClick = { selectedProduct = product })
                             }
                         }
                     }
@@ -182,6 +191,52 @@ private fun NativeMarketplaceHome(onOpenMarketplace: () -> Unit) {
             BottomItem("Kategori", false, onOpenMarketplace)
             BottomItem("Pesanan", false, onOpenMarketplace)
             BottomItem("Akun", false, onOpenMarketplace)
+        }
+    }
+}
+
+@Composable
+private fun NativeProductDetail(product: NativeProduct, onBack: () -> Unit, onOpenMarketplace: () -> Unit) {
+    Column(Modifier.fillMaxSize().background(PhBackground)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().background(PhDark).padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("‹", color = Color.White, fontSize = 30.sp, modifier = Modifier.clickable { onBack() })
+            Spacer(Modifier.width(14.dp))
+            Text("Detail produk", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        }
+        Column(Modifier.weight(1f)) {
+            AsyncImage(
+                model = product.imageUrl.ifBlank { null },
+                contentDescription = product.name,
+                modifier = Modifier.fillMaxWidth().height(280.dp).background(Color(0xFFEAF1E9)),
+                contentScale = ContentScale.Crop
+            )
+            Column(Modifier.padding(18.dp)) {
+                Text(product.name, color = PhDark, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(8.dp))
+                Text("Rp " + "%,d".format(product.price).replace(',', '.'), color = PhGreen,
+                    fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+                Spacer(Modifier.height(8.dp))
+                Text("Toko: ${product.shopName}", color = Color.DarkGray, fontSize = 13.sp)
+                Text("Stok tersedia: ${product.stock}", color = Color.DarkGray, fontSize = 13.sp)
+                Spacer(Modifier.height(16.dp))
+                Text("Deskripsi produk", color = PhDark, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(6.dp))
+                Text(product.description.ifBlank { "Belum ada deskripsi untuk produk ini." },
+                    color = Color(0xFF4B5B50), fontSize = 13.sp, lineHeight = 19.sp)
+            }
+        }
+        Surface(color = Color.White, shadowElevation = 8.dp) {
+            Button(
+                onClick = onOpenMarketplace,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp).height(50.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = PhOrange),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Masuk untuk membeli", color = Color.White, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }
@@ -215,7 +270,7 @@ private fun BottomItem(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 private fun fetchNativeProducts(): List<NativeProduct> {
-    val endpoint = "$SUPABASE_URL/rest/v1/products?select=id,name,price,image_path,shops(name)&status=eq.active&stock=gt.0&order=created_at.desc&limit=40"
+    val endpoint = "$SUPABASE_URL/rest/v1/products?select=id,name,description,price,stock,image_path,shops(name)&status=eq.active&stock=gt.0&order=created_at.desc&limit=40"
     val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
         requestMethod = "GET"
         connectTimeout = 15000
@@ -243,7 +298,9 @@ private fun fetchNativeProducts(): List<NativeProduct> {
                 name = item.optString("name", "Produk"),
                 price = item.optDouble("price", 0.0).toLong(),
                 shopName = shop?.optString("name", "Toko Hanakau") ?: "Toko Hanakau",
-                imageUrl = image
+                imageUrl = image,
+                description = item.optString("description", ""),
+                stock = item.optInt("stock", 0)
             )
         }
     } finally {
