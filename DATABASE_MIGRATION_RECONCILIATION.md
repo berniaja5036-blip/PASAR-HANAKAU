@@ -4,13 +4,13 @@ Last reconciled: 2026-11-14.
 
 ## Canonical migration history
 
-The live Supabase project has **66 applied migration records**. The repository previously had 95 SQL files directly inside `supabase/migrations/`, with duplicate version prefixes and local prefixes that did not match the live 14-digit migration versions.
+The live Supabase project has **72 applied migration records**. The repository previously had 95 SQL files directly inside `supabase/migrations/`, with duplicate version prefixes and local prefixes that did not match the live 14-digit migration versions.
 
 This reconciliation changes **filenames and locations only**; the SQL bodies of all files are preserved byte-for-byte:
 
 - The 61 files from the 12 November reconciliation remain in `supabase/migrations/`; three additional forward migrations were added before 14 November, bringing the active set to 64.
 - 34 historical files remain unchanged in `supabase/migrations-archive/`, outside the Supabase CLI migration scan directory.
-- On 14 November, two forward migrations were applied and committed: the 65th `20261114024945_scope_driver_profile_visibility_to_related_orders.sql` and the 66th `20261114025139_fix_driver_application_review_trim_function.sql`.
+- On 14 November, the 65th and 66th migrations were applied and committed: `20261114024945_scope_driver_profile_visibility_to_related_orders.sql` and `20261114025139_fix_driver_application_review_trim_function.sql`. Six subsequent forward migrations brought the canonical and live history to 72 records: `20261114025617_harden_driver_delivery_status_role_and_null_validation.sql`, `20261114030034_support_multi_shop_order_commissions.sql`, `20261114030104_tighten_buyer_receipt_and_commission_review.sql`, `20261114030136_require_buyer_role_for_fee_actions.sql`, `20261114030338_report_commission_paid_at_payment_time.sql`, and `20261114032016_report_delivered_metrics_by_delivery_date.sql`.
 
 The five historical filename equivalents are now canonicalized to the exact live migration names:
 
@@ -28,7 +28,7 @@ The live `driver_profiles_read_scoped` policy was already narrower than the olde
 
 The policy permits a driver to read their own profile, an administrator to read profiles for dispatch, and a buyer or seller to read a driver's vehicle profile only when that driver is assigned to an order the current user is allowed to access. The check uses the active-account-aware `current_user_can_read_delivery_order(uuid)` helper. No driver, order, stock, payment, or Storage rows were changed.
 
-## Archived files
+## 14 November follow-up migrations (67–72)\n\nThe 67th migration hardens driver delivery status updates with active-driver role, ownership, transition, and null validation. The 68th records commission entries per shop for multi-shop orders. The 69th tightens buyer receipt confirmation and admin commission-payment review. The 70th requires the buyer role for delivery-fee confirmation and dispute actions. The 71st groups paid commission by payment-review time. The 72nd corrects marketplace reporting so delivered-order counts, delivered sales, discounts, and delivery fees are grouped by the actual `delivered` status-history timestamp; order creation counts remain grouped by order creation time. The reporting function remains admin-only, retains the 366-day range limit, uses Asia/Jakarta day grouping, and changes no transactional rows.\n\n## Archived files
 
 The 34 archived files are preserved unchanged:
 
@@ -55,4 +55,4 @@ Supabase CLI v3 changed database commands to target the local stack by default; 
 - The canonical directory has unique 14-digit version prefixes and no duplicate versions.
 - The five archived-but-applied SQL effects were checked in the live catalog: helper ACLs and `search_path`, profile column grants, rating-summary function definitions, and product/shop status grants plus guard triggers.
 - The two old bootstrap table names were confirmed absent from the current public schema.
-- The new forward migration changes only the `driver_profiles_read_scoped` SELECT policy; no user, order, stock, payment, or Storage data was changed.
+- The 65th migration changes only the `driver_profiles_read_scoped` SELECT policy; no user, order, stock, payment, or Storage data was changed. The 72nd migration only replaces the admin statistics function; it does not modify transactional rows.
