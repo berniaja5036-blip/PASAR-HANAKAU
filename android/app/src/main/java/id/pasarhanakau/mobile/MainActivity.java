@@ -1,8 +1,10 @@
 package id.pasarhanakau.mobile;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
@@ -11,6 +13,8 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.CookieManager;
+import android.webkit.GeolocationPermissions;
+import android.webkit.PermissionRequest;
 import android.webkit.DownloadListener;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -30,16 +34,54 @@ public class MainActivity extends Activity {
     private ProgressBar progressBar;
     private android.webkit.ValueCallback<Uri[]> uploadCallback;
     private static final int FILE_CHOOSER_REQUEST = 4102;
+    private static final int LOCATION_PERMISSION_REQUEST = 4103;
+    private static final int CAMERA_PERMISSION_REQUEST = 4104;
+    private GeolocationPermissions.Callback pendingGeoCallback;
+    private String pendingGeoOrigin;
+    private PermissionRequest pendingWebPermissionRequest;
+
+    private void hideStatusBar() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            getWindow().setDecorFitsSystemWindows(true);
+            if (getWindow().getInsetsController() != null) {
+                getWindow().getInsetsController().hide(android.view.WindowInsets.Type.statusBars());
+                getWindow().getInsetsController().setSystemBarsBehavior(
+                    android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+            }
+        } else {
+            getWindow().getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_FULLSCREEN
+                    | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                    | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+        }
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) hideStatusBar();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        getWindow().setStatusBarColor(Color.rgb(23, 107, 69));
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
         getWindow().setNavigationBarColor(Color.rgb(18, 63, 45));
+        hideStatusBar();
 
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Color.rgb(243, 247, 242));
+        // Keep WebView content clear of Android system bars on Android 15+.
+        root.setOnApplyWindowInsetsListener((view, insets) -> {
+            view.setPadding(
+                insets.getSystemWindowInsetLeft(),
+                insets.getSystemWindowInsetTop(),
+                insets.getSystemWindowInsetRight(),
+                insets.getSystemWindowInsetBottom()
+            );
+            return insets;
+        });
 
         webView = new WebView(this);
         webView.setBackgroundColor(Color.rgb(243, 247, 242));
@@ -114,6 +156,54 @@ public class MainActivity extends Activity {
             }
 
             @Override
+            public void onGeolocationPermissionsShowPrompt(String origin,
+                    GeolocationPermissions.Callback callback) {
+                Uri requestedOrigin = Uri.parse(origin);
+                if (!"https".equalsIgnoreCase(requestedOrigin.getScheme())
+                        || !APP_HOST.equalsIgnoreCase(requestedOrigin.getHost())) {
+                    callback.invoke(origin, false, false);
+                    return;
+                }
+                boolean fineGranted = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                    == PackageManager.PERMISSION_GRANTED;
+                boolean coarseGranted = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+                    == PackageManager.PERMISSION_GRANTED;
+                if (fineGranted || coarseGranted) {
+                    callback.invoke(origin, true, false);
+                    return;
+                }
+                pendingGeoCallback = callback;
+                pendingGeoOrigin = origin;
+                requestPermissions(new String[] {
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                }, LOCATION_PERMISSION_REQUEST);
+            }
+
+            @Override
+            public void onPermissionRequest(PermissionRequest request) {
+                boolean asksForCamera = false;
+                for (String resource : request.getResources()) {
+                    if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)) {
+                        asksForCamera = true;
+                    }
+                }
+                Uri requestedOrigin = Uri.parse(request.getOrigin().toString());
+                if (!asksForCamera || !"https".equalsIgnoreCase(requestedOrigin.getScheme())
+                        || !APP_HOST.equalsIgnoreCase(requestedOrigin.getHost())) {
+                    request.deny();
+                    return;
+                }
+                if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                    request.grant(request.getResources());
+                    return;
+                }
+                pendingWebPermissionRequest = request;
+                requestPermissions(new String[] { Manifest.permission.CAMERA },
+                    CAMERA_PERMISSION_REQUEST);
+            }
+
+            @Override
             public void onCloseWindow(WebView window) {
                 window.destroy();
             }
@@ -158,6 +248,26 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == LOCATION_PERMISSION_REQUEST && pendingGeoCallback != null) {
+            boolean granted = false;
+            for (int result : grantResults) {
+                if (result == PackageManager.PERMISSION_GRANTED) granted = true;
+            }
+            pendingGeoCallback.invoke(pendingGeoOrigin, granted, false);
+            pendingGeoCallback = null;
+            pendingGeoOrigin = null;
+        } else if (requestCode == CAMERA_PERMISSION_REQUEST && pendingWebPermissionRequest != null) {
+            boolean granted = grantResults.length > 0
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            if (granted) pendingWebPermissionRequest.grant(pendingWebPermissionRequest.getResources());
+            else pendingWebPermissionRequest.deny();
+            pendingWebPermissionRequest = null;
+        }
+    }
+
+    @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == FILE_CHOOSER_REQUEST && uploadCallback != null) {
@@ -184,6 +294,15 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (pendingGeoCallback != null) {
+            pendingGeoCallback.invoke(pendingGeoOrigin, false, false);
+            pendingGeoCallback = null;
+            pendingGeoOrigin = null;
+        }
+        if (pendingWebPermissionRequest != null) {
+            pendingWebPermissionRequest.deny();
+            pendingWebPermissionRequest = null;
+        }
         if (uploadCallback != null) {
             uploadCallback.onReceiveValue(null);
             uploadCallback = null;
