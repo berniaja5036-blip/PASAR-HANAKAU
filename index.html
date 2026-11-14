@@ -795,7 +795,7 @@ async function loadMarketplaceAds(){
 document.addEventListener('click',event=>{const button=event.target.closest('[data-ad-open]');if(!button)return;const id=button.dataset.adOpen,ad=marketplaceAds.find(x=>x.product_id===id);if(ad?.products){$('catalogSearch').value=ad.products.name||'';renderCatalog();}$('catalog').scrollIntoView({behavior:'smooth',block:'start'});});
 async function loadSellerAds(){
  const box=$('sellerAdList');if(!box||!sellerShopId)return;
- const {data:products}=await supabase.from('products').select('id,name,status').eq('shop_id',sellerShopId).order('created_at',{ascending:false});
+ const {data:products}=await supabase.from('products').select('id,name,status').eq('shop_id',sellerShopId).eq('status','active').order('created_at',{ascending:false});
  const select=$('adProduct'),previous=select.value;select.innerHTML='<option value="">Pilih produk toko</option>'+(products||[]).map(p=>'<option value="'+p.id+'">'+escapeHtml(p.name)+' ('+escapeHtml(p.status)+')</option>').join('');if((products||[]).some(p=>p.id===previous))select.value=previous;
  const {data,error}=await supabase.from('marketplace_ads').select('id,title,ad_type,requested_days,quoted_price,status,review_note,starts_at,ends_at,created_at').eq('shop_id',sellerShopId).order('created_at',{ascending:false}).limit(30);
  if(error){box.textContent='Pengajuan iklan belum dapat dimuat: '+error.message;return;}
