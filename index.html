@@ -69,14 +69,41 @@ footer{color:#829087;font-size:12px;padding:30px 10px}
 #catalog .btn:not(.secondary){background:linear-gradient(110deg,#168447,#08703b)}
 @media(max-width:420px){.market-home{padding:11px}.market-hero{min-height:166px}.hero-copy h2{font-size:22px}.hero-art{font-size:67px;right:0}.market-shortcuts button{flex-basis:49px}}
 @media(min-width:760px){.market-home{padding:18px}.market-hero{min-height:205px}.hero-copy h2{font-size:30px}.hero-art{font-size:100px}}
+
+/* Public storefront landing page */
+.market-top{background:linear-gradient(100deg,#075b32,#168447 70%,#23964a);border-bottom:4px solid #ffd52e;color:#fff;padding:16px 18px}
+.market-top .brandline h1,.market-top .brandline small,.market-top .tagline{color:#fff}
+.market-top .brandmark{background:#ffd52e;color:#075b32;border-radius:14px;padding:10px;font-size:24px}
+.top-leaf{font-size:30px}
+.market-landing{border:0!important;background:transparent!important;padding:0!important;box-shadow:none!important}
+.market-landing .market-home{padding:12px;margin-bottom:14px}
+.landing-hero{min-height:205px}
+.landing-roles{background:#fff;border:1px solid #e9eee6;border-radius:18px;padding:14px;box-shadow:0 5px 22px #173b2410}
+.landing-roles .market-list-heading{margin-top:2px}
+.landing-roles .rolegrid{display:grid;grid-template-columns:1fr;gap:9px}
+.landing-roles .rolecard{display:flex;align-items:center;gap:12px;text-align:left;width:100%;padding:13px;border:1px solid #e6eee4;border-radius:13px;background:#fff}
+.landing-roles .rolecard:first-child{border-color:#f4d64e;background:#fffbed}
+.landing-roles .roleicon{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#e8f5e9;font-size:23px}
+.landing-roles .rolecard b{display:block;color:#145b35}.landing-roles .rolecard small{display:block;color:#77847a;margin-top:3px}
+@media(min-width:620px){.landing-roles .rolegrid{grid-template-columns:repeat(3,minmax(0,1fr))}.landing-roles .rolecard{align-items:flex-start;flex-direction:column}}
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body>
-<header class="top"><div class="brandline"><div class="brandmark" aria-hidden="true">🛍️</div><div><small>Marketplace warga • Desa Hanakau Jaya</small><h1>Pasar Hanakau</h1><div class="tagline">Belanja dekat, mudah, dan nyaman.</div></div></div></header>
+<header class="top market-top"><div class="brandline"><div class="brandmark" aria-hidden="true">🛒</div><div><small>MARKETPLACE WARGA • HANAKAU JAYA</small><h1>Pasar Hanakau</h1><div class="tagline">Belanja mudah, harga bersahabat.</div></div></div><span class="top-leaf" aria-hidden="true">🌿</span></header>
 <main class="wrap">
 <div class="notice"><b>Pasar Hanakau masih dalam tahap uji coba.</b> Fitur akun, katalog, pemesanan, dan pengiriman sedang diuji. Pembayaran belum diaktifkan. Jangan melakukan transfer atau pembayaran di luar aplikasi atas nama Pasar Hanakau.</div>
-<section id="rolePanel" class="panel"><div style="text-align:center;margin:8px 0 20px"><div style="font-size:42px">🛍️</div><h2>Selamat datang!</h2><p class="muted">Pilih jenis akun untuk melanjutkan ke Pasar Hanakau.</p></div><div class="rolegrid"><button class="rolecard" type="button" data-entry-role="buyer"><span class="roleicon">🛒</span><span><b>Saya Pembeli</b><small>Belanja dan pantau pesanan</small></span></button><button class="rolecard" type="button" data-entry-role="seller"><span class="roleicon">🏬</span><span><b>Saya Penjual</b><small>Kelola toko dan pesanan</small></span></button><button class="rolecard" type="button" data-entry-role="driver"><span class="roleicon">🚚</span><span><b>Saya Driver</b><small>Kelola penjemputan dan pengantaran</small></span></button></div><p style="text-align:center;margin:18px 0 0"><button class="btn secondary" type="button" data-entry-role="admin">Masuk khusus Admin</button></p></section>
+<section id="rolePanel" class="market-landing">
+ <div class="market-home">
+  <div class="market-hero landing-hero"><div class="hero-copy"><span class="hero-kicker">SELAMAT DATANG DI PASAR LOKAL</span><h2>Belanja mudah,<br><em>harga bersahabat!</em></h2><p>Temukan kebutuhan harian dan dukung usaha warga Hanakau Jaya.</p><button type="button" data-entry-role="buyer">Mulai belanja <b>→</b></button></div><div class="hero-art" aria-hidden="true">🛍️</div></div>
+  <div class="market-shortcuts"><div>🛒<span>Belanja</span></div><div>🏬<span>Toko lokal</span></div><div>🥬<span>Kebutuhan</span></div><div>🚚<span>Antar</span></div><div>⭐<span>Favorit</span></div></div>
+  <div class="market-promo-strip"><span>🟢</span><div><b>Belanja dari warga sekitar</b><small>Satu pasar digital untuk masyarakat Hanakau Jaya.</small></div><span class="promo-arrow">›</span></div>
+ </div>
+ <div class="landing-roles"><div class="market-list-heading"><div><span class="market-eyebrow">MULAI DI SINI</span><h2>Pilih layanan</h2><p class="muted">Masuk sesuai peran kamu di Pasar Hanakau.</p></div><span class="market-spark">✦</span></div>
+  <div class="rolegrid"><button class="rolecard" type="button" data-entry-role="buyer"><span class="roleicon">🛒</span><span><b>Saya Pembeli</b><small>Belanja dan pantau pesanan</small></span></button><button class="rolecard" type="button" data-entry-role="seller"><span class="roleicon">🏬</span><span><b>Saya Penjual</b><small>Kelola toko dan pesanan</small></span></button><button class="rolecard" type="button" data-entry-role="driver"><span class="roleicon">🚚</span><span><b>Saya Driver</b><small>Kelola penjemputan dan pengantaran</small></span></button></div>
+  <p style="text-align:center;margin:14px 0 0"><button class="btn secondary" type="button" data-entry-role="admin">Masuk khusus Admin</button></p>
+ </div>
+</section>
 <section id="authPanel" class="panel hidden">
 <button class="btn secondary" id="backToRoles" type="button">← Kembali pilih jenis akun</button><h2 id="authTitle">Masuk atau daftar</h2><p class="muted" id="authDescription">Gunakan email dan kata sandi.</p>
 <div id="registrationDetails" class="tile"><h3 id="registrationHeading">Data pendaftar</h3><label id="registerNameLabel" for="registerFullName">Nama lengkap</label><input class="field" id="registerFullName" maxlength="120" autocomplete="name" placeholder="Nama lengkap"><label id="registerAddressLabel" for="registerAddress">Alamat lengkap</label><textarea class="field" id="registerAddress" rows="2" maxlength="500" autocomplete="street-address" placeholder="Jalan, RT/RW, desa, kecamatan, kabupaten"></textarea><label id="registerPhoneLabel" for="registerPhone">Nomor WhatsApp aktif</label><input class="field" id="registerPhone" type="tel" maxlength="20" autocomplete="tel" placeholder="08xxxxxxxxxx"><p class="muted">Pastikan nomor WhatsApp aktif dan dapat dihubungi.</p></div><div class="authgrid"><div><label for="email">Alamat email</label><input class="field" id="email" type="email" autocomplete="email" placeholder="nama@email.com"></div><div><label for="password">Kata sandi</label><input class="field" id="password" type="password" autocomplete="current-password" minlength="8" maxlength="72" placeholder="Minimal 8 karakter"></div></div>
