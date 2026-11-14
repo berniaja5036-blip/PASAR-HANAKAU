@@ -1,17 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-<defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="#075b32"/><stop offset="1" stop-color="#168447"/></linearGradient></defs>
-<rect width="512" height="512" rx="112" fill="url(#g)"/>
-<path d="M70 208 256 78l186 130v28H70z" fill="#ffd52e" stroke="#fff" stroke-width="12" stroke-linejoin="round"/>
-<path d="M104 220h304v118H104z" fill="#fff8df"/><path d="M104 250h304v25H104z" fill="#168447"/>
-<path d="M104 250h38v25h-38m76-25h38v25h-38m76-25h38v25h-38m76-25h38v25h-38" fill="#fff"/>
-<text x="256" y="190" font-family="Arial,sans-serif" font-size="54" font-weight="900" text-anchor="middle" fill="#075b32">PASAR</text>
-<text x="256" y="318" font-family="Arial,sans-serif" font-size="42" font-weight="900" text-anchor="middle" fill="#075b32">HANAKAU</text>
-<path d="M92 370h328l-28 80H120z" fill="#075b32" stroke="#ffd52e" stroke-width="9"/>
-<text x="256" y="425" font-family="Arial,sans-serif" font-size="66" font-weight="900" text-anchor="middle" fill="#fff">PH</text>
-<g stroke="#fff" stroke-width="8" stroke-linejoin="round">
-<path d="M104 365c-12-36 8-62 33-48 14-30 48-21 45 8 26 5 29 35 7 49z" fill="#7cc84a"/>
-<path d="M335 370c-9-35 11-57 34-43 12-29 44-20 43 8 24 5 28 34 8 47z" fill="#7cc84a"/>
-</g>
-<path d="M143 353c-9-23-4-43 11-50 18 14 22 31 11 50z" fill="#ff8a19"/><path d="M365 353c-8-23-3-43 12-50 18 14 22 31 11 50z" fill="#e83e35"/>
-<path d="M145 353h20m200 0h20" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
+<defs><linearGradient id="bg" x2="0.2" y2="1"><stop stop-color="#17a5e8"/><stop offset="1" stop-color="#075b32"/></linearGradient><linearGradient id="skin" x2="1" y2="1"><stop stop-color="#f1f0ff"/><stop offset="1" stop-color="#9299b7"/></linearGradient></defs>
+<rect width="512" height="512" rx="94" fill="url(#bg)" stroke="#ffd52e" stroke-width="12"/>
+<path d="M250 54 370 12 490 90v110H250z" fill="#f4a51c" stroke="#57331c" stroke-width="10"/><path d="M282 104h188v66H282z" fill="#fff5d9"/><text x="376" y="132" text-anchor="middle" font-size="28" font-weight="900" fill="#075b32">PASAR</text><text x="376" y="160" text-anchor="middle" font-size="26" font-weight="900" fill="#075b32">HANAKAU</text>
+<path d="M72 160q-30-70 55-90 65-12 91 45 68-36 132 18 42 36 20 103l-12 83q-8 50-70 51H145q-72-4-78-77z" fill="url(#skin)" stroke="#20233a" stroke-width="10"/>
+<path d="M72 164q-58-5-53 65 3 51 60 67l48-55q-6-57-55-77" fill="#f58a9b" stroke="#20233a" stroke-width="9"/>
+<path d="M290 146q40-32 68 4 22 30-4 62l-27 32q-14 24 5 44 18 18 39-3l28-33" fill="none" stroke="#20233a" stroke-width="34" stroke-linecap="round"/><path d="M290 146q40-32 68 4 22 30-4 62l-27 32q-14 24 5 44 18 18 39-3l28-33" fill="none" stroke="url(#skin)" stroke-width="25" stroke-linecap="round"/>
+<ellipse cx="218" cy="192" rx="24" ry="34" fill="#fff" stroke="#20233a" stroke-width="7"/><ellipse cx="224" cy="199" rx="12" ry="21" fill="#42271d"/><circle cx="228" cy="190" r="6" fill="#fff"/>
+<path d="M186 253q47 48 97 0-7 69-53 68-40-4-44-68" fill="#a70f22" stroke="#20233a" stroke-width="8"/><path d="M204 282q29 24 56 0" fill="none" stroke="#ff6275" stroke-width="12" stroke-linecap="round"/>
+<path d="M122 304q78-32 160 2l-10 106H125z" fill="#13823e" stroke="#ffd52e" stroke-width="12"/><text x="202" y="376" font-size="57" text-anchor="middle" font-weight="900" fill="#fff">PH</text>
+<path d="M30 403h230l-18 62H48z" fill="#aab7ca" stroke="#27334b" stroke-width="9"/><path d="M58 403l15 62m46-62 8 62m48-62 2 62m48-62-8 62M35 430h215" stroke="#27334b" stroke-width="6"/><circle cx="70" cy="405" r="17" fill="#e43c2f"/><circle cx="112" cy="402" r="18" fill="#f5bc16"/><path d="M143 405q15-40 33 0" fill="#4da843"/><path d="M172 403l19-23 20 23" fill="#ee8c20"/>
+<path d="M28 466h456v34H28z" fill="#075b32" stroke="#ffd52e" stroke-width="7"/><text x="256" y="491" text-anchor="middle" font-size="24" font-weight="900" fill="#fff">PASAR HANAKAU</text>
 </svg>
