@@ -34,7 +34,6 @@ jobs:
           grep -q "addEventListener" /tmp/sw.js
           echo "PWA manifest and service worker are reachable and structurally valid."
 
-
   build-android:
     needs: validate-pwa
     runs-on: ubuntu-latest
@@ -62,19 +61,19 @@ jobs:
           packages: platform-tools platforms;android-35 build-tools;35.0.0
       - name: Install Bubblewrap
         run: npm install --global @bubblewrap/cli
-      - name: Generate Android project from the live PWA
+      - name: Generate Android project from the verified TWA manifest
         env:
-          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
+          set -eu
           mkdir -p "$HOME/.bubblewrap"
           echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > "$HOME/.bubblewrap/config.json"
-          mkdir -p android
-          yes '' | bubblewrap init --manifest="https://berniaja5036-blip.github.io/PASAR-HANAKAU/manifest.webmanifest" --directory=android
-          cp android/twa-manifest.template.json android/twa-manifest.json
           mkdir -p android/android-keystore
-          printf '%s' "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/android-keystore/pasar-hanakau.keystore
-          bubblewrap update --manifest=android --skipVersionUpgrade
+          cp android/twa-manifest.template.json android/twa-manifest.json
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/android-keystore/pasar-hanakau.keystore
+          test -s android/android-keystore/pasar-hanakau.keystore
+          cd android
+          bubblewrap update --skipVersionUpgrade
       - name: Verify signing certificate matches Digital Asset Links
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
