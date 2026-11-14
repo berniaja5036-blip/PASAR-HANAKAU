@@ -24,7 +24,7 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v3
         with:
-          packages: platform-tools platforms;android-35 build-tools;35.0.0
+          packages: platform-tools platforms;android-35 build-tools;36.1.0
       - name: Validate live PWA manifest and app assets
         run: |
           set -eu
@@ -67,6 +67,12 @@ jobs:
         run: |
           set -eu
           mkdir -p "$HOME/.bubblewrap"
+          # Bubblewrap validates that the SDK root contains a top-level bin/ directory.
+          # GitHub's Android SDK image keeps sdkmanager under cmdline-tools/<version>/bin.
+          SDKMANAGER_DIR=$(find "$ANDROID_HOME/cmdline-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+          test -x "$SDKMANAGER_DIR/bin/sdkmanager"
+          mkdir -p "$ANDROID_HOME/bin"
+          ln -sf "$SDKMANAGER_DIR/bin/sdkmanager" "$ANDROID_HOME/bin/sdkmanager"
           echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > "$HOME/.bubblewrap/config.json"
           mkdir -p android/android-keystore
           cp android/twa-manifest.template.json android/twa-manifest.json
