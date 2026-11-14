@@ -123,7 +123,7 @@ private fun NativeMarketplaceHome(onOpenMarketplace: () -> Unit) {
             }
         )
     } else Column(
-        modifier = Modifier.fillMaxSize().background(PhBackground)
+        modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).background(PhBackground)
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().background(PhDark).padding(horizontal = 18.dp, vertical = 16.dp)
@@ -232,7 +232,7 @@ private fun NativeMarketplaceHome(onOpenMarketplace: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            BottomItem("Beranda", true) { }
+            BottomItem("Beranda", true) { query = ""; selectedCategory = "Semua"; selectedProduct = null; showCart = false }
             BottomItem("Kategori", false, onOpenMarketplace)
             BottomItem("Pesanan", false, onOpenMarketplace)
             BottomItem("Akun", false, onOpenMarketplace)
@@ -242,7 +242,7 @@ private fun NativeMarketplaceHome(onOpenMarketplace: () -> Unit) {
 
 @Composable
 private fun NativeProductDetail(product: NativeProduct, onBack: () -> Unit, onAddToCart: () -> Unit) {
-    Column(Modifier.fillMaxSize().background(PhBackground)) {
+    Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).background(PhBackground)) {
         Row(
             modifier = Modifier.fillMaxWidth().background(PhDark).padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
