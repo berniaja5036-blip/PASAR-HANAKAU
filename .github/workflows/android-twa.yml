@@ -1,0 +1,71 @@
+name: Android TWA build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-pwa:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate live PWA for Trusted Web Activity
+        run: |
+          npm install --global @bubblewrap/cli
+          bubblewrap validate --url="https://berniaja5036-blip.github.io/PASAR-HANAKAU/"
+
+  build-android:
+    needs: validate-pwa
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check release secrets and Digital Asset Links
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -eu
+          test -n "$ANDROID_KEYSTORE_BASE64" || { echo "::error::Secret ANDROID_KEYSTORE_BASE64 belum diatur."; exit 1; }
+          test -n "$ANDROID_KEYSTORE_PASSWORD" || { echo "::error::Secret ANDROID_KEYSTORE_PASSWORD belum diatur."; exit 1; }
+          test -n "$ANDROID_KEY_PASSWORD" || { echo "::error::Secret ANDROID_KEY_PASSWORD belum diatur."; exit 1; }
+          curl --fail --silent --show-error "https://berniaja5036-blip.github.io/.well-known/assetlinks.json" -o /tmp/assetlinks.json
+          echo "Digital Asset Links tersedia di origin root."
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Bubblewrap
+        run: npm install --global @bubblewrap/cli
+      - name: Generate Android project from the live PWA
+        run: |
+          mkdir -p android
+          printf '\\n%.0s' {1..80} | bubblewrap init --manifest="https://berniaja5036-blip.github.io/PASAR-HANAKAU/manifest.webmanifest" --directory=android
+          cp android/twa-manifest.template.json android/twa-manifest.json
+          mkdir -p android/android-keystore
+          printf '%s' "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/android-keystore/pasar-hanakau.keystore
+          bubblewrap update --manifest=android --skipVersionUpgrade
+      - name: Verify signing certificate matches Digital Asset Links
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          set -eu
+          keytool -list -v -keystore android/android-keystore/pasar-hanakau.keystore -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias pasar-hanakau > /tmp/cert.txt
+          FINGERPRINT=$(sed -n 's/.*SHA256: //p' /tmp/cert.txt | head -n 1 | tr -d ':')
+          PACKAGE='id.pasarhanakau.mobile'
+          node -e "const a=require('/tmp/assetlinks.json'); const p=process.argv[1], f=process.argv[2]; if(!a.some(x=>x.target?.package_name===p && x.target?.sha256_cert_fingerprints?.some(v=>v.replace(/:/g,'').toLowerCase()===f.toLowerCase()))) process.exit(1)" "$PACKAGE" "$FINGERPRINT" || { echo "::error::Fingerprint atau package ID tidak cocok dengan assetlinks.json."; exit 1; }
+      - name: Build signed APK and AAB
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: bubblewrap build --manifest=android --signingKeyPath=android/android-keystore/pasar-hanakau.keystore --signingKeyAlias=pasar-hanakau
+      - name: Upload Android release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pasar-hanakau-android-release
+          path: |
+            android/app-release-signed.apk
+            android/app-release-bundle.aab
+          if-no-files-found: error
