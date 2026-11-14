@@ -295,7 +295,7 @@ if (!driverAssignmentMigration.includes('public.is_admin()') ||
 }
 
 const driverProfileScopeMigration = readMigration('scope_driver_profile_visibility_to_related_orders');
-const driverProfilePolicy = driverProfileScopeMigration.match(/create policy driver_profiles_read_scoped[\s\S]*?using\s*\(([\s\S]*?)\);/i);
+const driverProfilePolicy = driverProfileScopeMigration.match(/create policy driver_profiles_read_scoped[\s\S]*?using\s*\(([\s\S]*?)^\);/im);
 if (!driverProfilePolicy ||
     !driverProfilePolicy[1].includes('id = (select auth.uid())') ||
     !driverProfilePolicy[1].includes('(select public.is_admin())') ||
