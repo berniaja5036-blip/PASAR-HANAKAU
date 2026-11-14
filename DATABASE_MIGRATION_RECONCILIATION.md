@@ -1,16 +1,16 @@
 # Database migration reconciliation
 
-Last reconciled: 2026-11-12.
+Last reconciled: 2026-11-14.
 
 ## Canonical migration history
 
-The live Supabase project has **61 applied migration records**. The repository previously had 95 SQL files directly inside `supabase/migrations/`, with duplicate version prefixes and local prefixes that did not match the live 14-digit migration versions.
+The live Supabase project has **62 applied migration records**. The repository previously had 95 SQL files directly inside `supabase/migrations/`, with duplicate version prefixes and local prefixes that did not match the live 14-digit migration versions.
 
 This reconciliation changes **filenames and locations only**; the SQL bodies of all files are preserved byte-for-byte:
 
-- 61 files are retained in `supabase/migrations/` and renamed to exactly match the live database's `version_name.sql` records.
-- 34 files are moved unchanged to `supabase/migrations-archive/`, outside the Supabase CLI migration scan directory.
-- No migration is applied to the production database by this reconciliation.
+- The 61 files from the 12 November reconciliation remain in `supabase/migrations/` and match the then-current live `version_name.sql` records.
+- 34 historical files remain unchanged in `supabase/migrations-archive/`, outside the Supabase CLI migration scan directory.
+- On 14 November, one forward migration was applied and committed as the 62nd canonical migration: `20261114024945_scope_driver_profile_visibility_to_related_orders.sql`.
 
 The five historical filename equivalents are now canonicalized to the exact live migration names:
 
@@ -21,6 +21,12 @@ The five historical filename equivalents are now canonicalized to the exact live
 | `20261111172816` | `restrict_push_webhook_token_lookup_to_service_role` | `202611110022_restrict_push_webhook_token_lookup.sql` |
 | `20261111174121` | `fix_rating_insert_policy_qualification` | `202611120002_fix_rating_insert_policies.sql` |
 | `20261112033138` | `protect_active_driver_documents_from_owner_deletion` | `202611120020_protect_active_driver_documents.sql` |
+
+## 14 November forward migration
+
+The live `driver_profiles_read_scoped` policy was already narrower than the older canonical policy from `20261111182828_consolidate_permissive_select_policies.sql`, but that production restriction was not represented by a later canonical migration. The new migration `20261114024945_scope_driver_profile_visibility_to_related_orders.sql` records the restriction in migration history.
+
+The policy permits a driver to read their own profile, an administrator to read profiles for dispatch, and a buyer or seller to read a driver's vehicle profile only when that driver is assigned to an order the current user is allowed to access. The check uses the active-account-aware `current_user_can_read_delivery_order(uuid)` helper. No driver, order, stock, payment, or Storage rows were changed.
 
 ## Archived files
 
@@ -44,9 +50,9 @@ Supabase CLI v3 changed database commands to target the local stack by default; 
 
 ## Verification performed
 
-- Live migration history was read using the Supabase migration-list endpoint: 61 records.
+- Live migration history was read using the Supabase migration-list endpoint: 62 records, including `20261114024945_scope_driver_profile_visibility_to_related_orders`.
 - Every live version/name pair has exactly one canonical repository file after this reconciliation.
 - The canonical directory has unique 14-digit version prefixes and no duplicate versions.
 - The five archived-but-applied SQL effects were checked in the live catalog: helper ACLs and `search_path`, profile column grants, rating-summary function definitions, and product/shop status grants plus guard triggers.
 - The two old bootstrap table names were confirmed absent from the current public schema.
-- No production schema, user, order, stock, payment, or Storage data was changed.
+- The new forward migration changes only the `driver_profiles_read_scoped` SELECT policy; no user, order, stock, payment, or Storage data was changed.

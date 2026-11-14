@@ -23,7 +23,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Check inline JavaScript syntax
+      - name: Check inline JavaScript and security regression checks
         run: node scripts/check-inline-js.mjs
       - name: Check PWA manifest and icons
         run: node scripts/check-pwa-manifest.mjs

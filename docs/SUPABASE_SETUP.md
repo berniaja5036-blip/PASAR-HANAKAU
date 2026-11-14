@@ -1,18 +1,26 @@
 # Menyiapkan proyek Supabase Pasar Hanakau
 
-Dokumen ini mengikuti skema database yang dipakai website saat ini: `profiles`, `shops`, `categories`, `products`, `orders`, `order_items`, `driver_profiles`, dan `deliveries`.
+Dokumen ini menjelaskan database aktif yang digunakan website Pasar Hanakau: `profiles`, `shops`, `categories`, `products`, `orders`, `order_items`, `driver_profiles`, `deliveries`, dan tabel fitur pendukung.
 
-## Urutan migrasi
+## Status skema dan migrasi
 
-Untuk database baru, mulai dengan migrasi dasar berikut secara berurutan:
+Proyek aktif memakai riwayat migrasi kanonis 14 digit di `supabase/migrations/`. Per 14 November 2026, terdapat 62 migrasi yang sudah tercatat pada proyek Supabase aktif.
 
-1. `supabase/migrations/001_initial_schema.sql`
-2. `supabase/migrations/002_row_level_security.sql`
-3. `supabase/migrations/003_data_api_grants.sql`
+**Penting: folder migrasi aktif bukan paket bootstrap untuk database kosong.** File lama bernomor `001`–`025` dan rancangan alternatif `20261106...` berada di `supabase/migrations-archive/` untuk referensi historis. Jangan jalankan file arsip, jangan menjalankan semua SQL sekaligus, dan jangan mengulang migrasi yang sudah diterapkan. Jika membuat proyek Supabase baru, siapkan baseline skema yang ditinjau khusus atau pulihkan backup tervalidasi terlebih dahulu; jangan memakai file arsip sebagai instalasi baru.
 
-Fitur aplikasi saat ini juga memerlukan migrasi lanjutan `004` sampai `023` sesuai urutan nomor. Migrasi `202611120015_checkout_request_idempotency.sql` menambahkan perlindungan kunci checkout agar percobaan ulang dengan isi keranjang dan alamat yang sama mengembalikan pesanan yang sudah dibuat, bukan membuat pesanan baru. Pada database yang sudah dipakai, jalankan hanya migrasi yang memang belum diterapkan—jangan mengulang migrasi lama. Khusus migrasi `023_secure_seller_order_read.sql`, jalankan satu kali setelah `022`; migrasi ini menambahkan RPC baca pesanan Seller yang membatasi data dan menghapus kebijakan baca langsung Seller pada tabel `orders`.
+Migrasi penting pada skema aktif:
 
-Jangan jalankan file skema alternatif bertanggal `20261106...`; file tersebut memakai rancangan tabel berbeda dan bukan skema yang digunakan website saat ini.
+- `20261112022146_checkout_request_idempotency.sql` menyimpan kunci percobaan checkout per pembeli agar pengulangan permintaan yang sama tidak membuat pesanan ganda.
+- `20261114024945_scope_driver_profile_visibility_to_related_orders.sql` membatasi data `driver_profiles`: driver hanya dapat membaca profilnya sendiri, admin dapat membaca untuk pengelolaan, sedangkan pembeli/penjual hanya dapat melihat driver yang ditugaskan pada pesanan yang memang dapat mereka akses.
+- RPC `seller_list_orders()` sudah tersedia pada database aktif. Hasilnya dibatasi pada nomor/status/tanggal pesanan, catatan untuk penjual, rincian barang milik toko penjual, dan riwayat status. RPC ini tidak mengembalikan alamat atau koordinat GPS pembeli. Instruksi lama tentang `023_secure_seller_order_read.sql` tidak berlaku; file tersebut bukan migrasi kanonis dan tidak boleh dicari atau dijalankan.
+
+## Prosedur perubahan database
+
+1. Periksa riwayat remote dengan `supabase migration list --remote` pada proyek yang benar.
+2. Cocokkan setiap versi/nama remote dengan satu file kanonis di `supabase/migrations/`.
+3. Tinjau SQL migrasi baru sebelum diterapkan; terapkan hanya migrasi yang memang belum tercatat.
+4. Setelah penerapan, periksa ulang riwayat migrasi dan kebijakan/izin yang berubah.
+5. Jangan mengedit `supabase_migrations.schema_migrations` secara manual.
 
 ## Akun
 
@@ -31,8 +39,9 @@ where id = 'GANTI_DENGAN_UUID_AKUN_ADMIN';
 
 ## Keamanan dan batas tahap ini
 
-- File `003_data_api_grants.sql` hanya memberi izin baca minimum pada katalog publik dan profil akun. Row Level Security (RLS) tetap membatasi baris yang terlihat.
-- Checkout transaksional, pengelolaan status pesanan, permintaan pembatalan, dan penugasan/pembaruan pengiriman Driver sudah tersedia melalui RPC yang memeriksa peran dan stok.
+- Row Level Security (RLS), hak SQL, dan fungsi database harus menegakkan akses; tampilan website bukan batas keamanan.
+- Checkout transaksional, pengelolaan status pesanan, permintaan pembatalan, dan penugasan/pembaruan pengiriman Driver tersedia melalui Edge Function/RPC yang memeriksa peran, status akun, stok, dan status pesanan.
+- Tarif ongkir masih nonaktif sampai jarak jalan dan penyimpanan tarif diuji menyeluruh. Jangan menganggap estimasi sebagai tagihan final.
 - Pembayaran sungguhan, top-up, dan dompet saldo belum tersedia. Jangan gunakan aplikasi ini untuk menerima uang atau pembayaran sungguhan.
-- Jangan pernah memasukkan password, service-role key, atau access token ke kode website maupun repositori.
+- Jangan pernah memasukkan password, service-role key, access token, atau rahasia ke kode website maupun repositori.
 - Publishable key boleh digunakan di browser; keamanan data tetap wajib ditegakkan oleh RLS dan izin database.

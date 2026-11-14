@@ -45,7 +45,7 @@ Fitur-fitur tersebut sudah memiliki implementasi kode/database. Uji simulasi dat
 - Website: GitHub Pages melalui GitHub Actions.
 - Migrasi database berada di `supabase/migrations/`. Jangan menjalankan ulang migrasi yang sudah diterapkan atau menjalankan seluruh file SQL sebagai satu batch.
 
-**Status rekonsiliasi migrasi (12 November 2026):** direktori `supabase/migrations/` kini diselaraskan dengan 61 versi/nama migrasi yang tercatat di proyek aktif. Sebanyak 34 file lama dipindahkan tanpa perubahan SQL ke `supabase/migrations-archive/`. Sebelum perubahan database berikutnya, jalankan `supabase migration list --remote` dan pastikan tidak ada migrasi tak terduga yang tertunda. Jangan menjalankan arsip atau mengubah tabel riwayat migrasi secara manual. Lihat `DATABASE_MIGRATION_RECONCILIATION.md` untuk rincian dan prosedur aman.
+**Status rekonsiliasi migrasi (14 November 2026):** direktori `supabase/migrations/` kini berisi 62 migrasi kanonis yang cocok dengan riwayat proyek aktif. Sebanyak 34 file historis tetap disimpan tanpa perubahan SQL di `supabase/migrations-archive/`. Migrasi terbaru `20261114024945_scope_driver_profile_visibility_to_related_orders.sql` membatasi pembacaan profil kendaraan driver kepada driver itu sendiri, admin, serta pembeli/penjual yang memiliki akses ke pesanan terkait. Sebelum perubahan database berikutnya, cocokkan `supabase migration list --remote` dengan file kanonis. Jangan menjalankan arsip, mengulang migrasi, atau mengubah tabel riwayat migrasi secara manual. Lihat `DATABASE_MIGRATION_RECONCILIATION.md` untuk rincian dan prosedur aman.
 
 ### Backup otomatis database dan Storage
 

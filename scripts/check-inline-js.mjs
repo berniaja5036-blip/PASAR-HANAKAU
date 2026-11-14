@@ -294,4 +294,15 @@ if (!driverAssignmentMigration.includes('public.is_admin()') ||
   process.exit(1);
 }
 
-console.log('JavaScript syntax check passed (' + moduleBlocks.length + ' inline module).');
+const driverProfileScopeMigration = readMigration('scope_driver_profile_visibility_to_related_orders');
+const driverProfilePolicy = driverProfileScopeMigration.match(/create policy driver_profiles_read_scoped[\\s\\S]*?using\\s*\\(([\\s\\S]*?)\\);/i);
+if (!driverProfilePolicy ||
+    !driverProfilePolicy[1].includes('id = (select auth.uid())') ||
+    !driverProfilePolicy[1].includes('(select public.is_admin())') ||
+    !driverProfilePolicy[1].includes('d.driver_id = driver_profiles.id') ||
+    !driverProfilePolicy[1].includes('public.current_user_can_read_delivery_order(d.order_id)')) {
+  console.error('Driver profile reads must be limited to the driver, admin, and users who can access an associated order.');
+  process.exit(1);
+}
+
+console.log('JavaScript syntax and marketplace security regression checks passed (' + moduleBlocks.length + ' inline module).');
