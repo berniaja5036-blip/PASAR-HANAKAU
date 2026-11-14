@@ -105,7 +105,7 @@ public class MainActivity extends Activity {
                     intent = params.createIntent();
                     startActivityForResult(intent, FILE_CHOOSER_REQUEST);
                     return true;
-                } catch (ActivityNotFoundException | RuntimeException e) {
+                } catch (RuntimeException e) {
                     uploadCallback = null;
                     Toast.makeText(MainActivity.this,
                         "Tidak ada aplikasi untuk memilih berkas.", Toast.LENGTH_SHORT).show();
