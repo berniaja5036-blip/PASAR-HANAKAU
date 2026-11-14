@@ -1,0 +1,29 @@
+{
+  "packageId": "id.pasarhanakau.mobile",
+  "host": "berniaja5036-blip.github.io",
+  "name": "Pasar Hanakau",
+  "launcherName": "Pasar Hanakau",
+  "display": "standalone",
+  "themeColor": "#176b45",
+  "themeColorDark": "#176b45",
+  "navigationColor": "#176b45",
+  "navigationColorDark": "#176b45",
+  "backgroundColor": "#f3f7f2",
+  "enableNotifications": true,
+  "enableSiteSettingsShortcut": true,
+  "startUrl": "/PASAR-HANAKAU/",
+  "iconUrl": "https://berniaja5036-blip.github.io/PASAR-HANAKAU/icons/icon-512.png",
+  "maskableIconUrl": "https://berniaja5036-blip.github.io/PASAR-HANAKAU/icons/icon-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android-keystore/pasar-hanakau.keystore",
+    "alias": "pasar-hanakau"
+  },
+  "appVersion": "1.0.0",
+  "appVersionCode": 1,
+  "minSdkVersion": 23,
+  "orientation": "portrait",
+  "fallbackType": "customtabs",
+  "webManifestUrl": "https://berniaja5036-blip.github.io/PASAR-HANAKAU/manifest.webmanifest",
+  "fullScopeUrl": "https://berniaja5036-blip.github.io/PASAR-HANAKAU/"
+}
