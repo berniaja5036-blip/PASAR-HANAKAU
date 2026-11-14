@@ -131,6 +131,10 @@ body.ph-buyer-mode .notice{font-size:12px}
 .workspace-content>.tile{margin:8px 0}
 
 
+/* Keep decorative header artwork from intercepting taps on the guest navigation. */
+.top:after{pointer-events:none}
+.market-header-main,.market-header-sub{position:relative;z-index:2}
+
 /* Public marketplace storefront before sign-in */
 .market-header-main{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1120px;margin:auto}
 .market-header-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
