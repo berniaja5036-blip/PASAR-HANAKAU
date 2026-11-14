@@ -25,8 +25,8 @@ for (const requiredSize of ["192x192", "512x512"]) {
     const width = bytes.readUInt32BE(16);
     const height = bytes.readUInt32BE(20);
     const expected = Number(requiredSize.split("x")[0]);
-    if (width !== expected || height !== expected) {
-      throw new Error(`Icon ${icon.src} must be ${requiredSize}; found ${width}x${height}.`);
+    if (width < expected || height < expected || !icon.sizes?.split(/\s+/).includes(`${width}x${height}`)) {
+      throw new Error(`Icon ${icon.src} must be at least ${requiredSize} and declare its actual dimensions; found ${width}x${height}.`);
     }
   }
 }
