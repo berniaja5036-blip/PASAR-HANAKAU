@@ -305,7 +305,7 @@ if (!driverProfilePolicy ||
   process.exit(1);
 }
 
-const driverReviewTrimMigration = readMigration('fix_driver_application_review_trim_function');
+const driverReviewTrimMigration = readMigration('fix_driver_application_review_trim_function').toLowerCase();
 if (!driverReviewTrimMigration.includes('create or replace function public.admin_review_driver_application') ||
     !driverReviewTrimMigration.includes('pg_catalog.btrim(v_app.ktp_image_path)') ||
     !driverReviewTrimMigration.includes('pg_catalog.btrim(v_app.face_image_path)') ||
