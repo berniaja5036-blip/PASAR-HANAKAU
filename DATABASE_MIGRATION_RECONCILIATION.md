@@ -50,7 +50,7 @@ Supabase CLI v3 changed database commands to target the local stack by default; 
 
 ## Verification performed
 
-- Live migration history was read using the Supabase migration-list endpoint: 62 records, including `20261114024945_scope_driver_profile_visibility_to_related_orders`.
+- Live migration history was read using the Supabase migration-list endpoint: 66 records, including `20261114024945_scope_driver_profile_visibility_to_related_orders` and `20261114025139_fix_driver_application_review_trim_function`.
 - Every live version/name pair has exactly one canonical repository file after this reconciliation.
 - The canonical directory has unique 14-digit version prefixes and no duplicate versions.
 - The five archived-but-applied SQL effects were checked in the live catalog: helper ACLs and `search_path`, profile column grants, rating-summary function definitions, and product/shop status grants plus guard triggers.

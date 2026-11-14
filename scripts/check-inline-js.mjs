@@ -310,6 +310,7 @@ if (!driverReviewTrimMigration.includes('create or replace function public.admin
     !driverReviewTrimMigration.includes('pg_catalog.btrim(v_app.ktp_image_path)') ||
     !driverReviewTrimMigration.includes('pg_catalog.btrim(v_app.face_image_path)') ||
     !driverReviewTrimMigration.includes("so.bucket_id = 'driver-private-documents'") ||
+    !driverReviewTrimMigration.includes('public.is_admin()') ||
     driverReviewTrimMigration.includes('pg_catalog.trim(')) {
   console.error('Driver application approval must safely trim and verify both stored identity-document paths.');
   process.exit(1);
