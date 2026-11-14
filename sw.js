@@ -1,5 +1,5 @@
-const CACHE_NAME = "pasar-hanakau-shell-v7";
-const APP_SHELL = ["./", "./manifest.webmanifest", "./icons/icon.svg", "./icons/icon-192.png", "./icons/icon-512.png"];
+const CACHE_NAME = "pasar-hanakau-shell-v8";
+const APP_SHELL = ["./", "./manifest.webmanifest", "./icons/icon.svg", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/logo-pasar-hanakau.png"];
 
 self.addEventListener("install", event => {
   event.waitUntil((async () => {
