@@ -1,6 +1,11 @@
 name: Build Pasar Hanakau Android App
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - '.github/workflows/android-twa.yml'
   push:
     branches: [main, native-android-foundation]
     paths:
