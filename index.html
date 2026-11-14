@@ -1177,6 +1177,14 @@ async function loadAdminOrders(){
 
 }
 $('refreshAdminOrders').addEventListener('click',loadAdminOrders);
+$('adminOrders')?.addEventListener('click',async e=>{
+ const btn=e.target.closest('[data-review-order-payment]');if(!btn)return;
+ const status=btn.dataset.paymentStatus,note=status==='rejected'?(prompt('Alasan penolakan / petunjuk perbaikan:')||'Bukti pembayaran perlu diperiksa kembali.'):'Pembayaran transfer telah diterima dan diverifikasi admin.';
+ if(status==='rejected'&&!note.trim())return;btn.disabled=true;
+ const {error}=await supabase.from('order_payment_submissions').update({status,admin_note:note,reviewed_at:new Date().toISOString(),reviewed_by:activeAccountUserId,updated_at:new Date().toISOString()}).eq('id',btn.dataset.reviewOrderPayment);
+ if(error){btn.disabled=false;message('adminMessage','Status pembayaran gagal diperbarui: '+error.message,true);return;}
+ message('adminMessage',status==='confirmed'?'Pembayaran pembeli telah dikonfirmasi.':'Konfirmasi pembayaran ditolak; pembeli dapat mengirim ulang.');await loadAdminOrders();
+});
 function filterAdminOrders(){const q=$('adminOrderSearch')?.value.trim().toLocaleLowerCase('id-ID')||'',status=$('adminOrderStatus')?.value||'';let shown=0;document.querySelectorAll('[data-admin-order-card]').forEach(card=>{const matchText=(card.dataset.search||'').includes(q),matchStatus=!status||card.dataset.status===status;card.classList.toggle('hidden',!(matchText&&matchStatus));if(matchText&&matchStatus)shown++;});const box=$('adminOrders');let empty=$('adminOrderFilterEmpty');if(!empty){empty=document.createElement('p');empty.id='adminOrderFilterEmpty';empty.className='muted';box.appendChild(empty);}empty.textContent=shown?'Menampilkan '+shown+' pesanan sesuai filter.':'Tidak ada pesanan yang cocok dengan pencarian/filter.';empty.classList.toggle('hidden',shown>0||!document.querySelector('[data-admin-order-card]'));}
 $('adminOrderSearch').addEventListener('input',filterAdminOrders);$('adminOrderStatus').addEventListener('change',filterAdminOrders);
 $('exportAdminOrders').addEventListener('click',async()=>{
@@ -1657,6 +1665,14 @@ async function loadBuyerOrders(){
  }).join('');
 }
 $('refreshBuyerOrders').addEventListener('click',loadBuyerOrders);
+$('buyerOrders')?.addEventListener('click',async e=>{
+ const btn=e.target.closest('[data-submit-order-payment]');if(!btn)return;
+ const orderId=btn.dataset.submitOrderPayment,methodId=$('orderPayMethod-'+orderId)?.value,reference=$('orderPayRef-'+orderId)?.value.trim()||'';
+ if(!methodId){message('checkoutMessage','Pilih rekening tujuan transfer.',true);return;}if(reference.length<4){message('checkoutMessage','Masukkan nomor referensi transfer minimal 4 karakter.',true);return;}
+ btn.disabled=true;const {error}=await supabase.rpc('buyer_submit_order_payment',{p_order_id:orderId,p_payment_method_id:methodId,p_payment_reference:reference});
+ if(error){btn.disabled=false;message('checkoutMessage','Konfirmasi transfer gagal dikirim: '+error.message,true);return;}
+ message('checkoutMessage','Konfirmasi transfer terkirim. Pesanan menunggu verifikasi admin.');await loadBuyerOrders();
+});
 $('buyerOrders').addEventListener('click',async e=>{
  const buyAgainButton=e.target.closest('[data-buy-again]');
  if(buyAgainButton){
