@@ -74,7 +74,7 @@ jobs:
           test -s android/android-keystore/pasar-hanakau.keystore
           cd android
           bubblewrap doctor
-          bubblewrap update --skipVersionUpgrade --manifest="$PWD/twa-manifest.json"
+          bubblewrap update --skipVersionUpgrade --manifest=.
       - name: Verify signing certificate matches Digital Asset Links
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
