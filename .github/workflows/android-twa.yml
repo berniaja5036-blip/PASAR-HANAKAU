@@ -28,7 +28,8 @@ jobs:
       - name: Validate live PWA for Trusted Web Activity
         run: |
           npm install --global @bubblewrap/cli
-          bubblewrap updateConfig --jdkPath="$JAVA_HOME" --androidSdkPath="$ANDROID_HOME"
+          mkdir -p "$HOME/.bubblewrap"
+          echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > "$HOME/.bubblewrap/config.json"
           bubblewrap validate --url="https://berniaja5036-blip.github.io/PASAR-HANAKAU/"
 
   build-android:
@@ -63,7 +64,8 @@ jobs:
           BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          bubblewrap updateConfig --jdkPath="$JAVA_HOME" --androidSdkPath="$ANDROID_HOME"
+          mkdir -p "$HOME/.bubblewrap"
+          echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > "$HOME/.bubblewrap/config.json"
           mkdir -p android
           yes '' | bubblewrap init --manifest="https://berniaja5036-blip.github.io/PASAR-HANAKAU/manifest.webmanifest" --directory=android
           cp android/twa-manifest.template.json android/twa-manifest.json
