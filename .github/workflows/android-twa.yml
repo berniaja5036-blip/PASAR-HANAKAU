@@ -60,7 +60,7 @@ jobs:
         env:
           BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: bubblewrap build --manifest=android --signingKeyPath=android/android-keystore/pasar-hanakau.keystore --signingKeyAlias=pasar-hanakau
+        run: cd android && bubblewrap build --manifest=. --signingKeyPath=./android-keystore/pasar-hanakau.keystore --signingKeyAlias=pasar-hanakau
       - name: Upload Android release artifacts
         uses: actions/upload-artifact@v4
         with:
