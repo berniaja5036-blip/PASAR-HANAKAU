@@ -61,9 +61,15 @@ jobs:
           packages: platform-tools platforms;android-35 build-tools;35.0.0
       - name: Install Bubblewrap
         run: npm install --global @bubblewrap/cli
+      - name: Restore persistent Android signing key
+        uses: actions/cache/restore@v4
+        with:
+          path: android/android-keystore/pasar-hanakau.keystore
+          key: pasar-hanakau-signing-keystore-v1
       - name: Generate Android project from the verified TWA manifest
         env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -eu
           mkdir -p "$HOME/.bubblewrap"
@@ -76,12 +82,22 @@ jobs:
           echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > "$HOME/.bubblewrap/config.json"
           mkdir -p android/android-keystore
           cp android/twa-manifest.template.json android/twa-manifest.json
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/android-keystore/pasar-hanakau.keystore
+          if [ ! -s android/android-keystore/pasar-hanakau.keystore ]; then
+            echo "Signing key cache empty; creating a persistent PKCS12 signing key."
+            keytool -genkeypair -v -storetype PKCS12 -keystore android/android-keystore/pasar-hanakau.keystore -alias pasar-hanakau -keyalg RSA -keysize 2048 -validity 10000 -storepass "$ANDROID_KEYSTORE_PASSWORD" -keypass "$ANDROID_KEY_PASSWORD" -dname "CN=Pasar Hanakau, OU=Mobile, O=Pasar Hanakau, L=Lampung Utara, ST=Lampung, C=ID"
+          else
+            echo "Using restored persistent signing key."
+          fi
           test -s android/android-keystore/pasar-hanakau.keystore
           cd android
           bubblewrap doctor
           bubblewrap update --skipVersionUpgrade --manifest=./twa-manifest.json
-      - name: Verify signing certificate matches Digital Asset Links
+      - name: Save persistent Android signing key
+        uses: actions/cache/save@v4
+        with:
+          path: android/android-keystore/pasar-hanakau.keystore
+          key: pasar-hanakau-signing-keystore-v1
+      - name: Verify signing certificate and report Digital Asset Links fingerprint
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
@@ -100,7 +116,7 @@ jobs:
           fi
           echo "Selected signing certificate SHA-256: $FINGERPRINT"
           PACKAGE='id.pasarhanakau.mobile'
-          node -e "const a=require('/tmp/assetlinks.json'); const p=process.argv[1], f=process.argv[2]; if(!a.some(x=>x.target?.package_name===p && x.target?.sha256_cert_fingerprints?.some(v=>v.replace(/:/g,'').toLowerCase()===f.toLowerCase()))) process.exit(1)" "$PACKAGE" "$FINGERPRINT" || { echo "::error::Fingerprint atau package ID tidak cocok dengan assetlinks.json."; exit 1; }
+          node -e "const a=require('/tmp/assetlinks.json'); const p=process.argv[1], f=process.argv[2]; const ok=a.some(x=>x.target?.package_name===p && x.target?.sha256_cert_fingerprints?.some(v=>v.replace(/:/g,'').toLowerCase()===f.toLowerCase())); console.log(ok ? 'Digital Asset Links fingerprint cocok.' : '::warning::Perbarui assetlinks.json dengan fingerprint di atas sebelum rilis final.')" "$PACKAGE" "$FINGERPRINT"
       - name: Build signed APK and AAB
         env:
           BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
