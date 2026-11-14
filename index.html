@@ -1715,7 +1715,7 @@ function setupBuyerWorkspace(){
  const buyer=$('buyerPanel');if(!buyer)return;
  if(!phBuyerWorkspaceReady){
   const nodes=[...buyer.childNodes];
-  const split=nodes.findIndex(node=>node.nodeType===1&&node.matches('h3')&&node.textContent.toLowerCase().includes('riwayat pesanan saya'));
+  const historyHeading=[...buyer.querySelectorAll('h3')].find(node=>node.textContent.toLowerCase().includes('riwayat pesanan saya'));let splitNode=historyHeading;while(splitNode&&splitNode.parentNode!==buyer)splitNode=splitNode.parentNode;const split=splitNode?nodes.indexOf(splitNode):-1;
   const cart=document.createElement('section');cart.id='buyerCartPage';cart.className='';
   const orders=document.createElement('section');orders.id='buyerOrdersPage';orders.className='hidden';
   nodes.forEach((node,index)=>{(split>=0&&index>=split?orders:cart).appendChild(node)});
