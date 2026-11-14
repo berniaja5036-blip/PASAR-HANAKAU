@@ -1,6 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-<rect width="512" height="512" rx="112" fill="#176b45"/>
-<path d="M256 70c-18 53-25 95-18 135-35-36-77-51-132-50 33 35 49 73 48 116-26-17-58-25-98-22 37 27 62 60 74 99-22-5-46-3-72 8 55 28 92 62 110 104h176c18-42 55-76 110-104-26-11-50-13-72-8 12-39 37-72 74-99-40-3-72 5-98 22-1-43 15-81 48-116-55-1-97 14-132 50 7-40 0-82-18-135z" fill="#e7f5e9"/>
-<path d="M256 190v260" stroke="#f2b84b" stroke-width="18" stroke-linecap="round"/>
-<path d="M256 270c-49-40-87-48-127-42m127 88c48-39 87-48 127-42" fill="none" stroke="#f2b84b" stroke-width="14" stroke-linecap="round"/>
+<defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="#075b32"/><stop offset="1" stop-color="#168447"/></linearGradient></defs>
+<rect width="512" height="512" rx="112" fill="url(#g)"/>
+<path d="M70 208 256 78l186 130v28H70z" fill="#ffd52e" stroke="#fff" stroke-width="12" stroke-linejoin="round"/>
+<path d="M104 220h304v118H104z" fill="#fff8df"/><path d="M104 250h304v25H104z" fill="#168447"/>
+<path d="M104 250h38v25h-38m76-25h38v25h-38m76-25h38v25h-38m76-25h38v25h-38" fill="#fff"/>
+<text x="256" y="190" font-family="Arial,sans-serif" font-size="54" font-weight="900" text-anchor="middle" fill="#075b32">PASAR</text>
+<text x="256" y="318" font-family="Arial,sans-serif" font-size="42" font-weight="900" text-anchor="middle" fill="#075b32">HANAKAU</text>
+<path d="M92 370h328l-28 80H120z" fill="#075b32" stroke="#ffd52e" stroke-width="9"/>
+<text x="256" y="425" font-family="Arial,sans-serif" font-size="66" font-weight="900" text-anchor="middle" fill="#fff">PH</text>
+<g stroke="#fff" stroke-width="8" stroke-linejoin="round">
+<path d="M104 365c-12-36 8-62 33-48 14-30 48-21 45 8 26 5 29 35 7 49z" fill="#7cc84a"/>
+<path d="M335 370c-9-35 11-57 34-43 12-29 44-20 43 8 24 5 28 34 8 47z" fill="#7cc84a"/>
+</g>
+<path d="M143 353c-9-23-4-43 11-50 18 14 22 31 11 50z" fill="#ff8a19"/><path d="M365 353c-8-23-3-43 12-50 18 14 22 31 11 50z" fill="#e83e35"/>
+<path d="M145 353h20m200 0h20" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
 </svg>
