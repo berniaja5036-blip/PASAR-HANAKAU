@@ -621,17 +621,17 @@ async function loadAdminPanel(){
  }
 }
 function setDefaultAdminStatsDates(){
- const now=new Date(),first=new Date(now.getFullYear(),now.getMonth(),1);
- const localDate=d=>{const x=new Date(d.getTime()-d.getTimezoneOffset()*60000);return x.toISOString().slice(0,10)};
- if(!$('adminStatsFrom').value)$('adminStatsFrom').value=localDate(first);
- if(!$('adminStatsTo').value)$('adminStatsTo').value=localDate(now);
+ const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jakarta',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+ const year=parts.find(p=>p.type==='year').value,month=parts.find(p=>p.type==='month').value,day=parts.find(p=>p.type==='day').value;
+ if(!$('adminStatsFrom').value)$('adminStatsFrom').value=year+'-'+month+'-01';
+ if(!$('adminStatsTo').value)$('adminStatsTo').value=year+'-'+month+'-'+day;
 }
 async function loadAdminStatistics(){
  const box=$('adminStatsSummary'),dailyBox=$('adminStatsDaily');if(!box||!dailyBox)return;
  setDefaultAdminStatsDates();
  const from=$('adminStatsFrom').value,to=$('adminStatsTo').value;
  if(!from||!to||to<from){message('adminStatsMessage','Pilih rentang tanggal yang benar.',true);return}
- const fromDate=new Date(from+'T00:00:00'),toDate=new Date(to+'T00:00:00');toDate.setDate(toDate.getDate()+1);
+ const fromDate=new Date(from+'T00:00:00+07:00'),toDate=new Date(to+'T00:00:00+07:00');toDate.setUTCDate(toDate.getUTCDate()+1);
  if((toDate-fromDate)>366*24*60*60*1000){message('adminStatsMessage','Rentang laporan maksimal 366 hari.',true);return}
  box.textContent='Menghitung statistik…';dailyBox.textContent='Memuat aktivitas harian…';
  const {data,error}=await supabase.rpc('admin_get_marketplace_statistics',{p_from:fromDate.toISOString(),p_to:toDate.toISOString()});
@@ -654,8 +654,8 @@ async function loadAdminStatistics(){
  ];
  box.innerHTML=cards.map(([label,value])=>'<div class="tile"><div class="muted">'+escapeHtml(label)+'</div><b class="price">'+escapeHtml(value)+'</b></div>').join('');
  const days=data.daily||[];
- dailyBox.innerHTML=days.length?'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:7px">Tanggal</th><th style="text-align:right;padding:7px">Pesanan</th><th style="text-align:right;padding:7px">Terkirim</th><th style="text-align:right;padding:7px">Penjualan</th></tr></thead><tbody>'+days.map(d=>'<tr><td style="padding:7px;border-top:1px solid #e5eee8">'+new Date(d.day+'T00:00:00').toLocaleDateString('id-ID')+'</td><td style="text-align:right;padding:7px;border-top:1px solid #e5eee8">'+Number(d.orders).toLocaleString('id-ID')+'</td><td style="text-align:right;padding:7px;border-top:1px solid #e5eee8">'+Number(d.delivered).toLocaleString('id-ID')+'</td><td style="text-align:right;padding:7px;border-top:1px solid #e5eee8">'+formatRupiah(d.sales)+'</td></tr>').join('')+'</tbody></table></div>':'Belum ada aktivitas pesanan pada rentang tanggal ini.';
- message('adminStatsMessage','Laporan diperbarui untuk '+new Date(from+'T00:00:00').toLocaleDateString('id-ID')+' sampai '+new Date(to+'T00:00:00').toLocaleDateString('id-ID')+'.');
+ dailyBox.innerHTML=days.length?'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:7px">Tanggal</th><th style="text-align:right;padding:7px">Pesanan</th><th style="text-align:right;padding:7px">Terkirim</th><th style="text-align:right;padding:7px">Penjualan</th></tr></thead><tbody>'+days.map(d=>'<tr><td style="padding:7px;border-top:1px solid #e5eee8">'+new Date(d.day+'T00:00:00+07:00').toLocaleDateString('id-ID',{timeZone:'Asia/Jakarta'})+'</td><td style="text-align:right;padding:7px;border-top:1px solid #e5eee8">'+Number(d.orders).toLocaleString('id-ID')+'</td><td style="text-align:right;padding:7px;border-top:1px solid #e5eee8">'+Number(d.delivered).toLocaleString('id-ID')+'</td><td style="text-align:right;padding:7px;border-top:1px solid #e5eee8">'+formatRupiah(d.sales)+'</td></tr>').join('')+'</tbody></table></div>':'Belum ada aktivitas pesanan pada rentang tanggal ini.';
+ message('adminStatsMessage','Laporan diperbarui untuk '+new Date(from+'T00:00:00+07:00').toLocaleDateString('id-ID',{timeZone:'Asia/Jakarta'})+' sampai '+new Date(to+'T00:00:00+07:00').toLocaleDateString('id-ID',{timeZone:'Asia/Jakarta'})+'.');
 }
 $('refreshAdminStats').addEventListener('click',loadAdminStatistics);
 async function loadAdminVouchers(){
