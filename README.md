@@ -84,6 +84,22 @@ Setiap artefak disimpan GitHub selama 14 hari. Unduh salinan berkala ke tempat p
 - Jangan mengaktifkan pembayaran uang sungguhan sebelum integrasi penyedia pembayaran, verifikasi callback, rekonsiliasi, refund, dan pemeriksaan kepatuhan selesai.
 - Pertahankan backup dan uji perubahan di lingkungan yang sesuai sebelum peluncuran.
 
+
+### Pengemasan Android (TWA / Bubblewrap)
+
+Konfigurasi awal Android disiapkan di `android/twa-manifest.template.json` dengan ID aplikasi sementara yang ditetapkan untuk proyek ini: `id.pasarhanakau.mobile`. Jangan mengubah ID tersebut setelah aplikasi dipublikasikan karena pembaruan harus memakai ID dan kunci penandatanganan yang sama.
+
+Workflow **Android TWA build** dapat dijalankan manual dari tab Actions. Workflow memvalidasi PWA, menyiapkan proyek TWA, memeriksa Digital Asset Links dan sertifikat, lalu menghasilkan APK dan AAB bertanda tangan sebagai artefak GitHub Actions.
+
+Sebelum build rilis dapat berhasil, dua prasyarat eksternal harus diselesaikan:
+
+1. Buat situs GitHub Pages tingkat akun dengan repositori publik bernama persis `berniaja5036-blip.github.io` (atau gunakan domain khusus milik proyek). Situs saat ini berada di jalur `/PASAR-HANAKAU/`, sehingga file `PASAR-HANAKAU/.well-known/assetlinks.json` tidak memenuhi persyaratan TWA. File verifikasi harus tersedia pada origin root: `https://berniaja5036-blip.github.io/.well-known/assetlinks.json`.
+2. Buat satu keystore produksi yang permanen untuk alias `pasar-hanakau`. Simpan file dan password di tempat aman milik pengelola. Tambahkan GitHub Actions repository secrets bernama `ANDROID_KEYSTORE_BASE64` (isi file keystore dalam Base64), `ANDROID_KEYSTORE_PASSWORD`, dan `ANDROID_KEY_PASSWORD`. Jangan commit file keystore, jangan kirim password ke chat, dan jangan membuat ulang kunci untuk rilis berikutnya.
+
+Isi `assetlinks.json` harus memuat package ID `id.pasarhanakau.mobile` dan sidik jari SHA-256 sertifikat dari keystore produksi yang sama. Jangan menebak sidik jari. Setelah berkas root dan secrets siap, jalankan workflow **Android TWA build**. Build harus menghasilkan APK untuk uji instalasi perangkat dan AAB untuk jalur Google Play. APK/AAB belum dianggap rilis sampai keduanya berhasil dibuat, APK diuji di perangkat Android, notifikasi/lokasi/unggahan/tautan diuji, dan Digital Asset Links tervalidasi.
+
+Workflow Android hanya berjalan manual; perubahan PWA tetap dideploy melalui workflow website yang sudah ada. Tidak ada biaya layanan berbayar yang ditambahkan oleh konfigurasi ini.
+
 ## Tahap berikutnya
 
 1. Unduh dan simpan artefak backup database serta Storage sebelum masa retensinya berakhir; lakukan uji pemulihan ke proyek Supabase terpisah sebelum peluncuran publik bila lingkungan uji tersedia.
