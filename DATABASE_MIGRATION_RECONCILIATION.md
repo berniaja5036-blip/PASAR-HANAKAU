@@ -4,13 +4,13 @@ Last reconciled: 2026-11-14.
 
 ## Canonical migration history
 
-The live Supabase project has **62 applied migration records**. The repository previously had 95 SQL files directly inside `supabase/migrations/`, with duplicate version prefixes and local prefixes that did not match the live 14-digit migration versions.
+The live Supabase project has **66 applied migration records**. The repository previously had 95 SQL files directly inside `supabase/migrations/`, with duplicate version prefixes and local prefixes that did not match the live 14-digit migration versions.
 
 This reconciliation changes **filenames and locations only**; the SQL bodies of all files are preserved byte-for-byte:
 
-- The 61 files from the 12 November reconciliation remain in `supabase/migrations/` and match the then-current live `version_name.sql` records.
+- The 61 files from the 12 November reconciliation remain in `supabase/migrations/`; three additional forward migrations were added before 14 November, bringing the active set to 64.
 - 34 historical files remain unchanged in `supabase/migrations-archive/`, outside the Supabase CLI migration scan directory.
-- On 14 November, one forward migration was applied and committed as the 62nd canonical migration: `20261114024945_scope_driver_profile_visibility_to_related_orders.sql`.
+- On 14 November, two forward migrations were applied and committed: the 65th `20261114024945_scope_driver_profile_visibility_to_related_orders.sql` and the 66th `20261114025139_fix_driver_application_review_trim_function.sql`.
 
 The five historical filename equivalents are now canonicalized to the exact live migration names:
 
@@ -24,7 +24,7 @@ The five historical filename equivalents are now canonicalized to the exact live
 
 ## 14 November forward migration
 
-The live `driver_profiles_read_scoped` policy was already narrower than the older canonical policy from `20261111182828_consolidate_permissive_select_policies.sql`, but that production restriction was not represented by a later canonical migration. The new migration `20261114024945_scope_driver_profile_visibility_to_related_orders.sql` records the restriction in migration history.
+The live `driver_profiles_read_scoped` policy was already narrower than the older canonical policy from `20261111182828_consolidate_permissive_select_policies.sql`, but that production restriction was not represented by a later canonical migration. The 65th migration `20261114024945_scope_driver_profile_visibility_to_related_orders.sql` records the restriction in migration history. The 66th migration `20261114025139_fix_driver_application_review_trim_function.sql` redefines the admin driver-application review RPC to use `pg_catalog.btrim` for both identity-document paths and to verify both files exist in the private Storage bucket before approval. It changes no existing application or driver records.
 
 The policy permits a driver to read their own profile, an administrator to read profiles for dispatch, and a buyer or seller to read a driver's vehicle profile only when that driver is assigned to an order the current user is allowed to access. The check uses the active-account-aware `current_user_can_read_delivery_order(uuid)` helper. No driver, order, stock, payment, or Storage rows were changed.
 

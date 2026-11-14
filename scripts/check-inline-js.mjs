@@ -295,13 +295,23 @@ if (!driverAssignmentMigration.includes('public.is_admin()') ||
 }
 
 const driverProfileScopeMigration = readMigration('scope_driver_profile_visibility_to_related_orders');
-const driverProfilePolicy = driverProfileScopeMigration.match(/create policy driver_profiles_read_scoped[\\s\\S]*?using\\s*\\(([\\s\\S]*?)\\);/i);
+const driverProfilePolicy = driverProfileScopeMigration.match(/create policy driver_profiles_read_scoped[\s\S]*?using\s*\(([\s\S]*?)\);/i);
 if (!driverProfilePolicy ||
     !driverProfilePolicy[1].includes('id = (select auth.uid())') ||
     !driverProfilePolicy[1].includes('(select public.is_admin())') ||
     !driverProfilePolicy[1].includes('d.driver_id = driver_profiles.id') ||
     !driverProfilePolicy[1].includes('public.current_user_can_read_delivery_order(d.order_id)')) {
   console.error('Driver profile reads must be limited to the driver, admin, and users who can access an associated order.');
+  process.exit(1);
+}
+
+const driverReviewTrimMigration = readMigration('fix_driver_application_review_trim_function');
+if (!driverReviewTrimMigration.includes('create or replace function public.admin_review_driver_application') ||
+    !driverReviewTrimMigration.includes('pg_catalog.btrim(v_app.ktp_image_path)') ||
+    !driverReviewTrimMigration.includes('pg_catalog.btrim(v_app.face_image_path)') ||
+    !driverReviewTrimMigration.includes("so.bucket_id = 'driver-private-documents'") ||
+    driverReviewTrimMigration.includes('pg_catalog.trim(')) {
+  console.error('Driver application approval must safely trim and verify both stored identity-document paths.');
   process.exit(1);
 }
 

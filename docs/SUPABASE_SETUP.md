@@ -4,7 +4,7 @@ Dokumen ini menjelaskan database aktif yang digunakan website Pasar Hanakau: `pr
 
 ## Status skema dan migrasi
 
-Proyek aktif memakai riwayat migrasi kanonis 14 digit di `supabase/migrations/`. Per 14 November 2026, terdapat 62 migrasi yang sudah tercatat pada proyek Supabase aktif.
+Proyek aktif memakai riwayat migrasi kanonis 14 digit di `supabase/migrations/`. Per 14 November 2026, terdapat 66 migrasi yang sudah tercatat pada proyek Supabase aktif.
 
 **Penting: folder migrasi aktif bukan paket bootstrap untuk database kosong.** File lama bernomor `001`–`025` dan rancangan alternatif `20261106...` berada di `supabase/migrations-archive/` untuk referensi historis. Jangan jalankan file arsip, jangan menjalankan semua SQL sekaligus, dan jangan mengulang migrasi yang sudah diterapkan. Jika membuat proyek Supabase baru, siapkan baseline skema yang ditinjau khusus atau pulihkan backup tervalidasi terlebih dahulu; jangan memakai file arsip sebagai instalasi baru.
 
@@ -12,6 +12,7 @@ Migrasi penting pada skema aktif:
 
 - `20261112022146_checkout_request_idempotency.sql` menyimpan kunci percobaan checkout per pembeli agar pengulangan permintaan yang sama tidak membuat pesanan ganda.
 - `20261114024945_scope_driver_profile_visibility_to_related_orders.sql` membatasi data `driver_profiles`: driver hanya dapat membaca profilnya sendiri, admin dapat membaca untuk pengelolaan, sedangkan pembeli/penjual hanya dapat melihat driver yang ditugaskan pada pesanan yang memang dapat mereka akses.
+- `20261114025139_fix_driver_application_review_trim_function.sql` memperbaiki pemeriksaan foto KTP dan wajah saat persetujuan driver dengan fungsi `pg_catalog.btrim` yang valid serta memastikan kedua objek benar-benar tersimpan di bucket privat.
 - RPC `seller_list_orders()` sudah tersedia pada database aktif. Hasilnya dibatasi pada nomor/status/tanggal pesanan, catatan untuk penjual, rincian barang milik toko penjual, dan riwayat status. RPC ini tidak mengembalikan alamat atau koordinat GPS pembeli. Instruksi lama tentang `023_secure_seller_order_read.sql` tidak berlaku; file tersebut bukan migrasi kanonis dan tidak boleh dicari atau dijalankan.
 
 ## Prosedur perubahan database
