@@ -52,6 +52,8 @@ data class NativeProduct(
     val stock: Int
 )
 
+data class NativeCartItem(val product: NativeProduct, val quantity: Int)
+
 class NativeHomeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -80,6 +82,8 @@ private fun NativeMarketplaceHome(onOpenMarketplace: () -> Unit) {
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var selectedProduct by remember { mutableStateOf<NativeProduct?>(null) }
+    var cart by remember { mutableStateOf<List<NativeCartItem>>(emptyList()) }
+    var showCart by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         try {
@@ -92,11 +96,28 @@ private fun NativeMarketplaceHome(onOpenMarketplace: () -> Unit) {
         }
     }
 
-    if (selectedProduct != null) {
+    if (showCart) {
+        NativeCartScreen(
+            cart = cart,
+            onBack = { showCart = false },
+            onQuantityChange = { id, qty ->
+                cart = if (qty <= 0) cart.filterNot { it.product.id == id }
+                else cart.map { if (it.product.id == id) it.copy(quantity = qty.coerceAtMost(it.product.stock)) else it }
+            },
+            onCheckout = onOpenMarketplace
+        )
+    } else if (selectedProduct != null) {
         NativeProductDetail(
             product = selectedProduct!!,
             onBack = { selectedProduct = null },
-            onOpenMarketplace = onOpenMarketplace
+            onAddToCart = {
+                val current = cart.firstOrNull { it.product.id == it.product.id }
+                cart = if (cart.any { it.product.id == selectedProduct!!.id }) {
+                    cart.map { if (it.product.id == selectedProduct!!.id) it.copy(quantity = (it.quantity + 1).coerceAtMost(selectedProduct!!.stock)) else it }
+                } else cart + NativeCartItem(selectedProduct!!, 1)
+                selectedProduct = null
+                showCart = true
+            }
         )
     } else Column(
         modifier = Modifier.fillMaxSize().background(PhBackground)
@@ -111,11 +132,11 @@ private fun NativeMarketplaceHome(onOpenMarketplace: () -> Unit) {
                     Text("Belanja mudah, harga bersahabat", color = Color(0xFFE0F1E4), fontSize = 11.sp)
                 }
                 Surface(color = PhYellow, shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.clickable { onOpenMarketplace() }) {
+                    modifier = Modifier.clickable { showCart = true }) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp)) {
                         Icon(Icons.Default.ShoppingCart, contentDescription = "Keranjang", tint = PhDark)
                         Spacer(Modifier.width(5.dp))
-                        Text("Keranjang", color = PhDark, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text("Keranjang (${cart.sumOf { it.quantity }})", color = PhDark, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
             }
@@ -196,7 +217,7 @@ private fun NativeMarketplaceHome(onOpenMarketplace: () -> Unit) {
 }
 
 @Composable
-private fun NativeProductDetail(product: NativeProduct, onBack: () -> Unit, onOpenMarketplace: () -> Unit) {
+private fun NativeProductDetail(product: NativeProduct, onBack: () -> Unit, onAddToCart: () -> Unit) {
     Column(Modifier.fillMaxSize().background(PhBackground)) {
         Row(
             modifier = Modifier.fillMaxWidth().background(PhDark).padding(16.dp),
@@ -230,12 +251,76 @@ private fun NativeProductDetail(product: NativeProduct, onBack: () -> Unit, onOp
         }
         Surface(color = Color.White, shadowElevation = 8.dp) {
             Button(
-                onClick = onOpenMarketplace,
+                onClick = onAddToCart,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp).height(50.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = PhOrange),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Masuk untuk membeli", color = Color.White, fontWeight = FontWeight.Bold)
+                Text("Tambah ke keranjang", color = Color.White, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun NativeCartScreen(
+    cart: List<NativeCartItem>,
+    onBack: () -> Unit,
+    onQuantityChange: (String, Int) -> Unit,
+    onCheckout: () -> Unit
+) {
+    val total = cart.sumOf { it.product.price * it.quantity }
+    Column(Modifier.fillMaxSize().background(PhBackground)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().background(PhDark).padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("‹", color = Color.White, fontSize = 30.sp, modifier = Modifier.clickable { onBack() })
+            Spacer(Modifier.width(14.dp))
+            Text("Keranjang belanja", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        }
+        if (cart.isEmpty()) {
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("🛒", fontSize = 48.sp)
+                    Text("Keranjang masih kosong", color = PhDark, fontWeight = FontWeight.Bold)
+                    Text("Pilih produk untuk mulai berbelanja.", color = Color.Gray, fontSize = 12.sp)
+                }
+            }
+        } else {
+            Column(Modifier.weight(1f).padding(14.dp)) {
+                cart.forEach { item ->
+                    Surface(color = Color.White, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().padding(bottom = 9.dp)) {
+                        Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            AsyncImage(model = item.product.imageUrl.ifBlank { null }, contentDescription = item.product.name,
+                                modifier = Modifier.size(66.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
+                            Spacer(Modifier.width(10.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(item.product.name, color = PhDark, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                                Text("Rp " + "%,d".format(item.product.price).replace(',', '.'), color = PhGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                Text(item.product.shopName, color = Color.Gray, fontSize = 10.sp)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("−", color = PhGreen, fontSize = 22.sp, modifier = Modifier.clickable { onQuantityChange(item.product.id, item.quantity - 1) }.padding(5.dp))
+                                Text(item.quantity.toString(), color = PhDark, fontWeight = FontWeight.Bold)
+                                Text("+", color = PhGreen, fontSize = 20.sp, modifier = Modifier.clickable { onQuantityChange(item.product.id, item.quantity + 1) }.padding(5.dp))
+                            }
+                        }
+                    }
+                }
+            }
+            Surface(color = Color.White, shadowElevation = 8.dp) {
+                Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Total sementara", color = Color.DarkGray)
+                        Text("Rp " + "%,d".format(total).replace(',', '.'), color = PhGreen, fontWeight = FontWeight.ExtraBold)
+                    }
+                    Text("Pembayaran pesanan: COD (bayar saat barang diterima).", color = Color.Gray, fontSize = 11.sp)
+                    Button(onClick = onCheckout, modifier = Modifier.fillMaxWidth().padding(top = 10.dp).height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = PhOrange), shape = RoundedCornerShape(12.dp)) {
+                        Text("Lanjut ke checkout COD", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
     }
