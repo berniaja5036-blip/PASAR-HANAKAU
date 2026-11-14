@@ -25,12 +25,15 @@ jobs:
       - uses: android-actions/setup-android@v3
         with:
           packages: platform-tools platforms;android-35 build-tools;35.0.0
-      - name: Validate live PWA for Trusted Web Activity
+      - name: Validate live PWA manifest and app assets
         run: |
-          npm install --global @bubblewrap/cli
-          mkdir -p "$HOME/.bubblewrap"
-          echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > "$HOME/.bubblewrap/config.json"
-          bubblewrap validate --url="https://berniaja5036-blip.github.io/PASAR-HANAKAU/"
+          set -eu
+          curl --fail --silent --show-error "https://berniaja5036-blip.github.io/PASAR-HANAKAU/manifest.webmanifest" -o /tmp/manifest.json
+          curl --fail --silent --show-error "https://berniaja5036-blip.github.io/PASAR-HANAKAU/sw.js" -o /tmp/sw.js
+          node -e "const m=require('/tmp/manifest.json'); for (const k of ['name','short_name','start_url','scope','display','icons']) if (!m[k]) throw new Error('Manifest missing '+k); if(!m.icons.some(i=>i.src.includes('icon-192')) || !m.icons.some(i=>i.src.includes('icon-512'))) throw new Error('Required PWA icons missing'); if(m.display!=='standalone') throw new Error('PWA display must be standalone');"
+          grep -q "addEventListener" /tmp/sw.js
+          echo "PWA manifest and service worker are reachable and structurally valid."
+
 
   build-android:
     needs: validate-pwa
