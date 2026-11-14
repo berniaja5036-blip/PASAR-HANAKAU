@@ -7,6 +7,8 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -49,7 +51,8 @@ data class NativeProduct(
     val shopName: String,
     val imageUrl: String,
     val description: String,
-    val stock: Int
+    val stock: Int,
+    val categoryName: String
 )
 
 data class NativeCartItem(val product: NativeProduct, val quantity: Int)
@@ -84,6 +87,7 @@ private fun NativeMarketplaceHome(onOpenMarketplace: () -> Unit) {
     var selectedProduct by remember { mutableStateOf<NativeProduct?>(null) }
     var cart by remember { mutableStateOf<List<NativeCartItem>>(emptyList()) }
     var showCart by remember { mutableStateOf(false) }
+    var selectedCategory by remember { mutableStateOf("Semua") }
 
     LaunchedEffect(Unit) {
         try {
@@ -180,6 +184,24 @@ private fun NativeMarketplaceHome(onOpenMarketplace: () -> Unit) {
                 Text("Hanakau Jaya", color = PhGreen, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             }
             Spacer(Modifier.height(10.dp))
+            val categoryNames = listOf("Semua") + products.map { it.categoryName }.filter { it.isNotBlank() }.distinct().sorted()
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                categoryNames.forEach { category ->
+                    FilterChip(
+                        selected = selectedCategory == category,
+                        onClick = { selectedCategory = category },
+                        label = { Text(category, fontSize = 11.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = PhGreen,
+                            selectedLabelColor = Color.White
+                        )
+                    )
+                }
+            }
+            Spacer(Modifier.height(10.dp))
 
             when {
                 loading -> Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) {
@@ -187,7 +209,10 @@ private fun NativeMarketplaceHome(onOpenMarketplace: () -> Unit) {
                 }
                 error != null -> Text(error!!, color = Color(0xFF9B3D26), fontSize = 13.sp, modifier = Modifier.padding(12.dp))
                 else -> {
-                    val shown = products.filter { it.name.contains(query, ignoreCase = true) || it.shopName.contains(query, ignoreCase = true) }
+                    val shown = products.filter {
+                        (it.name.contains(query, ignoreCase = true) || it.shopName.contains(query, ignoreCase = true)) &&
+                            (selectedCategory == "Semua" || it.categoryName == selectedCategory)
+                    }
                     if (shown.isEmpty()) {
                         Text(if (products.isEmpty()) "Belum ada produk aktif yang tersedia." else "Produk tidak ditemukan.",
                             color = Color.Gray, fontSize = 13.sp, modifier = Modifier.padding(12.dp))
@@ -354,7 +379,7 @@ private fun BottomItem(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 private fun fetchNativeProducts(): List<NativeProduct> {
-    val endpoint = "$SUPABASE_URL/rest/v1/products?select=id,name,description,price,stock,image_path,shops(name)&status=eq.active&stock=gt.0&order=created_at.desc&limit=40"
+    val endpoint = "$SUPABASE_URL/rest/v1/products?select=id,name,description,price,stock,image_path,shops(name),categories(name)&status=eq.active&stock=gt.0&order=created_at.desc&limit=40"
     val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
         requestMethod = "GET"
         connectTimeout = 15000
@@ -384,7 +409,8 @@ private fun fetchNativeProducts(): List<NativeProduct> {
                 shopName = shop?.optString("name", "Toko Hanakau") ?: "Toko Hanakau",
                 imageUrl = image,
                 description = item.optString("description", ""),
-                stock = item.optInt("stock", 0)
+                stock = item.optInt("stock", 0),
+                categoryName = item.optJSONObject("categories")?.optString("name", "") ?: ""
             )
         }
     } finally {
