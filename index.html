@@ -55,7 +55,7 @@ footer{color:#829087;font-size:12px;padding:30px 10px}
 .market-cart{border:0;border-radius:12px;padding:10px 12px;background:#fff6cf;color:#5c4b00;font-weight:800}
 .market-search{height:46px;border:2px solid #e8eee7;border-radius:13px;display:flex;align-items:center;gap:9px;padding:0 12px;background:#fbfdf9;color:var(--ph-green);font-size:23px}
 .market-search input{border:0;outline:0;background:transparent;min-width:0;flex:1;font:inherit;font-size:14px;color:#183329}
-.search-hint{font-size:11px;font-weight:800;color:var(--ph-green);border-left:1px solid #dce6db;padding-left:10px}
+.search-hint{font:800 12px inherit;font-size:12px;font-weight:800;color:var(--ph-green);border:0;border-left:1px solid #dce6db;padding:4px 0 4px 10px;background:transparent;cursor:pointer;white-space:nowrap}.market-search:focus-within{border-color:var(--ph-green);box-shadow:0 0 0 3px #16834a18}
 .market-hero{position:relative;overflow:hidden;display:flex;align-items:center;min-height:178px;margin-top:13px;padding:18px 17px;border-radius:17px;background:linear-gradient(112deg,#075b32 0%,#168447 57%,#38a64d 100%);color:#fff}
 .market-hero:after{content:"";position:absolute;width:190px;height:190px;border:20px solid #ffffff14;border-radius:50%;right:-62px;top:-72px}
 .hero-copy{position:relative;z-index:1;max-width:75%}.hero-kicker{font-size:9px;letter-spacing:1.5px;font-weight:900;color:#ffe35a}.hero-copy h2{font-size:24px;line-height:1.08;margin:8px 0;color:white;letter-spacing:-.6px}.hero-copy h2 em{font-style:normal;color:#ffdb35}.hero-copy p{font-size:11px;line-height:1.45;color:#e5f6e8;margin:0 0 12px}.hero-copy button{border:0;border-radius:9px;background:var(--ph-yellow);color:#174c2d;padding:9px 13px;font-size:11px;font-weight:900}
@@ -226,7 +226,7 @@ body:not(.ph-guest-mode) .market-header-actions{display:none}
 <section id="catalogPanel" class="hidden guest-catalog">
 <div class="market-home">
  <div class="market-head"><div class="market-brand"><img src="./icons/icon.svg" alt="Logo Pasar Hanakau"><div><b>Pasar Hanakau</b><small>Belanja dekat, mudah, dan nyaman</small></div></div><button class="market-cart" type="button" onclick="window.openMarketplaceCart()" aria-label="Buka keranjang">🛒 <span>Keranjang</span></button></div>
- <div class="market-search"><span aria-hidden="true">⌕</span><input id="catalogSearch" type="search" placeholder="Cari produk atau nama toko..." autocomplete="off" aria-label="Cari produk atau toko"><span class="search-hint">Cari</span></div>
+ <form class="market-search" id="catalogSearchForm" role="search"><span aria-hidden="true">⌕</span><input id="catalogSearch" type="search" placeholder="Cari produk atau nama toko..." autocomplete="off" aria-label="Cari produk atau toko"><button class="search-hint" type="submit">Cari</button></form>
  <div class="market-hero"><div class="hero-copy"><span class="hero-kicker">PASAR LOKAL KITA</span><h2>Belanja mudah,<br><em>harga bersahabat!</em></h2><p>Temukan kebutuhan harian dari toko sekitar Hanakau.</p><button type="button" onclick="document.getElementById('catalog').scrollIntoView({behavior:'smooth'})">Mulai belanja <b>→</b></button></div><div class="hero-art" aria-hidden="true">🛍️</div></div>
  <div class="market-shortcuts"><button type="button" data-home-category="">✨<span>Semua</span></button><button type="button" data-home-category="makanan">🍚<span>Makanan</span></button><button type="button" data-home-category="minuman">🥤<span>Minuman</span></button><button type="button" data-home-category="sayur">🥬<span>Sayur</span></button><button type="button" data-home-category="buah">🍉<span>Buah</span></button><button type="button" data-home-category="rumah">🏠<span>Rumah</span></button></div>
  <div class="market-promo-strip"><span>🟢</span><div><b>Dukung usaha warga</b><small>Belanja dari penjual lokal Desa Hanakau Jaya</small></div><span class="promo-arrow">›</span></div>
@@ -720,7 +720,7 @@ function renderCatalog(){
 $('closeProductDetail').addEventListener('click',()=>$('productDetailDialog').close());
 $('productDetailDialog').addEventListener('click',e=>{if(e.target===$('productDetailDialog'))$('productDetailDialog').close();});
 document.querySelectorAll('[data-home-category]').forEach(button=>button.addEventListener('click',()=>{$('catalogSearch').value=button.dataset.homeCategory||'';renderCatalog();$('catalog').scrollIntoView({behavior:'smooth',block:'start'});}));
-$('catalogSearch').addEventListener('input',renderCatalog);
+$('catalogSearch').addEventListener('input',renderCatalog);$('catalogSearchForm').addEventListener('submit',e=>{e.preventDefault();renderCatalog();$('catalog').scrollIntoView({behavior:'smooth',block:'start'});$('catalogSearch').blur();});$('catalogSearch').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('catalogSearchForm').requestSubmit();}});
 $('catalogSort').addEventListener('change',renderCatalog);
 $('catalogShopFilter').addEventListener('change',renderCatalog);
 $('catalogMinPrice').addEventListener('input',renderCatalog);
