@@ -11,6 +11,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: pasar-hanakau-android-release
+  cancel-in-progress: false
+
 jobs:
   validate-pwa:
     runs-on: ubuntu-latest
@@ -46,7 +50,6 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -eu
-          test -n "$ANDROID_KEYSTORE_BASE64" || { echo "::error::Secret ANDROID_KEYSTORE_BASE64 belum diatur."; exit 1; }
           test -n "$ANDROID_KEYSTORE_PASSWORD" || { echo "::error::Secret ANDROID_KEYSTORE_PASSWORD belum diatur."; exit 1; }
           test -n "$ANDROID_KEY_PASSWORD" || { echo "::error::Secret ANDROID_KEY_PASSWORD belum diatur."; exit 1; }
           curl --fail --silent --show-error "https://berniaja5036-blip.github.io/.well-known/assetlinks.json" -o /tmp/assetlinks.json
