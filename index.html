@@ -148,9 +148,9 @@ body.ph-buyer-mode .notice{font-size:12px}
 .guest-catalog #catalog .product-open img{width:100%;aspect-ratio:1/1;object-fit:cover}
 .guest-catalog #catalog .product .btn{font-size:12px;padding:10px}
 body.ph-guest-mode .market-header-actions{display:flex}
-body.ph-guest-mode #rolePanel{display:block}
-body.ph-guest-mode #authPanel{display:none}
-body.ph-guest-mode #catalogPanel{display:block!important}
+body.ph-guest-mode #rolePanel:not(.hidden){display:block!important}
+body.ph-guest-mode #authPanel:not(.hidden){display:block!important}
+body.ph-guest-mode #catalogPanel:not(.hidden){display:block!important}
 body:not(.ph-guest-mode) .market-header-actions{display:none}
 @media(max-width:520px){.market-top{padding:12px 13px}.market-header-main{align-items:center}.market-top .brandmark{width:43px;height:43px;flex-basis:43px;border-radius:12px}.market-top .brandline{gap:8px}.market-top .brandline h1{font-size:20px}.market-top .brandline small{font-size:8px;letter-spacing:.04em}.market-top .tagline{font-size:10px}.market-header-actions{gap:5px}.market-header-actions button{padding:9px 10px;font-size:11px}.market-header-sub{margin-top:8px}}
 
