@@ -73,7 +73,8 @@ jobs:
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/android-keystore/pasar-hanakau.keystore
           test -s android/android-keystore/pasar-hanakau.keystore
           cd android
-          bubblewrap update --skipVersionUpgrade
+          bubblewrap doctor
+          bubblewrap update --skipVersionUpgrade --manifest="$PWD/twa-manifest.json"
       - name: Verify signing certificate matches Digital Asset Links
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
