@@ -130,13 +130,37 @@ body.ph-buyer-mode .notice{font-size:12px}
 .workspace-content{padding:12px}
 .workspace-content>.tile{margin:8px 0}
 
+
+/* Public marketplace storefront before sign-in */
+.market-header-main{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1120px;margin:auto}
+.market-header-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.market-header-actions button{border:0;border-radius:11px;padding:10px 14px;font:inherit;font-size:12px;font-weight:850;cursor:pointer}
+.market-login-btn{background:#ffffff20;color:#fff;border:1px solid #ffffff80!important}
+.market-register-btn{background:#ffd52e;color:#164b2e}
+.market-header-sub{max-width:1120px;margin:10px auto 0;display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:11px;color:#e4f5e8}
+.market-partner-btn{border:0;background:transparent;color:#ffdf48;font:inherit;font-size:11px;font-weight:800;text-decoration:underline;text-underline-offset:3px}
+#rolePanel .landing-roles{display:none}
+#rolePanel.partner-access-open .landing-roles{display:block;margin:12px 0 18px}
+.guest-catalog{display:block!important;margin-top:10px}
+.guest-catalog .guest-hide{display:none!important}
+.guest-catalog [data-wishlist-toggle],.guest-catalog [data-chat-shop]{display:none!important}
+.guest-catalog #catalog .tile{padding:10px;overflow:hidden}
+.guest-catalog #catalog .product-open img{width:100%;aspect-ratio:1/1;object-fit:cover}
+.guest-catalog #catalog .product .btn{font-size:12px;padding:10px}
+body.ph-guest-mode .market-header-actions{display:flex}
+body.ph-guest-mode #rolePanel{display:block}
+body.ph-guest-mode #authPanel{display:none}
+body.ph-guest-mode #catalogPanel{display:block!important}
+body:not(.ph-guest-mode) .market-header-actions{display:none}
+@media(max-width:520px){.market-top{padding:12px 13px}.market-header-main{align-items:center}.market-top .brandmark{width:43px;height:43px;flex-basis:43px;border-radius:12px}.market-top .brandline{gap:8px}.market-top .brandline h1{font-size:20px}.market-top .brandline small{font-size:8px;letter-spacing:.04em}.market-top .tagline{font-size:10px}.market-header-actions{gap:5px}.market-header-actions button{padding:9px 10px;font-size:11px}.market-header-sub{margin-top:8px}}
+
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body>
-<header class="top market-top"><div class="brandline"><div class="brandmark" aria-label="Logo maskot gajah Pasar Hanakau"><img src="./icons/logo-pasar-hanakau.png" alt="Maskot gajah Pasar Hanakau"></div><div><small>MARKETPLACE WARGA • HANAKAU JAYA</small><h1>Pasar Hanakau</h1><div class="tagline">Belanja mudah, harga bersahabat.</div></div></div><span class="top-produce" aria-hidden="true">🥬 🥕 🍅</span></header>
+<header class="top market-top"><div class="market-header-main"><div class="brandline"><div class="brandmark" aria-label="Logo maskot gajah Pasar Hanakau"><img src="./icons/logo-pasar-hanakau.png" alt="Maskot gajah Pasar Hanakau"></div><div><small>MARKETPLACE WARGA • HANAKAU JAYA</small><h1>Pasar Hanakau</h1><div class="tagline">Belanja mudah, harga bersahabat.</div></div></div><div class="market-header-actions" id="guestHeaderActions"><button class="market-login-btn" type="button" data-entry-role="buyer">Masuk</button><button class="market-register-btn" type="button" data-entry-role="buyer" data-open-register="yes">Daftar</button></div></div><div class="market-header-sub"><span>📍 Hanakau Jaya</span><button type="button" class="market-partner-btn" id="togglePartnerAccess">Akses Penjual / Driver</button></div></header>
 <main class="wrap">
-<div class="notice"><b>Pasar Hanakau masih dalam tahap uji coba.</b> Fitur akun, katalog, pemesanan, dan pengiriman sedang diuji. Pembayaran belum diaktifkan. Jangan melakukan transfer atau pembayaran di luar aplikasi atas nama Pasar Hanakau.</div>
+<div class="notice guest-notice"><b>Pasar Hanakau masih dalam tahap uji coba.</b> Pembayaran belum diaktifkan. Jangan melakukan transfer atau pembayaran di luar aplikasi atas nama Pasar Hanakau.</div>
 <section id="rolePanel" class="market-landing">
  <div class="market-home">
   <div class="market-hero landing-hero"><div class="hero-copy"><span class="hero-kicker">SELAMAT DATANG DI PASAR LOKAL</span><h2>Belanja mudah,<br><em>harga bersahabat!</em></h2><p>Temukan kebutuhan harian dan dukung usaha warga Hanakau Jaya.</p><button type="button" data-entry-role="buyer">Mulai belanja <b>→</b></button></div><div class="hero-art" aria-hidden="true">🛍️</div></div>
@@ -194,16 +218,16 @@ body.ph-buyer-mode .notice{font-size:12px}
 <div id="sellerOrders" class="muted">Memuat pesanan toko…</div>
 <div class="tile" id="sellerChatBox" style="margin-top:14px"><h3>💬 Pesan dari pembeli</h3><p class="muted">Balas pertanyaan pembeli. Anda dapat mengirim teks, foto, dan dokumen.</p><div id="sellerChatConversations" class="muted">Memuat percakapan…</div><div id="sellerChatMessages" class="chat-messages muted">Pilih percakapan untuk melihat pesan.</div><textarea id="sellerChatBody" class="field" rows="2" maxlength="5000" placeholder="Tulis balasan untuk pembeli…"></textarea><input id="sellerChatFile" class="field" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,text/plain,text/csv,.doc,.docx,.xls,.xlsx"><button id="sellerChatSend" class="btn" type="button">Kirim pesan</button><div id="sellerChatStatus" class="status" role="status"></div></div>
 </section>
-<section id="catalogPanel" class="hidden">
+<section id="catalogPanel" class="hidden guest-catalog">
 <div class="market-home">
- <div class="market-head"><div class="market-brand"><img src="./icons/icon.svg" alt="Logo Pasar Hanakau"><div><b>Pasar Hanakau</b><small>Belanja dekat, mudah, dan nyaman</small></div></div><button class="market-cart" type="button" onclick="document.getElementById('buyerPanel').scrollIntoView({behavior:'smooth'})" aria-label="Buka keranjang">🛒 <span>Keranjang</span></button></div>
+ <div class="market-head"><div class="market-brand"><img src="./icons/icon.svg" alt="Logo Pasar Hanakau"><div><b>Pasar Hanakau</b><small>Belanja dekat, mudah, dan nyaman</small></div></div><button class="market-cart" type="button" onclick="window.openMarketplaceCart()" aria-label="Buka keranjang">🛒 <span>Keranjang</span></button></div>
  <div class="market-search"><span aria-hidden="true">⌕</span><input id="catalogSearch" type="search" placeholder="Cari produk atau nama toko..." autocomplete="off" aria-label="Cari produk atau toko"><span class="search-hint">Cari</span></div>
  <div class="market-hero"><div class="hero-copy"><span class="hero-kicker">PASAR LOKAL KITA</span><h2>Belanja mudah,<br><em>harga bersahabat!</em></h2><p>Temukan kebutuhan harian dari toko sekitar Hanakau.</p><button type="button" onclick="document.getElementById('catalog').scrollIntoView({behavior:'smooth'})">Mulai belanja <b>→</b></button></div><div class="hero-art" aria-hidden="true">🛍️</div></div>
  <div class="market-shortcuts"><button type="button" data-home-category="">✨<span>Semua</span></button><button type="button" data-home-category="makanan">🍚<span>Makanan</span></button><button type="button" data-home-category="minuman">🥤<span>Minuman</span></button><button type="button" data-home-category="sayur">🥬<span>Sayur</span></button><button type="button" data-home-category="buah">🍉<span>Buah</span></button><button type="button" data-home-category="rumah">🏠<span>Rumah</span></button></div>
  <div class="market-promo-strip"><span>🟢</span><div><b>Dukung usaha warga</b><small>Belanja dari penjual lokal Desa Hanakau Jaya</small></div><span class="promo-arrow">›</span></div>
 </div>
-<div class="tile" id="buyerChatBox" style="display:none;margin:14px 0"><div class="row" style="justify-content:space-between"><h3 style="margin:0">💬 Chat dengan toko</h3><button id="buyerChatClose" class="btn secondary" type="button">Tutup</button></div><p id="buyerChatShopTitle" class="muted"></p><p class="muted">Pilih tombol Hubungi toko pada katalog untuk memulai percakapan. Anda dapat mengirim teks, foto, dan dokumen.</p><div id="buyerChatConversations" class="muted">Memuat percakapan…</div><div id="buyerChatMessages" class="chat-messages muted">Pilih percakapan untuk melihat pesan.</div><textarea id="buyerChatBody" class="field" rows="2" maxlength="5000" placeholder="Tulis pesan untuk toko…"></textarea><input id="buyerChatFile" class="field" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,text/plain,text/csv,.doc,.docx,.xls,.xlsx"><button id="buyerChatSend" class="btn" type="button">Kirim pesan</button><div id="buyerChatStatus" class="status" role="status"></div></div>
-<div class="panel" style="margin:10px 0"><div class="row" style="justify-content:space-between"><h3 style="margin:0">❤️ Produk favorit saya</h3><button id="refreshWishlist" class="btn secondary" type="button">Muat ulang</button></div><div id="buyerWishlist" class="muted" style="margin-top:8px">Masuk sebagai pembeli untuk melihat favorit.</div></div><div class="market-list-heading"><div><span class="market-eyebrow">PILIHAN WARGA</span><h2>Produk untukmu</h2><p class="muted">Temukan barang menarik dari toko sekitar.</p></div><span class="market-spark">✦</span></div>
+<div class="tile guest-hide" id="buyerChatBox" style="display:none;margin:14px 0"><div class="row" style="justify-content:space-between"><h3 style="margin:0">💬 Chat dengan toko</h3><button id="buyerChatClose" class="btn secondary" type="button">Tutup</button></div><p id="buyerChatShopTitle" class="muted"></p><p class="muted">Pilih tombol Hubungi toko pada katalog untuk memulai percakapan. Anda dapat mengirim teks, foto, dan dokumen.</p><div id="buyerChatConversations" class="muted">Memuat percakapan…</div><div id="buyerChatMessages" class="chat-messages muted">Pilih percakapan untuk melihat pesan.</div><textarea id="buyerChatBody" class="field" rows="2" maxlength="5000" placeholder="Tulis pesan untuk toko…"></textarea><input id="buyerChatFile" class="field" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,text/plain,text/csv,.doc,.docx,.xls,.xlsx"><button id="buyerChatSend" class="btn" type="button">Kirim pesan</button><div id="buyerChatStatus" class="status" role="status"></div></div>
+<div class="panel guest-hide" style="margin:10px 0"><div class="row" style="justify-content:space-between"><h3 style="margin:0">❤️ Produk favorit saya</h3><button id="refreshWishlist" class="btn secondary" type="button">Muat ulang</button></div><div id="buyerWishlist" class="muted" style="margin-top:8px">Masuk sebagai pembeli untuk melihat favorit.</div></div><div class="market-list-heading"><div><span class="market-eyebrow">PILIHAN WARGA</span><h2>Produk untukmu</h2><p class="muted">Temukan barang menarik dari toko sekitar.</p></div><span class="market-spark">✦</span></div>
 <div class="panel market-filter" style="margin-top:10px"><div class="row"><label for="catalogSort" class="muted">Urutkan:</label><select id="catalogSort" class="field" style="max-width:230px;margin:0"><option value="newest">Terbaru</option><option value="price-asc">Harga termurah</option><option value="price-desc">Harga termahal</option><option value="name-asc">Nama barang A–Z</option></select><label for="catalogShopFilter" class="muted">Toko:</label><select id="catalogShopFilter" class="field" style="max-width:230px;margin:0"><option value="">Semua toko</option></select></div><div class="row"><input id="catalogMinPrice" class="field" type="number" min="0" step="1000" inputmode="numeric" placeholder="Harga minimum (Rp)" aria-label="Harga minimum"><input id="catalogMaxPrice" class="field" type="number" min="0" step="1000" inputmode="numeric" placeholder="Harga maksimum (Rp)" aria-label="Harga maksimum"><button id="clearCatalogFilters" class="btn secondary" type="button">Reset filter</button></div><div id="catalogCount" class="muted" style="margin-top:8px" aria-live="polite"></div></div>
 <div id="catalog" class="grid"><div class="tile muted">Menghubungkan ke katalog…</div></div>
 <div id="catalogMessage" class="status" role="status"></div></section>
@@ -260,13 +284,15 @@ makeWorkspaceSections('buyerPanel','Keranjang dan checkout');
 makeWorkspaceSections('sellerProducts','Kelola produk dan lokasi toko');
 makeWorkspaceSections('adminPanel','Pengaturan dan ringkasan admin');
 
+window.openMarketplaceCart=()=>{if(activeBuyerId){$('buyerPanel').scrollIntoView({behavior:'smooth'});return;}selectedEntryRole='buyer';$('rolePanel').classList.add('hidden');$('catalogPanel').classList.add('hidden');$('authPanel').classList.remove('hidden');$('authTitle').textContent='Masuk atau daftar sebagai Pembeli';$('authDescription').textContent='Masuk untuk melihat keranjang dan melanjutkan belanja.';$('signUp').classList.remove('hidden');$('registrationDetails').classList.add('hidden');$('legalConsent').classList.add('hidden');};
 let selectedEntryRole=null;
 let activePanelRole=null;let roleRefreshBusy=false;
-document.querySelectorAll('[data-entry-role]').forEach(button=>button.addEventListener('click',()=>{signupFormJustOpened=false;selectedEntryRole=button.dataset.entryRole;$('rolePanel').classList.add('hidden');$('authPanel').classList.remove('hidden');const names={buyer:'Pembeli',seller:'Penjual',driver:'Driver',admin:'Admin'};$('authTitle').textContent='Masuk atau daftar sebagai '+names[selectedEntryRole];$('authDescription').textContent=selectedEntryRole==='admin'?'Halaman masuk khusus pengelola Pasar Hanakau.':'Gunakan email dan kata sandi untuk akun '+names[selectedEntryRole]+'.';$('signUp').classList.toggle('hidden',selectedEntryRole==='admin');$('registrationDetails').classList.add('hidden');$('legalConsent').classList.add('hidden');const sellerMode=selectedEntryRole==='seller';$('registrationHeading').textContent=sellerMode?'Data toko penjual':'Data diri pendaftar';$('registerNameLabel').textContent=sellerMode?'Nama toko':'Nama lengkap';$('registerFullName').placeholder=sellerMode?'Contoh: Toko Sumber Rezeki':'Nama lengkap sesuai identitas';$('registerAddressLabel').textContent=sellerMode?'Alamat toko':'Alamat lengkap';$('registerAddress').placeholder=sellerMode?'Alamat lengkap lokasi toko':'Jalan, RT/RW, desa, kecamatan, kabupaten';$('registerPhoneLabel').textContent=sellerMode?'Nomor WhatsApp toko':'Nomor WhatsApp aktif';$('password').value='';$('email').value='';$('registerFullName').value='';$('registerPhone').value='';$('registerAddress').value='';message('authMessage','');}));
+document.querySelectorAll('[data-entry-role]').forEach(button=>button.addEventListener('click',()=>{signupFormJustOpened=false;selectedEntryRole=button.dataset.entryRole;$('rolePanel').classList.add('hidden');$('catalogPanel').classList.add('hidden');$('authPanel').classList.remove('hidden');const names={buyer:'Pembeli',seller:'Penjual',driver:'Driver',admin:'Admin'};$('authTitle').textContent='Masuk atau daftar sebagai '+names[selectedEntryRole];$('authDescription').textContent=selectedEntryRole==='admin'?'Halaman masuk khusus pengelola Pasar Hanakau.':'Gunakan email dan kata sandi untuk akun '+names[selectedEntryRole]+'.';$('signUp').classList.toggle('hidden',selectedEntryRole==='admin');$('registrationDetails').classList.add('hidden');$('legalConsent').classList.add('hidden');const sellerMode=selectedEntryRole==='seller';$('registrationHeading').textContent=sellerMode?'Data toko penjual':'Data diri pendaftar';$('registerNameLabel').textContent=sellerMode?'Nama toko':'Nama lengkap';$('registerFullName').placeholder=sellerMode?'Contoh: Toko Sumber Rezeki':'Nama lengkap sesuai identitas';$('registerAddressLabel').textContent=sellerMode?'Alamat toko':'Alamat lengkap';$('registerAddress').placeholder=sellerMode?'Alamat lengkap lokasi toko':'Jalan, RT/RW, desa, kecamatan, kabupaten';$('registerPhoneLabel').textContent=sellerMode?'Nomor WhatsApp toko':'Nomor WhatsApp aktif';$('password').value='';$('email').value='';$('registerFullName').value='';$('registerPhone').value='';$('registerAddress').value='';message('authMessage','');if(button.dataset.openRegister==='yes')$('signUp').click();}));
 $('signIn').addEventListener('click',()=>{$('registrationDetails').classList.add('hidden');$('legalConsent').classList.add('hidden');message('authMessage','');});
 let signupFormJustOpened=false;
 $('signUp').addEventListener('click',()=>{const opening=$('registrationDetails').classList.contains('hidden');$('registrationDetails').classList.remove('hidden');$('legalConsent').classList.remove('hidden');if(opening)signupFormJustOpened=true;message('authMessage','');});
-$('backToRoles').addEventListener('click',()=>{$('authPanel').classList.add('hidden');$('rolePanel').classList.remove('hidden');selectedEntryRole=null;});
+$('backToRoles').addEventListener('click',()=>{$('authPanel').classList.add('hidden');$('rolePanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');selectedEntryRole=null;document.body.classList.add('ph-guest-mode');});
+$('togglePartnerAccess').addEventListener('click',()=>{$('rolePanel').classList.toggle('partner-access-open');$('rolePanel').scrollIntoView({behavior:'smooth',block:'start'});});
 function message(id,text,isError=false){$(id).textContent=text;$(id).style.color=isError?'#b42318':'#176b45'}
 function validCredentials(){const email=$('email').value.trim(),password=$('password').value;if(!email||!password){message('authMessage','Isi email dan kata sandi terlebih dahulu.',true);return null}return {email,password}}
 let passwordRecoveryMode=false;
@@ -412,11 +438,12 @@ async function refreshSession(){
  activePanelRole=null;
  const {data:{session}}=await supabase.auth.getSession();
  if(refreshId!==sessionRefreshSequence)return;
+ document.body.classList.toggle('ph-guest-mode',!session);
  $('rolePanel').classList.toggle('hidden',!!session);$('authPanel').classList.toggle('hidden',!!session || !selectedEntryRole);$('accountPanel').classList.toggle('hidden',!session);
  $('sellerPanel').classList.add('hidden');$('sellerPanel').classList.add('hidden');$('sellerProducts').classList.add('hidden');$('adminPanel').classList.add('hidden');$('buyerPanel').classList.add('hidden');$('driverPanel').classList.add('hidden');$('driverApplyPanel').classList.add('hidden');
  $('catalogPanel').classList.add('hidden');
  hideBuyerWorkspace();
- if(!session){sellerShopId=null;activeBuyerId=null;cart={};buyerDeliveryPoint=null;return}
+ if(!session){sellerShopId=null;activeBuyerId=null;cart={};buyerDeliveryPoint=null;$('catalogPanel').classList.remove('hidden');$('accountPanel').classList.add('hidden');return}
  $('catalogMessage').textContent='';
  activeBuyerId=null;cart={};
  activeAccountUserId=session.user.id;await loadAccountAvatar(activeAccountUserId);
@@ -1357,7 +1384,7 @@ $('catalog').addEventListener('click',async e=>{
  const chat=e.target.closest('[data-chat-shop]');
  if(chat){const button=chat;button.disabled=true;button.textContent='Membuka chat…';try{await openBuyerChatWithShop(chat.dataset.chatShop,chat.dataset.chatShopName);}finally{button.disabled=false;button.textContent='Hubungi toko';}return;}
  const b=e.target.closest('[data-add-cart]');if(!b)return;
- if(!activeBuyerId){message('catalogMessage','Silakan masuk dengan akun pembeli untuk menggunakan keranjang.',true);return}
+ if(!activeBuyerId){message('catalogMessage','Masuk atau daftar sebagai pembeli untuk menambahkan produk ke keranjang.',true);window.openMarketplaceCart();return}
  if(checkoutInProgress){message('catalogMessage','Tunggu sampai proses checkout selesai.',true);return}
   const id=b.dataset.addCart,stock=Number(b.dataset.stock),existing=cart[id]?.quantity||0;
  if(existing>=stock){message('catalogMessage','Jumlah di keranjang sudah mencapai stok tersedia.',true);return}
