@@ -1,0 +1,36 @@
+name: Verify Android Digital Asset Links
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-assetlinks.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch and validate public Digital Asset Links
+        run: |
+          set -eu
+          curl --fail --silent --show-error --location \
+            'https://berniaja5036-blip.github.io/.well-known/assetlinks.json' \
+            -o /tmp/assetlinks.json
+          node -e "
+            const fs = require('fs');
+            const data = JSON.parse(fs.readFileSync('/tmp/assetlinks.json', 'utf8'));
+            const expectedPackage = 'id.pasarhanakau.mobile';
+            const expectedFingerprint = '13:8A:D3:68:2C:28:C4:58:46:F7:1B:4E:ED:88:82:D3:92:87:0C:1D:BB:C6:2D:16:2A:3F:C7:31:20:E9:DB:7A';
+            const ok = Array.isArray(data) && data.some(item =>
+              item.target?.namespace === 'android_app' &&
+              item.target?.package_name === expectedPackage &&
+              item.relation?.includes('delegate_permission/common.handle_all_urls') &&
+              item.target?.sha256_cert_fingerprints?.some(fp => fp.toUpperCase() === expectedFingerprint)
+            );
+            if (!ok) throw new Error('Asset Links JSON tidak cocok dengan package ID / fingerprint rilis.');
+            console.log('PASS: HTTPS assetlinks dapat diakses dan package ID + SHA-256 cocok.');
+          "
