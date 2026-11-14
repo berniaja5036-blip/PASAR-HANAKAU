@@ -31,6 +31,21 @@ Fitur-fitur tersebut sudah memiliki implementasi kode/database. Uji simulasi dat
 - Ulasan produk dan penilaian driver dapat dikirim pembeli setelah pesanan diterima. Katalog kini menampilkan rata-rata dan jumlah ulasan produk; rincian pesanan menampilkan ringkasan rating driver. Teks ulasan dan identitas pembeli tetap tidak dibuka ke publik.
 - Validasi arsip backup database/Storage dan pemulihan pada runner terisolasi telah lulus pada 12 November 2026 (73 tabel database dan 8 file dari 4 bucket Storage). Pemulihan ke proyek Supabase baru belum diuji. Uji penerimaan langsung di perangkat dan pemeriksaan privasi operasional tetap perlu sebelum peluncuran publik.
 
+## Persiapan aplikasi Android (APK dan Google Play)
+
+Pengemasan Android direncanakan menggunakan Trusted Web Activity (TWA) dengan Bubblewrap, bukan WebView biasa. Pilihan ini mempertahankan origin Chrome untuk service worker dan Web Push sehingga alur notifikasi PWA tidak sengaja diputus oleh pembungkus WebView.
+
+**Penghalang rilis yang sudah diketahui:** situs saat ini berada pada URL proyek GitHub Pages `https://berniaja5036-blip.github.io/PASAR-HANAKAU/`. TWA memerlukan Digital Asset Links di akar origin, yaitu `https://berniaja5036-blip.github.io/.well-known/assetlinks.json`. File di dalam subfolder proyek (`/PASAR-HANAKAU/.well-known/`) tidak menggantikan file pada akar origin. Sebelum build Android final, sediakan hosting file akar tersebut melalui situs GitHub Pages tingkat akun `berniaja5036-blip.github.io` atau domain milik sendiri yang diarahkan ke GitHub Pages. Jangan mengubah URL PWA/backend yang sudah berjalan hanya untuk melewati pemeriksaan ini.
+
+Sebelum build rilis:
+1. Tetapkan application ID Android yang permanen dan nama aplikasi; jangan mengganti application ID setelah publikasi.
+2. Siapkan satu keystore rilis dan simpan salinan cadangannya secara aman. Jangan commit keystore atau password ke repositori.
+3. Bangun APK untuk uji instalasi dan AAB untuk Play Store melalui GitHub Actions; simpan keystore/password hanya sebagai GitHub Actions secrets.
+4. Ambil SHA-256 fingerprint dari sertifikat yang benar, terbitkan `assetlinks.json` pada akar origin, lalu validasi verifikasi TWA.
+5. Uji login seluruh peran, peta/lokasi, unggah dokumen, tautan eksternal, dan notifikasi pada APK di perangkat Android sebelum menganggapnya siap rilis.
+
+Jangan unggah AAB ke Play Store atau mengumumkan APK final sebelum Digital Asset Links, tanda tangan, uji perangkat, dan persyaratan akun Play Console benar-benar lolos. PWA tetap dipertahankan dan terus diperbarui secara terpisah dari proses paket Android.
+
 ## Peran
 
 - **Admin:** moderasi akun, toko, produk, pesanan, driver, voucher, statistik, dan komisi.
