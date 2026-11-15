@@ -4,25 +4,27 @@ Last reviewed: 2026-11-15.
 
 ## Current production status (15 November 2026)
 
-The live Supabase project reports **86 applied migration records**. After this repository reconciliation, the active `supabase/migrations/` directory on `main` contains **79 SQL files**. Seven production-applied migrations still have no matching source file in any current repository branch:
+The live Supabase project reports **86 applied migration records**. The active `supabase/migrations/` directory on this branch contains **86 SQL files**. A direct comparison of every 14-digit version and migration name now reports **86 exact matches, zero missing versions, zero extra files, and zero duplicate version prefixes**.
 
-- `20261114121343_create_marketplace_ads_requests_and_rls`
-- `20261114121409_add_marketplace_ads_payment_review_stage`
-- `20261114121553_drop_marketplace_ads_old_insert_policy`
-- `20261114121600_require_active_product_for_marketplace_ads`
-- `20261114121725_drop_marketplace_ads_insert_policy_ambiguous_shop`
-- `20261114121726_scope_marketplace_ads_product_to_owned_shop`
-- `20261114135451_seed_marketplace_product_categories_and_require_category`
+The seven migration source files that were absent from the repository have been restored from the authoritative `statements[1]` values stored in production's `supabase_migrations.schema_migrations` table:
 
-Three repository-only corrections are made in this commit:
+- `20261114121343_create_marketplace_ads_requests_and_rls.sql`
+- `20261114121409_add_marketplace_ads_payment_review_stage.sql`
+- `20261114121553_drop_marketplace_ads_old_insert_policy.sql`
+- `20261114121600_require_active_product_for_marketplace_ads.sql`
+- `20261114121725_drop_marketplace_ads_insert_policy_ambiguous_shop.sql`
+- `20261114121726_scope_marketplace_ads_product_to_owned_shop.sql`
+- `20261114135451_seed_marketplace_product_categories_and_require_category.sql`
+
+Each recovered file was compared with the corresponding stored SQL statement. The SQL bodies match exactly; only a trailing newline was added where the stored statement did not include one. The seven records have no rollback statements in the production migration-history table. These files are source recovery only: **no migration SQL was executed and the live database was not changed**.
+
+Three repository-history corrections remain documented:
 
 - The live voucher-budget migration version is `20261114141056`; its existing SQL file was named with the incorrect local version `20261114141000`. The filename is corrected without changing its SQL body. The live voucher-budget column and checkout function were inspected and found present.
-- The live anonymous catalogue policy migration `20261114171623_separate_anon_public_read_policies_from_admin_helper` was recovered from draft PR #21 and added to `main`. It is already present in the live migration history; no SQL is applied by this commit.
-- The local-only aggregate `20261114130000_create_marketplace_ads.sql` is moved to `supabase/migrations-archive/`. Production already has the marketplace-ads table and its later policy/payment columns; the active local aggregate is superseded by the seven smaller production migrations listed above and must not be run.
+- The live anonymous catalogue policy migration `20261114171623_separate_anon_public_read_policies_from_admin_helper` was recovered from draft PR #21 and added to the repository. It is already present in the live migration history; no SQL is applied by this commit.
+- The local-only aggregate `20261114130000_create_marketplace_ads.sql` is moved to `supabase/migrations-archive/`. Production already has the marketplace-ads table and its later policy/payment columns; the active local aggregate is superseded by the seven smaller production migrations and must not be run.
 
-**Important:** Do not run `supabase db push` or apply further database migrations until the seven missing production migration sources are recovered and reviewed. The live database was not changed during this repository reconciliation. This is a migration-source/history completeness issue, not a reason to reset or recreate production data.
-
-The historical baseline from 14 November is retained below for context; its migration counts are not the current production counts.
+**Important:** Migration history and source files now reconcile, but this does not authorize applying migrations. Before any future database deployment, create and verify a backup and test the proposed migration in an isolated non-production database. The live database was not changed during this repository reconciliation.
 
 ## Historical baseline (14 November 2026)
 
