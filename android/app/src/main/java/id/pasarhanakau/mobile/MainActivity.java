@@ -140,8 +140,13 @@ public class MainActivity extends Activity {
                         || !APP_HOST.equalsIgnoreCase(page.getHost())) return;
                 String safeJson = org.json.JSONObject.quote(pendingNativeCartJson);
                 String script = "(function(){try{localStorage.setItem('pasar-hanakau-native-cart-pending',"
-                    + safeJson + ");window.dispatchEvent(new Event('pasarhanakau:native-cart-pending'));}catch(e){}})();";
-                view.evaluateJavascript(script, null);
+                    + safeJson + ");window.dispatchEvent(new Event('pasarhanakau:native-cart-pending'));return true;}catch(e){return false;}})();";
+                view.evaluateJavascript(script, result -> {
+                    if ("true".equals(result)) {
+                        getSharedPreferences("pasar_hanakau_cart", MODE_PRIVATE)
+                            .edit().remove("items").apply();
+                    }
+                });
                 pendingNativeCartJson = null;
             }
         });
