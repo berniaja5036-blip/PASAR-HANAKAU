@@ -27,7 +27,7 @@ import android.widget.Toast;
 
 public class MainActivity extends Activity {
     private static final String HOME_URL =
-        "https://berniaja5036-blip.github.io/PASAR-HANAKAU/";
+        "https://berniaja5036-blip.github.io/PASAR-HANAKAU/?client=buyer";
     private static final String APP_HOST = "berniaja5036-blip.github.io";
     public static final String EXTRA_NATIVE_CART = "id.pasarhanakau.mobile.EXTRA_NATIVE_CART";
 
