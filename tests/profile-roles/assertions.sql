@@ -58,7 +58,7 @@ set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000004';
 do $$
 begin
-  if (select count(*) from public.profile_roles) <> 8 then
+  if (select count(*) from public.profile_roles) <> 9 then
     raise exception 'Admin should be able to read all role rows';
   end if;
 end $$;
