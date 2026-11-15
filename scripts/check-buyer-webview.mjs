@@ -14,8 +14,8 @@ if (html.includes('id="togglePartnerAccess"') ||
   throw new Error('Buyer-only access guards are missing or partner entry is exposed.');
 }
 
-const scripts = [...html.matchAll(/<script\\b([^>]*)>([\\s\\S]*?)<\\/script>/gi)];
-const inlineScripts = scripts.filter(([, attrs]) => !/\\bsrc\\s*=/i.test(attrs));
+const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)];
+const inlineScripts = scripts.filter(([, attrs]) => !/\bsrc\s*=/i.test(attrs));
 if (inlineScripts.length === 0) throw new Error('No inline JavaScript found in buyer entry.');
 for (let index = 0; index < inlineScripts.length; index += 1) {
   const result = spawnSync(process.execPath, ['--check', '--input-type=module'], {
@@ -27,7 +27,7 @@ for (let index = 0; index < inlineScripts.length; index += 1) {
   }
 }
 
-for (const asset of [...html.matchAll(/(?:href|src)="(\\.\\.\\/icons\\/[^"]+)"/g)].map(match => match[1])) {
+for (const asset of [...html.matchAll(/(?:href|src)="(\.\.\/icons\/[^"]+)"/g)].map(match => match[1])) {
   if (!existsSync(resolve('buyer', asset))) throw new Error('Buyer asset missing: ' + asset);
 }
 for (const required of ['buyer/manifest.webmanifest','buyer/sw.js','buyer/syarat-ketentuan.html','buyer/kebijakan-privasi.html']) {
