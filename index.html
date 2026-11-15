@@ -513,6 +513,13 @@ async function refreshSession(){
   $('accountRole').textContent='Peran: Penjual';
   activePanelRole='seller';$('sellerProducts').classList.remove('hidden');setupSellerWorkspace();await loadSellerShop();return;
  }
+ if(nativeBuyerMode){
+  $('accountRole').textContent='Peran: Pembeli';
+  activePanelRole='buyer';$('buyerPanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');
+  setupBuyerWorkspace();initBuyerMap();activeBuyerId=session.user.id;loadCart();
+  renderBuyerLocationStatus();renderCart();await loadCatalog();await importNativeCartPending();renderCart();
+  await loadBuyerOrders();await loadBuyerChatConversations();return;
+ }
   // Semua akun berperan buyer diperiksa lebih dahulu untuk memastikan akun
  // yang pernah mengajukan driver tidak masuk ke katalog sebelum disetujui.
  const {data:driverApplication,error:driverLookupError}=await supabase.from('driver_applications').select('status').eq('user_id',session.user.id).maybeSingle();
