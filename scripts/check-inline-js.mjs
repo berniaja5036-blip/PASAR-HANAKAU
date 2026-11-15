@@ -329,3 +329,18 @@ if (!buyerCartSource.includes('function reconcileCartWithCatalog(products)') ||
 }
 
 console.log('JavaScript syntax and marketplace security regression checks passed (' + moduleBlocks.length + ' inline module).');
+
+
+const codOnlyMigration = readMigration('disable_legacy_buyer_order_transfer');
+if (html.includes('order_payment_submissions') ||
+    html.includes('renderAdminOrderPayment') ||
+    html.includes('data-review-order-payment') ||
+    !html.includes('Pembayaran pesanan menggunakan COD: bayar tunai saat barang diterima.')) {
+  console.error('Buyer orders must use COD only; legacy buyer bank-transfer UI must not be present.');
+  process.exit(1);
+}
+if (!codOnlyMigration.includes('drop policy if exists order_payment_submissions_buyer_insert') ||
+    !codOnlyMigration.includes('drop policy if exists order_payment_submissions_buyer_resubmit')) {
+  console.error('COD-only migration must remove buyer insert/resubmit policies for legacy order transfers.');
+  process.exit(1);
+}
