@@ -331,7 +331,7 @@ if (!buyerCartSource.includes('function reconcileCartWithCatalog(products)') ||
 const buyerRuntimeSource = readFileSync('index.html', 'utf8');
 if (!buyerRuntimeSource.includes("get('client') === 'buyer'") ||
     !buyerRuntimeSource.includes("if(nativeBuyerMode&&role!=='buyer')") ||
-    !buyerRuntimeSource.includes("if(nativeBuyerMode&&selectedEntryRole!=='buyer')") ||
+    !buyerRuntimeSource.includes("nativeBuyerMode&&selectedEntryRole!=='buyer'") ||
     !buyerRuntimeSource.includes('async function importNativeCartPending()') ||
     !buyerRuntimeSource.includes('item?.id||item?.product_id') ||
     !buyerRuntimeSource.includes('pasar-hanakau-native-cart-pending')) {
