@@ -67,6 +67,7 @@ jobs:
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/android-keystore/pasar-hanakau.keystore
           test -s android/android-keystore/pasar-hanakau.keystore
           keytool -list -keystore android/android-keystore/pasar-hanakau.keystore -storetype PKCS12 -alias pasar-hanakau -storepass "$ANDROID_KEYSTORE_PASSWORD" >/dev/null
+          echo "PKCS12 keystore and alias validated successfully."
           cat > android/key.properties <<EOF
           storeFile=android-keystore/pasar-hanakau.keystore
           storePassword=$ANDROID_KEYSTORE_PASSWORD
