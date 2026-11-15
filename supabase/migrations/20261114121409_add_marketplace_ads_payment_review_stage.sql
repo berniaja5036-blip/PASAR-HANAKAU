@@ -1,0 +1,1 @@
+alter table public.marketplace_ads drop constraint if exists marketplace_ads_status_check; alter table public.marketplace_ads add constraint marketplace_ads_status_check check (status in ('pending','awaiting_payment','approved','rejected','paused'));
