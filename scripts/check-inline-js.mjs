@@ -344,3 +344,37 @@ if (!codOnlyMigration.includes('drop policy if exists order_payment_submissions_
   console.error('COD-only migration must remove buyer insert/resubmit policies for legacy order transfers.');
   process.exit(1);
 }
+
+
+const buyerCartSource = readFileSync('buyer/index.html', 'utf8');
+if (!buyerCartSource.includes('function reconcileCartWithCatalog(products)') ||
+    !buyerCartSource.includes(".in('id',cartProductIds)") ||
+    !buyerCartSource.includes('const price=Number(latest.price),stock=Number(latest.stock)') ||
+    !buyerCartSource.includes('quantity=Math.min(Math.max(1,Math.floor(oldQuantity)),stock)') ||
+    !buyerCartSource.includes('if(Object.values(cart).some(p=>p.unavailable))') ||
+    !buyerCartSource.includes('cartVerificationPending||cartVerificationFailed')) {
+  console.error('Buyer cart must refresh current prices and stock, preserve unavailable items for removal, and block unsafe checkout.');
+  process.exit(1);
+}
+
+const nativeCartImporterSource = buyerCartSource;
+const nativeCartBridgeSource = readFileSync('android/app/src/main/java/id/pasarhanakau/mobile/MainActivity.java', 'utf8');
+const nativeHomeSource = readFileSync('android/app/src/main/java/id/pasarhanakau/mobile/NativeHomeActivity.kt', 'utf8');
+if (!nativeCartImporterSource.includes('item?.id||item?.product_id') ||
+    !nativeHomeSource.includes('put("product_id", item.product.id)') ||
+    !nativeCartImporterSource.includes('pasar-hanakau-native-cart-pending') ||
+    !nativeCartBridgeSource.includes("localStorage.setItem('pasar-hanakau-native-cart-pending'") ||
+    !nativeCartBridgeSource.includes("new Event('pasarhanakau:native-cart-pending'")) {
+  console.error('Native cart bridge must accept the product_id field emitted by Android and hand it off to the buyer WebView.');
+  process.exit(1);
+}
+if (!nativeCartImporterSource.includes('async function importNativeCartPending()') ||
+    !nativeCartImporterSource.includes(".select('id,shop_id,name,price,stock,status,shops(name,status)')") ||
+    !nativeCartImporterSource.includes('if(!activeBuyerId||!catalogLoaded||nativeCartImportBusy)return;')) {
+  console.error('Native cart import must wait for buyer login and revalidate current product, shop, price, and stock.');
+  process.exit(1);
+}
+if (!nativeCartBridgeSource.includes('https://berniaja5036-blip.github.io/PASAR-HANAKAU/buyer/')) {
+  console.error('Android WebView must load the dedicated buyer-only route.');
+  process.exit(1);
+}
