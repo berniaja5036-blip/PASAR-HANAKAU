@@ -93,8 +93,10 @@ class NativeHomeActivity : ComponentActivity() {
                 background = PhBackground
             )) {
                 NativeMarketplaceHome(
-                    onOpenMarketplace = {
-                        startActivity(Intent(this, MainActivity::class.java))
+                    onOpenMarketplace = { cartJson ->
+                        val intent = Intent(this, MainActivity::class.java)
+                        if (cartJson != null) intent.putExtra(MainActivity.EXTRA_NATIVE_CART, cartJson)
+                        startActivity(intent)
                     }
                 )
             }
@@ -103,7 +105,7 @@ class NativeHomeActivity : ComponentActivity() {
 }
 
 @Composable
-private fun NativeMarketplaceHome(onOpenMarketplace: () -> Unit) {
+private fun NativeMarketplaceHome(onOpenMarketplace: (String?) -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var query by remember { mutableStateOf("") }
     var products by remember { mutableStateOf<List<NativeProduct>>(emptyList()) }
@@ -138,7 +140,7 @@ private fun NativeMarketplaceHome(onOpenMarketplace: () -> Unit) {
                 cart = if (qty <= 0) cart.filterNot { it.product.id == id }
                 else cart.map { if (it.product.id == id) it.copy(quantity = qty.coerceAtMost(it.product.stock)) else it }
             },
-            onCheckout = onOpenMarketplace
+            onCheckout = { onOpenMarketplace(serializeNativeCartForCheckout(cart)) }
         )
     } else if (selectedProduct != null) {
         NativeProductDetail(
@@ -199,7 +201,7 @@ private fun NativeMarketplaceHome(onOpenMarketplace: () -> Unit) {
                         Text("Temukan produk dan toko pilihan warga Hanakau Jaya.", color = Color.White, fontSize = 11.sp)
                         Spacer(Modifier.height(11.dp))
                         Surface(color = PhYellow, shape = RoundedCornerShape(9.dp),
-                            modifier = Modifier.clickable { onOpenMarketplace() }) {
+                            modifier = Modifier.clickable { onOpenMarketplace(null) }) {
                             Text("Jelajahi marketplace", color = PhDark, fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp))
                         }
@@ -263,9 +265,9 @@ private fun NativeMarketplaceHome(onOpenMarketplace: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             BottomItem("Beranda", true) { query = ""; selectedCategory = "Semua"; selectedProduct = null; showCart = false }
-            BottomItem("Kategori", false, onOpenMarketplace)
-            BottomItem("Pesanan", false, onOpenMarketplace)
-            BottomItem("Akun", false, onOpenMarketplace)
+            BottomItem("Kategori", false) { onOpenMarketplace(null) }
+            BottomItem("Pesanan", false) { onOpenMarketplace(null) }
+            BottomItem("Akun", false) { onOpenMarketplace(null) }
         }
     }
 }
@@ -512,5 +514,15 @@ private fun reconcileSavedCart(
         if (latest.stock <= 0) return@mapNotNull null
         NativeCartItem(latest, saved.quantity.coerceAtMost(latest.stock))
     }
+}
+private fun serializeNativeCartForCheckout(cart: List<NativeCartItem>): String {
+    val array = JSONArray()
+    cart.filter { it.quantity > 0 }.forEach { item ->
+        array.put(org.json.JSONObject().apply {
+            put("product_id", item.product.id)
+            put("quantity", item.quantity)
+        })
+    }
+    return array.toString()
 }
 
