@@ -101,7 +101,7 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           html=Path("index.html").read_text(encoding="utf-8")
-          required=["get('client') === 'buyer'","if(nativeBuyerMode&&role!=='buyer')","nativeBuyerMode&&selectedEntryRole!=='buyer'","id=\"togglePartnerAccess\""]
+          required=["get('client') === 'buyer'","if(nativeBuyerMode&&role!=='buyer')","nativeBuyerMode&&selectedEntryRole!=='buyer'","id=\"togglePartnerAccess\"", "if(nativeBuyerMode){"]
           for item in required:
               if item not in html: raise SystemExit("Missing native buyer mode guard: "+item)
           print("Buyer runtime mode checks passed")
