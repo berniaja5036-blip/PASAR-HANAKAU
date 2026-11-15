@@ -172,3 +172,16 @@ Cabang kerja diselaraskan dengan empat commit terbaru dari main untuk file rekon
 Query agregat tambahan menunjukkan seluruh 7 profil memiliki pasangan auth.users dan waktu pembuatan profil berjarak kurang dari 5 detik dari waktu pembuatan akun Auth. Profil seller memiliki satu aplikasi seller approved dan satu toko; kedua profil driver memiliki aplikasi driver approved dan driver_profiles approved; satu dari dua profil driver juga memiliki riwayat sebagai pembeli. Tidak ada profil tanpa pasangan Auth.
 
 Rencana backfill yang paling konservatif berdasarkan bukti saat ini: pertahankan role admin untuk akun admin saja sampai status buyer akun itu dikonfirmasi; buat role buyer bagi 3 akun yang sekarang buyer; untuk akun seller/driver yang memiliki akun Auth dan aplikasi mitra yang telah disetujui, pulihkan role buyer dasar lalu tambahkan role seller/driver aktif sesuai bukti aplikasi, toko, dan driver_profiles yang approved. Nilai raw_user_meta_data.requested_role tidak boleh dipakai sebagai sumber otorisasi atau satu-satunya bukti backfill. Sebelum menjalankan migrasi, lakukan dry-run SELECT yang menampilkan hanya jumlah per role dan daftar konflik tanpa email/nomor telepon.
+
+## Aturan backfill role yang telah diverifikasi — 15 November 2026
+
+Source `handle_new_user()` yang dibaca langsung dari database selalu membuat profil baru dengan `role='buyer'`; nilai `requested_role` pada metadata pengguna tidak digunakan untuk memberikan hak. Source `approve_seller_application()` dan `admin_review_driver_application()` kemudian mengubah kolom role tunggal menjadi seller atau driver setelah pemeriksaan persetujuan. Ini membuktikan bahwa model lama memang kehilangan label buyer ketika akun pembeli disetujui menjadi mitra.
+
+Aturan backfill yang disarankan untuk migration (belum diterapkan):
+- `profiles.role='buyer'` dan akun aktif: buat role buyer aktif.
+- `profiles.role='seller'`: buat role seller aktif hanya bila aplikasi seller approved dan toko milik pengguna berstatus approved; tambahkan buyer aktif karena akun publik dibuat sebagai buyer sebelum persetujuan seller.
+- `profiles.role='driver'`: buat role driver aktif hanya bila aplikasi driver approved, `driver_profiles.approval_status='approved'`, kedua dokumen privat masih ada dan cocok dengan UID pemilik, serta akun aktif; tambahkan buyer aktif karena akun publik dibuat sebagai buyer sebelum persetujuan driver.
+- `profiles.role='admin'`: buat role admin aktif untuk akun aktif saja. Jangan otomatis memberi role buyer kepada admin tanpa bukti akun tersebut memang digunakan sebagai pembeli.
+- Akun suspended, aplikasi pending/rejected, toko belum approved, driver profile belum approved, atau dokumen identitas yang hilang tidak boleh memperoleh role operasional aktif.
+
+Backfill harus dibuat per user ID melalui query verifikasi internal, dengan hasil agregat untuk audit dan tanpa menyalin email, nomor telepon, nama, atau dokumen identitas ke log. `profiles.role` tetap dipertahankan sebagai kompatibilitas sampai seluruh klien, RPC, policy, trigger, Storage, dan Edge Functions berpindah ke helper multi-role. Tidak ada perubahan database produksi yang dilakukan untuk menulis aturan ini.
