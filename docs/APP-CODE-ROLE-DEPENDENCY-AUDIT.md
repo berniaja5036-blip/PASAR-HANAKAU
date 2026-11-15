@@ -210,3 +210,22 @@ Catatan: policy `active_account_required` yang tersebar di banyak tabel dan Stor
 Snapshot database saat audit menemukan 47 fungsi `SECURITY DEFINER` pada schema `public`: 28 dapat dieksekusi role `authenticated`, 0 dapat dieksekusi `anon`, dan seluruh 47 memiliki konfigurasi `search_path` eksplisit. Ini berarti peringatan advisor tentang 28 fungsi authenticated bukan alasan untuk mencabut seluruh hak EXECUTE; banyak RPC memang diperlukan klien, sementara fungsi trigger/service-role sengaja tidak dapat dipanggil langsung oleh pengguna.
 
 Dari 28 fungsi yang dapat dipanggil authenticated, fungsi admin memeriksa `is_admin()`, fungsi buyer konfirmasi barang/ongkir dan sengketa memakai helper buyer, fungsi seller memakai helper seller/ownership, dan fungsi driver melakukan pemeriksaan driver profile/penugasan. Temuan yang masih harus diperbaiki dalam migrasi multi-role adalah pemeriksaan role pada `buyer_request_order_cancellation`, `current_user_can_read_delivery_order`, `current_user_is_assigned_driver`, serta pengalihan pemeriksaan `profiles.role` langsung pada `can_upload_product_image`, `driver_confirm_delivery_fee`, dan `driver_update_delivery_status`. Hak EXECUTE yang ada harus dipertahankan sesuai fungsi setelah definisi dan helper diperbarui; `anon` tetap tidak diberi EXECUTE.
+
+## Inventaris policy RLS ownership-only tambahan
+
+Pemeriksaan policy pada tabel operasional menemukan beberapa jalur yang memakai `auth.uid()` dan kepemilikan sebagai satu-satunya syarat role. Pada model saat ini, restrictive `active_account_required` tetap memblokir akun global yang ditangguhkan. Untuk model multi-role, jalur operasional berikut perlu memeriksa role aktif yang tepat, sementara akses baca riwayat sebaiknya dipertahankan bila memang diperlukan:
+
+**Perlu role aktif untuk operasi/tindakan:**
+- `buyer_wishlist_owner_add_active_product`, `buyer_wishlist_owner_delete`, dan `buyer_wishlist_owner_read`: buyer aktif.
+- `chat_conversations_buyer_create`: buyer aktif; `chat_conversations_participant_read`, `chat_messages_participant_send`, dan `chat_messages_recipient_mark_read`: buyer aktif pada sisi buyer dan seller aktif pada sisi pemilik toko. Akses baca riwayat percakapan dapat dipertahankan sesuai kebijakan retensi.
+- `driver_presence_insert_approved_self` dan `driver_presence_update_approved_self`: driver aktif selain `driver_profiles.approval_status='approved'`.
+- `driver_ratings_buyer_insert_verified` dan `product_reviews_buyer_insert_verified`: buyer aktif selain verifikasi pesanan selesai yang sudah ada.
+- `marketplace_ads_seller_submit_payment_reference`: seller aktif selain pemilik iklan dan status tagihan `awaiting_payment`.
+- `products_seller_delete_own_shop` dan `shops_owner_update_or_admin`: seller aktif untuk tindakan operasional pemilik toko; akses admin tetap melalui `is_admin()`.
+
+**Baca riwayat/identitas yang dapat dipertahankan berdasarkan ownership:**
+- `order_cancellation_read_participants`, `order_payment_submissions_buyer_read`, `driver_ratings_participant_read`, `product_reviews_participant_read`, `seller_commission_entries_read_owner_admin`, dan `seller_commission_invoices_read_owner_admin` dapat tetap mengizinkan pemilik membaca riwayat miliknya, dengan syarat akun global aktif dan tidak ada data pihak lain yang terbuka.
+- `shops_authenticated_read` boleh tetap menampilkan toko approved dan toko milik sendiri; `user_public_profiles_read_authenticated` memang merupakan data profil publik terbatas.
+- `driver_profiles_read_scoped` dapat mempertahankan akses pemilik membaca profil sendiri, tetapi jalur akses karena tugas harus menggunakan helper driver aktif.
+
+`active_account_required` adalah policy **RESTRICTIVE** pada tabel yang diperiksa, sehingga berfungsi sebagai syarat global AND dan bukan izin mandiri. Policy operasional di atas tetap harus diperbaiki secara spesifik; jangan mengubah policy restrictive ini menjadi permissive. Perubahan role harus mempertahankan batas ownership, shop ID, buyer ID, driver ID, status pesanan, dan admin, bukan menggantinya dengan pemeriksaan role saja.
