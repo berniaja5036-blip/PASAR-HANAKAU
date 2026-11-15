@@ -6,10 +6,12 @@ on:
     paths:
       - 'android/**'
       - 'index.html'
+      - 'buyer/**'
+      - 'scripts/check-buyer-webview.mjs'
       - 'docs/**'
       - '.github/workflows/android-twa.yml'
   push:
-    branches: [main, native-android-foundation]
+    branches: [main]
     paths:
       - 'android/**'
       - 'index.html'
@@ -21,8 +23,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: pasar-hanakau-android-release
-  cancel-in-progress: false
+  group: pasar-hanakau-android-release-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-android:
