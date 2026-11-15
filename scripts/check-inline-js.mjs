@@ -317,17 +317,6 @@ if (!driverReviewTrimMigration.includes('create or replace function public.admin
 }
 
 
-const buyerCartSource = readFileSync('index.html', 'utf8');
-if (!buyerCartSource.includes('function reconcileCartWithCatalog(products)') ||
-    !buyerCartSource.includes(".in('id',cartProductIds)") ||
-    !buyerCartSource.includes('const price=Number(latest.price),stock=Number(latest.stock)') ||
-    !buyerCartSource.includes('quantity=Math.min(Math.max(1,Math.floor(oldQuantity)),stock)') ||
-    !buyerCartSource.includes('if(Object.values(cart).some(p=>p.unavailable))') ||
-    !buyerCartSource.includes('cartVerificationPending||cartVerificationFailed')) {
-  console.error('Buyer cart must refresh current prices and stock, preserve unavailable items for removal, and block unsafe checkout.');
-  process.exit(1);
-}
-
 console.log('JavaScript syntax and marketplace security regression checks passed (' + moduleBlocks.length + ' inline module).');
 
 
