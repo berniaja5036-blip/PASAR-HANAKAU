@@ -23,7 +23,7 @@ create index profile_roles_user_status_idx
 
 alter table public.profile_roles enable row level security;
 
-revoke all on table public.profile_roles from public, anon;
+revoke all on table public.profile_roles from public, anon, authenticated;
 grant select on table public.profile_roles to authenticated;
 grant select, insert, update, delete on table public.profile_roles to service_role;
 
