@@ -126,6 +126,12 @@ security definer
 set search_path = pg_catalog, public
 as $function$
 begin
+  if tg_op = 'UPDATE' and old.role = 'admin' and new.role <> 'admin' then
+    update public.profile_roles
+    set status = 'suspended', updated_at = pg_catalog.now()
+    where user_id = new.id and role = 'admin';
+  end if;
+
   if new.role = 'admin' then
     insert into public.profile_roles (user_id, role, status)
     values (new.id, 'admin', 'active')
