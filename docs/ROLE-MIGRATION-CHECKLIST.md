@@ -131,3 +131,29 @@ Pencarian katalog PostgreSQL pada database aktif menemukan 24 fungsi publik yang
 ## Keputusan implementasi tahap berikutnya
 
 Belum aman membuat atau menjalankan migrasi produksi. Langkah berikutnya adalah menyiapkan rancangan migrasi bertahap yang mempertahankan kolom lama, mengisi role berdasarkan bukti persetujuan, mengubah seluruh RPC/policy yang terdampak, dan menyediakan rollback. Draft SQL baru boleh dianggap siap setelah definisi lengkap fungsi yang akan diganti dan seluruh aturan Storage/trigger dicocokkan satu per satu. Tidak ada perubahan skema yang diterapkan pada tahap audit ini.
+
+
+## Audit Storage, trigger, dan Edge Function (15 November 2026)
+
+Pemeriksaan lanjutan menemukan area yang tidak terlihat dari pencarian helper RLS saja:
+
+**Storage policies (14 policy):**
+- Dokumen privat driver: `driver_docs_owner_upload`, `driver_docs_owner_read_or_admin`, `driver_docs_owner_delete`. Kepemilikan folder UID dan pembatasan dokumen yang sudah diajukan harus tetap dipertahankan; admin check harus memakai role admin baru.
+- Foto produk: `product_images_seller_upload`, `product_images_seller_update`, `product_images_seller_delete` bergantung pada `can_upload_product_image` dan `is_admin`; keduanya harus dimigrasikan.
+- Lampiran chat dan avatar menggunakan kepemilikan peserta/UID; jangan memperluas akses hanya karena user memiliki role tambahan.
+- Policy `active_account_required` tetap wajib pada seluruh operasi Storage terautentikasi.
+
+**Trigger yang harus diperbarui/ditinjau:**
+- `notify_admin_application_submissions` mencari admin dari `profiles.role='admin'`.
+- `notify_order_events` mencari penerima notifikasi admin dari `profiles.role='admin'`.
+- `capture_seller_application_admin_audit` memverifikasi admin melalui `profiles.role='admin'`.
+- `capture_admin_audit_row` mencatat keputusan review driver dan aksi admin lain; pastikan aktor tetap diverifikasi sebagai admin aktif melalui helper baru.
+- Trigger lain untuk chat, pengiriman, komisi, riwayat pesanan, dan sinkronisasi profil juga harus diuji regresi, walaupun tidak semuanya membaca role langsung.
+
+**Edge Functions aktif (4) yang diperiksa:**
+- `checkout-with-delivery`: memeriksa `profiles.role === 'buyer'` sebelum checkout. Harus memakai role buyer aktif, bukan kesetaraan role tunggal, supaya akun buyer yang sekaligus seller/driver tetap dapat berbelanja.
+- `admin-account-management`: memeriksa `profiles.role === 'admin'` dan daftar akun memakai filter role tunggal. Endpoint ini harus berpindah ke role admin aktif dan menampilkan multi-role tanpa membuka jalur admin publik. Fungsi memverifikasi JWT pengguna sendiri walaupun konfigurasi gateway `verify_jwt=false`; verifikasi ini tidak boleh dihilangkan.
+- `push-notifications`: pendaftaran langganan memeriksa status akun; pengiriman memakai data penerima dari notifikasi. Pertahankan autentikasi dan pembatasan akun.
+- `route-distance`: memeriksa status akun aktif, bukan role tunggal; tidak perlu mengubah pemeriksaan role kecuali kebijakan produk menetapkan pembatasan khusus.
+
+**Kesimpulan audit tambahan:** migrasi tidak boleh hanya mengganti `current_user_has_role`. Harus mencakup tiga Edge Function yang membaca profil/otorisasi, empat trigger/admin-notification/audit di atas, dan policy Storage foto produk/dokumen driver. Tidak ada kode Edge Function, trigger, policy, atau skema produksi yang diubah pada audit ini.
