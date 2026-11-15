@@ -328,4 +328,16 @@ if (!buyerCartSource.includes('function reconcileCartWithCatalog(products)') ||
   process.exit(1);
 }
 
+const nativeCartImporterSource = readFileSync('index.html', 'utf8');
+const nativeCartBridgeSource = readFileSync('android/app/src/main/java/id/pasarhanakau/mobile/MainActivity.java', 'utf8');
+if (!nativeCartImporterSource.includes('async function importNativeCartPending()') ||
+    !nativeCartImporterSource.includes('pasar-hanakau-native-cart-pending') ||
+    !nativeCartImporterSource.includes(".select('id,shop_id,name,price,stock,status,shops(name,status)')") ||
+    !nativeCartImporterSource.includes('if(!activeBuyerId||!catalogLoaded||nativeCartImportBusy)return;') ||
+    !nativeCartBridgeSource.includes("localStorage.setItem('pasar-hanakau-native-cart-pending'") ||
+    !nativeCartBridgeSource.includes("new Event('pasarhanakau:native-cart-pending')")) {
+  console.error('Native cart handoff must import only after buyer login and revalidate live product, shop, price, and stock data.');
+  process.exit(1);
+}
+
 console.log('JavaScript syntax and marketplace security regression checks passed (' + moduleBlocks.length + ' inline module).');
