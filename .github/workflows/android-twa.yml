@@ -7,6 +7,7 @@ on:
       - 'android/**'
       - 'index.html'
       - 'buyer/**'
+      - 'scripts/check-inline-js.mjs'
       - 'scripts/check-buyer-webview.mjs'
       - 'docs/**'
       - '.github/workflows/android-twa.yml'
