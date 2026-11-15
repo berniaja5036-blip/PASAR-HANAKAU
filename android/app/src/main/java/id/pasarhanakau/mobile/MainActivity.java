@@ -29,8 +29,10 @@ public class MainActivity extends Activity {
     private static final String HOME_URL =
         "https://berniaja5036-blip.github.io/PASAR-HANAKAU/";
     private static final String APP_HOST = "berniaja5036-blip.github.io";
+    public static final String EXTRA_NATIVE_CART = "id.pasarhanakau.mobile.EXTRA_NATIVE_CART";
 
     private WebView webView;
+    private String pendingNativeCartJson;
     private ProgressBar progressBar;
     private android.webkit.ValueCallback<Uri[]> uploadCallback;
     private static final int FILE_CHOOSER_REQUEST = 4102;
@@ -65,6 +67,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        pendingNativeCartJson = getIntent() == null ? null : getIntent().getStringExtra(EXTRA_NATIVE_CART);
 
         getWindow().setStatusBarColor(Color.TRANSPARENT);
         getWindow().setNavigationBarColor(Color.rgb(18, 63, 45));
@@ -126,6 +129,20 @@ public class MainActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 return handleNavigation(Uri.parse(url));
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                if (pendingNativeCartJson == null) return;
+                Uri page = Uri.parse(url);
+                if (!"https".equalsIgnoreCase(page.getScheme())
+                        || !APP_HOST.equalsIgnoreCase(page.getHost())) return;
+                String safeJson = org.json.JSONObject.quote(pendingNativeCartJson);
+                String script = "(function(){try{localStorage.setItem('pasar-hanakau-native-cart-pending',"
+                    + safeJson + ");window.dispatchEvent(new Event('pasarhanakau:native-cart-pending'));}catch(e){}})();";
+                view.evaluateJavascript(script, null);
+                pendingNativeCartJson = null;
             }
         });
 
