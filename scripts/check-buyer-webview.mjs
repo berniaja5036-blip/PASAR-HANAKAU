@@ -10,8 +10,17 @@ if (new Set(roles).size !== 1 || roles[0] !== 'buyer') {
 }
 if (html.includes('id="togglePartnerAccess"') ||
     !html.includes("if(role!=='buyer')") ||
-    !html.includes("if(selectedEntryRole!=='buyer')")) {
+    !html.includes("if(selectedEntryRole!=='buyer')") ||
+    !html.includes('item?.id||item?.product_id') ||
+    !html.includes('await importNativeCartPending()')) {
   throw new Error('Buyer-only access guards are missing or partner entry is exposed.');
+}
+
+const roleGuardIndex = html.indexOf("if(role!=='buyer')");
+const buyerFlowIndex = html.indexOf("activePanelRole='buyer'");
+const driverLookupIndex = html.indexOf("const {data:driverApplication");
+if (!(roleGuardIndex >= 0 && buyerFlowIndex > roleGuardIndex && driverLookupIndex > buyerFlowIndex)) {
+  throw new Error('Buyer route must open shopping for buyer accounts even when they have a driver application.');
 }
 
 const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)];
