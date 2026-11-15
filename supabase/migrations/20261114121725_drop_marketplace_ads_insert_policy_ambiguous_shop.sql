@@ -1,0 +1,1 @@
+drop policy if exists marketplace_ads_seller_insert_own on public.marketplace_ads
