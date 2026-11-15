@@ -53,26 +53,20 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Restore the existing app signing key
-        uses: actions/cache/restore@v4
-        with:
-          path: android/android-keystore/pasar-hanakau.keystore
-          key: pasar-hanakau-signing-keystore-v1
-
-      - name: Prepare signing and launcher icon
+      - name: Restore the existing app signing key from GitHub Secret
         env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -eu
           mkdir -p android/android-keystore android/app/src/main/res/drawable-nodpi
-          if [ ! -s android/android-keystore/pasar-hanakau.keystore ]; then
-            echo "::error::Kunci tanda tangan aplikasi yang lama tidak ditemukan di cache. Build dihentikan agar APK tidak memakai kunci baru dan tetap dapat memperbarui versi sebelumnya."
-            exit 1
-          fi
+          test -n "$ANDROID_KEYSTORE_BASE64"
           test -n "$ANDROID_KEYSTORE_PASSWORD"
           test -n "$ANDROID_KEY_PASSWORD"
-          keytool -list -keystore android/android-keystore/pasar-hanakau.keystore -storetype PKCS12 -storepass "$ANDROID_KEYSTORE_PASSWORD" >/dev/null
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/android-keystore/pasar-hanakau.keystore
+          test -s android/android-keystore/pasar-hanakau.keystore
+          keytool -list -keystore android/android-keystore/pasar-hanakau.keystore -storetype PKCS12 -alias pasar-hanakau -storepass "$ANDROID_KEYSTORE_PASSWORD" >/dev/null
           cat > android/key.properties <<EOF
           storeFile=android-keystore/pasar-hanakau.keystore
           storePassword=$ANDROID_KEYSTORE_PASSWORD
