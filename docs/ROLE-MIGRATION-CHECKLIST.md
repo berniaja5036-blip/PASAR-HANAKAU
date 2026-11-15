@@ -36,6 +36,8 @@ Aturan:
 
 ## Urutan implementasi aman
 
+Catatan Supabase Data API: sejak perubahan platform yang berlaku 30 Oktober 2026, tabel baru pada schema public tidak otomatis diekspos ke Data API. Saat tabel role dibuat, berikan grant hanya kepada role database yang diperlukan dan expose secara eksplisit; RLS tetap wajib aktif. Jangan membuka tabel ini untuk anon.
+
 - [ ] Buat tabel peran dan indeks/constraint dengan RLS aktif serta akses tabel minimum.
 - [ ] Backfill peran yang sudah ada berdasarkan profil dan bukti persetujuan:
   - buyer: semua akun yang telah ada tetap mendapat buyer dasar, kecuali kebijakan khusus ditinjau.
