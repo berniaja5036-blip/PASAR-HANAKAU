@@ -1492,6 +1492,14 @@ function importNativeCartPending(){
   return 0;
  }
 }
+window.addEventListener('pasarhanakau:native-cart-pending',async()=>{
+ if(!activeBuyerId)return;
+ try{
+  await loadCatalog();
+  importNativeCartPending();
+  renderCart();
+ }catch(error){console.warn('Penyegaran katalog untuk keranjang native gagal:',error);}
+});
 function formatRupiah(n){return 'Rp '+Number(n||0).toLocaleString('id-ID');}
 function orderStatusLabel(s){return ({pending:'Menunggu konfirmasi',confirmed:'Dikonfirmasi',ready_for_pickup:'Siap dijemput driver',picked_up:'Sudah dijemput driver',delivered:'Terkirim',cancelled:'Dibatalkan'})[s]||s;}
 let checkoutInProgress=false;
