@@ -1,5 +1,6 @@
 package id.pasarhanakau.mobile
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -103,18 +104,24 @@ class NativeHomeActivity : ComponentActivity() {
 
 @Composable
 private fun NativeMarketplaceHome(onOpenMarketplace: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     var query by remember { mutableStateOf("") }
     var products by remember { mutableStateOf<List<NativeProduct>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var selectedProduct by remember { mutableStateOf<NativeProduct?>(null) }
-    var cart by remember { mutableStateOf<List<NativeCartItem>>(emptyList()) }
+    var cart by remember { mutableStateOf(loadSavedCart(context)) }
     var showCart by remember { mutableStateOf(false) }
+
+    LaunchedEffect(cart) {
+        withContext(Dispatchers.IO) { saveSavedCart(context, cart) }
+    }
     var selectedCategory by remember { mutableStateOf("Semua") }
 
     LaunchedEffect(Unit) {
         try {
             products = withContext(Dispatchers.IO) { fetchNativeProducts() }
+            cart = reconcileSavedCart(cart, products)
             error = null
         } catch (e: Exception) {
             error = "Katalog belum dapat dimuat. Periksa koneksi internet."
@@ -440,3 +447,70 @@ private fun fetchNativeProducts(): List<NativeProduct> {
         connection.disconnect()
     }
 }
+
+private const val CART_PREFS = "pasar_hanakau_cart"
+private const val CART_KEY = "items"
+
+private fun loadSavedCart(context: Context): List<NativeCartItem> {
+    return try {
+        val raw = context.getSharedPreferences(CART_PREFS, Context.MODE_PRIVATE)
+            .getString(CART_KEY, null) ?: return emptyList()
+        val array = JSONArray(raw)
+        (0 until array.length()).mapNotNull { index ->
+            val item = array.optJSONObject(index) ?: return@mapNotNull null
+            val id = item.optString("id")
+            val name = item.optString("name")
+            val quantity = item.optInt("quantity", 0)
+            val stock = item.optInt("stock", 0)
+            if (id.isBlank() || name.isBlank() || quantity <= 0 || stock <= 0) return@mapNotNull null
+            val product = NativeProduct(
+                id = id,
+                name = name,
+                price = item.optLong("price", 0L).coerceAtLeast(0L),
+                shopName = item.optString("shopName", "Toko Hanakau"),
+                imageUrl = item.optString("imageUrl", ""),
+                description = item.optString("description", ""),
+                stock = stock,
+                categoryName = item.optString("categoryName", "")
+            )
+            NativeCartItem(product, quantity.coerceAtMost(stock))
+        }
+    } catch (_: Exception) {
+        emptyList()
+    }
+}
+
+private fun saveSavedCart(context: Context, cart: List<NativeCartItem>) {
+    val array = JSONArray()
+    cart.forEach { item ->
+        val product = item.product
+        array.put(org.json.JSONObject().apply {
+            put("id", product.id)
+            put("name", product.name)
+            put("price", product.price)
+            put("shopName", product.shopName)
+            put("imageUrl", product.imageUrl)
+            put("description", product.description)
+            put("stock", product.stock)
+            put("categoryName", product.categoryName)
+            put("quantity", item.quantity)
+        })
+    }
+    context.getSharedPreferences(CART_PREFS, Context.MODE_PRIVATE)
+        .edit()
+        .putString(CART_KEY, array.toString())
+        .apply()
+}
+
+private fun reconcileSavedCart(
+    savedCart: List<NativeCartItem>,
+    latestProducts: List<NativeProduct>
+): List<NativeCartItem> {
+    val latestById = latestProducts.associateBy { it.id }
+    return savedCart.mapNotNull { saved ->
+        val latest = latestById[saved.product.id] ?: return@mapNotNull null
+        if (latest.stock <= 0) return@mapNotNull null
+        NativeCartItem(latest, saved.quantity.coerceAtMost(latest.stock))
+    }
+}
+
