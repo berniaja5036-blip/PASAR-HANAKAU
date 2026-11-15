@@ -518,7 +518,7 @@ async function refreshSession(){
    return;
   }
   $('accountRole').textContent='Peran: Pembeli';
-  activePanelRole='buyer';$('buyerPanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');setupBuyerWorkspace();initBuyerMap();activeBuyerId=session.user.id;loadCart();renderBuyerLocationStatus();renderCart();await loadCatalog();await loadBuyerOrders();await loadBuyerChatConversations();return;
+  activePanelRole='buyer';$('buyerPanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');setupBuyerWorkspace();initBuyerMap();activeBuyerId=session.user.id;loadCart();renderBuyerLocationStatus();renderCart();await loadCatalog();importNativeCartPending();renderCart();await loadBuyerOrders();await loadBuyerChatConversations();return;
  }
  if(role==='driver' && driverApplication?.status==='approved'){
   $('accountRole').textContent='Peran: Driver';
@@ -557,7 +557,7 @@ async function refreshSession(){
   return;
  }
  $('accountRole').textContent='Peran: Pembeli';
- activePanelRole='buyer';$('buyerPanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');setupBuyerWorkspace();initBuyerMap();activeBuyerId=session.user.id;loadCart();renderBuyerLocationStatus();renderCart();await loadCatalog();await loadBuyerOrders();
+ activePanelRole='buyer';$('buyerPanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');setupBuyerWorkspace();initBuyerMap();activeBuyerId=session.user.id;loadCart();renderBuyerLocationStatus();renderCart();await loadCatalog();importNativeCartPending();renderCart();await loadBuyerOrders();
 }
 $('signIn').addEventListener('click',async()=>{const c=validCredentials();if(!c)return; $('signIn').disabled=true;message('authMessage','Sedang masuk…');const {error}=await supabase.auth.signInWithPassword(c);$('signIn').disabled=false;if(error)message('authMessage',error.message,true);else{message('authMessage','Berhasil masuk.');await refreshSession();}});
 $('signUp').addEventListener('click',async()=>{if(signupFormJustOpened){signupFormJustOpened=false;return;}const c=validCredentials();if(!c)return;if(!$('acceptLegal').checked){message('authMessage','Centang persetujuan Syarat dan Ketentuan serta Kebijakan Privasi sebelum mendaftar.',true);return;}const full_name=$('registerFullName').value.trim(),phone=$('registerPhone').value.trim(),full_address=$('registerAddress').value.trim();if(c.password.length<8){message('authMessage','Kata sandi minimal 8 karakter.',true);return}if(full_name.length<3||phone.replace(/\D/g,'').length<9||full_address.length<10){message('authMessage',selectedEntryRole==='seller'?'Lengkapi nama toko, alamat toko, dan nomor WhatsApp aktif.':'Lengkapi nama, alamat, dan nomor WhatsApp aktif.',true);return}$('signUp').disabled=true;message('authMessage','Sedang membuat akun…');if(!['buyer','seller','driver'].includes(selectedEntryRole)){message('authMessage','Pendaftaran admin tidak tersedia melalui halaman publik.',true);return}const {data,error}=await supabase.auth.signUp({email:c.email,password:c.password,options:{data:{full_name,phone,full_address,requested_role:selectedEntryRole,accepted_terms_at:new Date().toISOString(),accepted_terms_version:"2026-11-12"}}});$('signUp').disabled=false;if(error)message('authMessage',error.message,true);else if(data.session){await supabase.from('profiles').update({full_name,phone,full_address}).eq('id',data.user.id);message('authMessage','Akun berhasil dibuat.');await refreshSession();}else message('authMessage','Pendaftaran diterima. Periksa email untuk konfirmasi, lalu masuk. Data profil akan tersimpan saat akun dibuat.');});
@@ -1452,6 +1452,46 @@ $('saveLegacyShopLocation').addEventListener('click',async()=>{if(!sellerShopId|
 function cartStorageKey(){return activeBuyerId?'pasar-hanakau-cart-'+activeBuyerId:null;}
 function loadCart(){const key=cartStorageKey();if(!key){cart={};return}try{cart=JSON.parse(localStorage.getItem(key)||'{}')||{};}catch{cart={};}}
 function saveCart(){const key=cartStorageKey();if(key)localStorage.setItem(key,JSON.stringify(cart));}
+function importNativeCartPending(){
+ if(!activeBuyerId)return 0;
+ const pendingKey='pasar-hanakau-native-cart-pending';
+ const raw=localStorage.getItem(pendingKey);
+ if(!raw)return 0;
+ try{
+  const incoming=JSON.parse(raw);
+  if(!Array.isArray(incoming))throw new Error('Format keranjang dari aplikasi tidak valid.');
+  let added=0;
+  for(const item of incoming){
+   const id=String(item?.product_id||'');
+   const quantity=Math.floor(Number(item?.quantity||0));
+   const product=catalogProducts.find(p=>p.id===id);
+   if(!product||quantity<=0||Number(product.stock)<=0)continue;
+   const existing=Number(cart[id]?.quantity||0);
+   const nextQuantity=Math.min(Number(product.stock),existing+quantity);
+   if(nextQuantity<=existing)continue;
+   cart[id]={
+    id:product.id,
+    name:product.name,
+    price:Number(product.price),
+    stock:Number(product.stock),
+    shopId:product.shop_id,
+    shopName:product.shops?.name||'Toko Pasar Hanakau',
+    quantity:nextQuantity
+   };
+   added+=nextQuantity-existing;
+  }
+  localStorage.removeItem(pendingKey);
+  saveCart();
+  if(added>0)message('catalogMessage',added+' barang dari keranjang aplikasi berhasil disiapkan. Periksa kembali sebelum checkout.');
+  else if(incoming.length>0)message('catalogMessage','Produk di keranjang aplikasi sudah tidak tersedia atau stoknya habis. Silakan pilih produk terbaru.',true);
+  return added;
+ }catch(error){
+  localStorage.removeItem(pendingKey);
+  console.warn('Keranjang native tidak dapat diimpor:',error);
+  message('catalogMessage','Keranjang dari aplikasi tidak dapat dibaca. Silakan tambahkan produk kembali.',true);
+  return 0;
+ }
+}
 function formatRupiah(n){return 'Rp '+Number(n||0).toLocaleString('id-ID');}
 function orderStatusLabel(s){return ({pending:'Menunggu konfirmasi',confirmed:'Dikonfirmasi',ready_for_pickup:'Siap dijemput driver',picked_up:'Sudah dijemput driver',delivered:'Terkirim',cancelled:'Dibatalkan'})[s]||s;}
 let checkoutInProgress=false;
