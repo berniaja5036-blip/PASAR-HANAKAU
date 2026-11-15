@@ -1518,7 +1518,7 @@ async function importNativeCartPending(){
  try{payload=JSON.parse(raw);}catch{message('checkoutMessage','Data keranjang dari aplikasi HP tidak terbaca. Keranjang asli tetap disimpan; coba muat ulang aplikasi.',true);return}
  const incoming=Array.isArray(payload)?payload:(Array.isArray(payload?.items)?payload.items:null);
  if(!incoming){message('checkoutMessage','Format keranjang aplikasi HP tidak sesuai. Data belum dihapus.',true);return}
- const normalized=incoming.map(item=>({id:String(item?.id||'').trim(),quantity:Number(item?.quantity),fallback:item||{}}))
+ const normalized=incoming.map(item=>({id:String(item?.id||item?.product_id||'').trim(),quantity:Number(item?.quantity),fallback:item||{}}))
   .filter(item=>/^[0-9a-f-]{36}$/i.test(item.id)&&Number.isInteger(item.quantity)&&item.quantity>0&&item.quantity<=100);
  if(!normalized.length){try{localStorage.removeItem('pasar-hanakau-native-cart-pending');}catch{}return}
  nativeCartImportBusy=true;cartVerificationPending=true;cartVerificationFailed=false;renderCart();
