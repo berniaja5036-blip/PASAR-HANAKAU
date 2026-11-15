@@ -29,3 +29,12 @@ Add `public.profile_roles` as an additive, multi-role assignment table while kee
 The GitHub Actions workflow uses an isolated PostgreSQL 17 service. It verifies migration syntax, backfill, multi-role accounts, pending/rejected applications, profile/application triggers, RLS visibility, suspended-account behavior, and absence of client write grants.
 
 This is not a substitute for the later Supabase integration tests. No production SQL has been executed by this draft.
+
+## Read-only production preflight (15 November 2026)
+
+- Current profiles: 1 admin, 3 buyer-primary, 1 seller-primary, and 2 driver-primary; all profiles are active.
+- Seller-primary accounts without an approved seller application and approved shop: 0.
+- Driver-primary accounts without an approved driver application and approved driver profile: 0.
+- Pending driver applications: 1; the draft maps this to a pending driver role while preserving the buyer role.
+- One already-approved driver application has empty KTP/face path fields even though its driver profile and application are approved. The draft deliberately preserves the existing approved driver role instead of silently revoking it. Existing delivery-assignment logic still requires the private document objects before assigning new work; this data anomaly needs an admin follow-up.
+- An encrypted production database backup was completed and verified before this draft was started. No production schema or data was changed.
