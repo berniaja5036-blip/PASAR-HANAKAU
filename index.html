@@ -709,6 +709,7 @@ $('addProduct').addEventListener('click',async()=>{
 $('signOut').addEventListener('click',async()=>{try{const registration=await navigator.serviceWorker?.ready;const subscription=await registration?.pushManager?.getSubscription();if(subscription){await callPushFunction({action:"remove_subscription",endpoint:subscription.endpoint});await subscription.unsubscribe();}}catch(error){console.warn("Pelepasan langganan notifikasi gagal:",error);}const {error}=await supabase.auth.signOut();if(error)message('catalogMessage',error.message,true);else{await refreshSession();message('catalogMessage','Anda sudah keluar.')}});
 supabase.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY'){passwordRecoveryMode=true;$('rolePanel').classList.add('hidden');$('authPanel').classList.add('hidden');$('accountPanel').classList.add('hidden');$('passwordRecoveryPanel').classList.remove('hidden');$('passwordRecoveryForm').classList.remove('hidden');$('backFromRecovery').classList.add('hidden');$('passwordRecoveryTitle').textContent='Buat kata sandi baru';$('passwordRecoveryDescription').textContent='Masukkan kata sandi baru untuk akun Pasar Hanakau.';$('passwordRecoveryMessage').textContent='Tautan pemulihan valid. Silakan buat kata sandi baru.';return;}if(passwordRecoveryMode)return;setTimeout(()=>{refreshSession().catch(error=>message('authMessage','Gagal memuat sesi akun: '+(error?.message||'Kesalahan tidak diketahui'),true));},0);});
 let catalogProducts=[];
+let catalogLoaded=false;
 let productCategories=[];
 let activeCategoryId='';
 let buyerWishlistIds=new Set();
@@ -764,6 +765,7 @@ $('catalogMinPrice').addEventListener('input',renderCatalog);
 $('catalogMaxPrice').addEventListener('input',renderCatalog);
 $('clearCatalogFilters').addEventListener('click',()=>{$('catalogSearch').value='';$('catalogSort').value='newest';$('catalogShopFilter').value='';$('catalogMinPrice').value='';$('catalogMaxPrice').value='';activeCategoryId='';document.querySelectorAll('[data-home-category]').forEach(item=>item.classList.toggle('active',!item.dataset.homeCategory));renderCatalog()});
 async function loadCatalog(){
+ catalogLoaded=false;
  $('catalog').innerHTML='<div class="tile muted">Menghubungkan ke katalog…</div>';
  $('catalogMessage').textContent='';
  try{
@@ -771,6 +773,7 @@ async function loadCatalog(){
    const {data,error}=await supabase.from('products').select('id,shop_id,category_id,categories(name),name,description,price,stock,image_path,created_at,shops(name)').eq('status','active').gt('stock',0).order('created_at',{ascending:false}).limit(60);
   if(error)throw error;
   catalogProducts=data||[];
+  catalogLoaded=true;
   if(activeBuyerId&&Object.keys(cart).length){
    const cartProductIds=Object.keys(cart);
    cartVerificationPending=true;
@@ -811,6 +814,7 @@ async function loadCatalog(){
   await loadMarketplaceAds();
   if(activeBuyerId)await loadBuyerWishlist();
  }catch(error){
+  catalogLoaded=false;
   $('catalog').innerHTML='<div class="tile muted">Katalog belum dapat dimuat. Periksa koneksi internet lalu coba muat ulang.</div>';
   message('catalogMessage','Keterangan: '+(error?.message||'Permintaan data katalog gagal.'),true);
   console.error('Gagal memuat katalog:',error);
@@ -1504,6 +1508,61 @@ function reconcileCartWithCatalog(products){
  if(changed)saveCart();
  return changes;
 }
+let nativeCartImportBusy=false;
+async function importNativeCartPending(){
+ if(!activeBuyerId||!catalogLoaded||nativeCartImportBusy)return;
+ let raw='';
+ try{raw=localStorage.getItem('pasar-hanakau-native-cart-pending')||'';}catch{return}
+ if(!raw)return;
+ let payload;
+ try{payload=JSON.parse(raw);}catch{message('checkoutMessage','Data keranjang dari aplikasi HP tidak terbaca. Keranjang asli tetap disimpan; coba muat ulang aplikasi.',true);return}
+ const incoming=Array.isArray(payload)?payload:(Array.isArray(payload?.items)?payload.items:null);
+ if(!incoming){message('checkoutMessage','Format keranjang aplikasi HP tidak sesuai. Data belum dihapus.',true);return}
+ const normalized=incoming.map(item=>({id:String(item?.id||'').trim(),quantity:Number(item?.quantity),fallback:item||{}}))
+  .filter(item=>/^[0-9a-f-]{36}$/i.test(item.id)&&Number.isInteger(item.quantity)&&item.quantity>0&&item.quantity<=100);
+ if(!normalized.length){try{localStorage.removeItem('pasar-hanakau-native-cart-pending');}catch{}return}
+ nativeCartImportBusy=true;cartVerificationPending=true;cartVerificationFailed=false;renderCart();
+ try{
+  const ids=[...new Set(normalized.map(item=>item.id))];
+  const {data:rows,error}=await supabase.from('products')
+   .select('id,shop_id,name,price,stock,status,shops(name,status)')
+   .in('id',ids);
+  if(error)throw error;
+  const latestById=new Map((rows||[]).map(row=>[row.id,row]));
+  for(const incomingItem of normalized){
+   const latest=latestById.get(incomingItem.id);
+   const old=cart[incomingItem.id]||{};
+   if(!latest||latest.status!=='active'||latest.shops?.status!=='approved'||Number(latest.stock)<1){
+    cart[incomingItem.id]={id:incomingItem.id,name:latest?.name||incomingItem.fallback.name||'Produk tidak tersedia',
+     price:Number(latest?.price??incomingItem.fallback.price??0),stock:0,
+     shopId:latest?.shop_id||'',shopName:latest?.shops?.name||incomingItem.fallback.shopName||'Toko Pasar Hanakau',
+     quantity:Math.max(1,Number(old.quantity)||0,incomingItem.quantity),unavailable:true};
+    continue;
+   }
+   const price=Number(latest.price),stock=Number(latest.stock);
+   if(!Number.isFinite(price)||price<0||!Number.isSafeInteger(stock)||stock<1){
+    cart[incomingItem.id]={id:incomingItem.id,name:latest.name||'Produk',price:0,stock:0,
+     shopId:latest.shop_id,shopName:latest.shops?.name||'Toko Pasar Hanakau',
+     quantity:incomingItem.quantity,unavailable:true};continue;
+   }
+   const quantity=Math.min((Number(old.quantity)||0)+incomingItem.quantity,stock);
+   cart[incomingItem.id]={id:latest.id,name:latest.name,price,stock,shopId:latest.shop_id,
+    shopName:latest.shops?.name||'Toko Pasar Hanakau',quantity};
+  }
+  saveCart();
+  try{localStorage.removeItem('pasar-hanakau-native-cart-pending');}catch{}
+  cartVerificationPending=false;cartVerificationFailed=false;
+  const unavailable=Object.values(cart).filter(item=>item.unavailable).length;
+  message('checkoutMessage',unavailable?'Keranjang dari aplikasi HP tersinkron. Ada '+unavailable+' produk tidak tersedia; hapus produk tersebut sebelum checkout.':'Keranjang dari aplikasi HP berhasil disinkronkan dengan harga dan stok terbaru.',unavailable>0);
+ }catch(error){
+  cartVerificationPending=false;cartVerificationFailed=true;
+  message('checkoutMessage','Keranjang dari aplikasi HP belum dapat diverifikasi. Data tetap disimpan dan checkout dikunci sampai harga/stok berhasil diperiksa.',true);
+  console.warn('Sinkronisasi keranjang native gagal:',error);
+ }finally{
+  nativeCartImportBusy=false;renderCart();
+ }
+}
+window.addEventListener('pasarhanakau:native-cart-pending',()=>{if(activeBuyerId&&catalogLoaded)importNativeCartPending();});
 function saveCart(){const key=cartStorageKey();if(key)localStorage.setItem(key,JSON.stringify(cart));}
 function formatRupiah(n){return 'Rp '+Number(n||0).toLocaleString('id-ID');}
 function orderStatusLabel(s){return ({pending:'Menunggu konfirmasi',confirmed:'Dikonfirmasi',ready_for_pickup:'Siap dijemput driver',picked_up:'Sudah dijemput driver',delivered:'Terkirim',cancelled:'Dibatalkan'})[s]||s;}
