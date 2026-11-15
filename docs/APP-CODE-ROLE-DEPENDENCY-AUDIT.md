@@ -133,3 +133,17 @@ Database produksi berisi 7 profil aktif: 1 admin, 3 buyer, 1 seller, dan 2 drive
 3. Migrasikan seluruh fungsi, policy, Storage policy, trigger, dan Edge Functions dalam satu urutan kompatibel. Jangan mengaktifkan helper multi-role sebagian saat klien lama masih mengandalkan role tunggal.
 4. Uji buyer-only, seller-only, driver-only, admin-only, akun multi-role, akun ditangguhkan, eskalasi role dari metadata, akses silang toko/pesanan, dokumen driver, dan notifikasi.
 5. Baru setelah itu pisahkan modul APK buyer, Mitra, dan Admin; pertahankan application ID serta signing buyer yang sudah dipakai.
+
+### Bukti tambahan untuk migrasi akun lama
+
+Agregat relasi data saat audit menunjukkan: 1 akun seller aktif memiliki 1 toko dan 1 aplikasi seller approved; 2 akun driver aktif masing-masing memiliki aplikasi driver approved dan driver_profiles approved; di antara 2 akun driver tersebut, satu akun memiliki riwayat pesanan sebagai pembeli. Satu dari 3 akun buyer aktif memiliki riwayat pesanan. Ini menguatkan bahwa model lama memang dapat menimpa role buyer ketika persetujuan mitra diberikan. Backfill buyer untuk akun mitra harus diputuskan berdasarkan riwayat pendaftaran dan data terkait, bukan hanya nilai profiles.role sekarang.
+
+### Storage policies dan izin kolom profil
+
+Storage memiliki policy terpisah untuk dokumen driver privat, gambar produk, lampiran chat, avatar, serta pembatasan akun aktif. Policy dokumen driver mempertahankan folder UID pemilik dan akses baca admin; policy gambar produk bergantung pada can_upload_product_image() dan is_admin(); lampiran chat dibatasi ke peserta percakapan. Semua policy ini harus diuji ulang setelah helper role berubah, khususnya akses baca dokumen KTP/wajah dan unggah/hapus gambar toko.
+
+Izin kolom profiles yang terbaca untuk authenticated hanya SELECT pada role/status dan UPDATE pada full_name, phone, serta full_address. Tidak ada UPDATE grant pada role, account_status, account_status_note, atau account_status_updated_at. Pembatasan ini adalah kontrol keamanan yang harus dipertahankan; jangan menggantinya dengan GRANT UPDATE tingkat tabel.
+
+### Catatan advisor performa
+
+Advisor performa saat audit menandai 5 foreign key tanpa indeks penutup dan 7 kasus beberapa policy permisif pada operasi yang sama; juga 23 indeks belum pernah dipakai pada statistik saat itu. Ini bukan alasan untuk menghapus indeks atau merombak policy secara otomatis. Setelah fitur stabil, periksa masing-masing berdasarkan query plan dan beban nyata. Perubahan role jangan digabung dengan optimasi indeks/policy yang tidak terkait.
