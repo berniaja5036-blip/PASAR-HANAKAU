@@ -119,7 +119,7 @@ jobs:
           import re
 
           html = Path("index.html").read_text(encoding="utf-8")
-          roles = set(re.findall(r'data-entry-role=["\\']([^"\\']+)', html))
+          roles = set(re.findall(r'data-entry-role="([^"]+)"', html))
           if roles != {"buyer"}:
               raise SystemExit(f"Public entry roles must be buyer-only; found: {sorted(roles)}")
           if 'id="togglePartnerAccess"' in html:
