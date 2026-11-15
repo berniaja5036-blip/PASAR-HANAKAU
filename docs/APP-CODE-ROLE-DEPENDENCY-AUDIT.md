@@ -229,3 +229,9 @@ Pemeriksaan policy pada tabel operasional menemukan beberapa jalur yang memakai 
 - `driver_profiles_read_scoped` dapat mempertahankan akses pemilik membaca profil sendiri, tetapi jalur akses karena tugas harus menggunakan helper driver aktif.
 
 `active_account_required` adalah policy **RESTRICTIVE** pada tabel yang diperiksa, sehingga berfungsi sebagai syarat global AND dan bukan izin mandiri. Policy operasional di atas tetap harus diperbaiki secara spesifik; jangan mengubah policy restrictive ini menjadi permissive. Perubahan role harus mempertahankan batas ownership, shop ID, buyer ID, driver ID, status pesanan, dan admin, bukan menggantinya dengan pemeriksaan role saja.
+
+### Edge Function admin-account-management: akun multi-role
+
+Source Edge Function `admin-account-management` mengonfirmasi admin diverifikasi melalui `profiles.role='admin'` dan `account_status='active'`. Daftar akun saat ini hanya memilih satu kolom role (`buyer`, `seller`, `driver`) dan mengecualikan admin. Alur `suspend_account` menentukan penanganan toko atau driver dari satu `target.role`, lalu melakukan ban Auth dan mengubah `profiles.account_status` menjadi suspended.
+
+Pada model multi-role, daftar akun admin harus menampilkan kumpulan role aktif/pending per pengguna, bukan satu role utama. Penangguhan akun tetap merupakan tindakan global (ban Auth + `profiles.account_status='suspended'`) dan harus menangani seluruh aset operasional: bila pengguna memiliki seller dan driver sekaligus, semua toko miliknya dan `driver_profiles` terkait harus ditangani; jangan hanya menjalankan satu cabang berdasarkan role pertama. Pemulihan akun harus memulihkan status toko/driver yang memang sah tanpa mengaktifkan role yang sebelumnya rejected atau suspended secara terpisah. Pemeriksaan JWT, admin aktif, audit log, dan pembatasan penggunaan service-role tetap dipertahankan.
