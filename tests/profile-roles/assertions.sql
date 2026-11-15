@@ -121,12 +121,12 @@ end $$;
 update public.profiles set role='buyer' where id='00000000-0000-0000-0000-000000000004';
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000004';
-do $
+do $demote$
 begin
   if public.current_user_has_active_role('admin') then
     raise exception 'Demoted admin must not retain active admin role';
   end if;
-end $;
+end $demote$;
 reset role;
 
 select 'profile_roles migration tests passed' as result;
