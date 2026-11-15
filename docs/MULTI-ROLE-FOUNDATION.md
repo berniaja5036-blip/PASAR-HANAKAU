@@ -21,7 +21,7 @@ Add `public.profile_roles` as an additive, multi-role assignment table while kee
 - Existing RPCs and RLS continue using their current helper during this additive phase.
 - New user profiles automatically receive buyer role rows.
 - Seller/driver application status triggers maintain pending/active/rejected role rows after application changes.
-- Authenticated clients may SELECT only their own roles; admins may SELECT all roles. Authenticated users receive no INSERT/UPDATE/DELETE grant. Anon receives no access.
+- Authenticated clients may SELECT only their own roles; admins may SELECT all roles. Authenticated users receive no INSERT/UPDATE/DELETE grant. Anon receives no access. Demoting a legacy primary admin role also suspends the corresponding admin role row, preventing stale admin access.
 - The new `current_user_has_active_role(text)` helper is read-only and checks both role status and account status.
 
 ## Test strategy
