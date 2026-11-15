@@ -10,7 +10,7 @@ Tujuan: mencocokkan rancangan tiga aplikasi dengan kode yang benar-benar tersimp
 
 | Area | File | Kondisi aktual | Dampak |
 |---|---|---|---|
-| Antarmuka web pembeli | `buyer/index.html` dan `index.html` pada branch kerja | Jalur `/buyer/` hanya menampilkan buyer; pendaftaran dan sesi non-buyer ditolak. CSS role lama masih tersisa sebagai kode tidak aktif, dan panel mitra/admin lama masih ada di source | Pengalaman Pembeli sudah dipisahkan, tetapi modul Mitra/Admin dan migrasi otorisasi multi-role belum selesai |
+| Antarmuka web pembeli | `buyer/index.html` | Jalur `/buyer/` hanya menampilkan buyer; pendaftaran dan sesi non-buyer ditolak. Halaman utama `index.html` tetap menjadi situs umum dengan akses web mitra/admin | Jalur buyer untuk Android sudah terpisah; modul Android Mitra/Admin dan migrasi otorisasi multi-role belum selesai |
 | Checkout | `supabase/functions/checkout-with-delivery/index.ts` | Membaca `profiles.role` dan mensyaratkan nilainya tepat `buyer` | Akun multi-role yang kolom lamanya berisi seller/driver akan ditolak checkout |
 | Admin API | `supabase/functions/admin-account-management/index.ts` | Verifikasi admin dan daftar akun memakai kolom `profiles.role` | Admin multi-role dan daftar multi-role belum didukung |
 | Native buyer home | `android/app/src/main/java/id/pasarhanakau/mobile/NativeHomeActivity.kt` | Tidak ditemukan pembacaan role langsung pada file ini | Tetap perlu memverifikasi titik login WebView dan jalur masuk aplikasi |
@@ -62,9 +62,9 @@ Dokumen ini mencatat audit kode, bukan klaim bahwa pemisahan aplikasi atau multi
 
 ### Hasil pemeriksaan Auth dan halaman publik
 
-- Landing page aktif pada index.html hanya menampilkan tombol Masuk/Daftar pembeli dan CTA Mulai Belanja. Bagian .landing-roles masih berupa CSS lama, tetapi markup panel role lama tidak muncul pada halaman utama yang diperiksa. Jadi temuan sebelumnya perlu diperjelas: pemilih role mitra tidak sedang ditampilkan di landing publik saat ini.
+- Jalur buyer yang dipakai Android adalah `buyer/index.html`; halaman ini hanya menampilkan Masuk/Daftar pembeli dan CTA belanja. Root `index.html` pada situs umum tetap memiliki pintu masuk web untuk buyer, seller, driver, dan admin. CSS role lama di buyer route tidak menjadi tombol/markup akses mitra.
 - Form pendaftaran mengirim requested_role dalam metadata pengguna, tetapi trigger public.handle_new_user() secara eksplisit mengabaikan metadata role tersebut dan selalu membuat profiles.role = buyer. Ini adalah pengaman yang benar dan wajib dipertahankan.
-- Panel pengajuan toko, pendaftaran driver, dashboard seller, driver, dan admin masih ada sebagai markup/kode lama di satu index.html. Namun refreshSession() pada cabang kerja kini menolak sesi dengan profiles.role selain buyer, melakukan sign-out, dan menampilkan petunjuk memakai aplikasi Mitra/Admin. Jadi akses publik dan sesi aplikasi Pembeli sudah dibatasi buyer pada cabang ini; yang belum selesai adalah memindahkan kode mitra/admin ke dua aplikasi Android terpisah dan mengganti pemeriksaan role tunggal dengan role aktif dari tabel multi-role.
+- Root `index.html` masih memuat panel web seller, driver, dan admin untuk situs umum. `buyer/index.html` tidak menampilkan akses tersebut dan `refreshSession()` menolak sesi dengan `profiles.role` selain buyer. Pemisahan Android Mitra/Admin dan penggantian pemeriksaan role tunggal dengan role aktif dari tabel multi-role masih menjadi pekerjaan berikutnya.
 - refreshSession() mengambil kolom role tunggal dan melakukan sign-out/menolak akses bila status akun tidak aktif atau role tidak dikenali. Perubahan role harus mengganti sumber keputusan UI ini dengan role aktif yang tervalidasi server, bukan menghapus pemeriksaan status.
 - Tombol kembali dari form auth masih bernama backToRoles, tetapi mengarah ke beranda pembeli. Penamaan/flow ini bisa dirapikan saat UI buyer dipisahkan.
 
@@ -165,7 +165,7 @@ Trigger notify_order_events mencari admin melalui profiles.role='admin' (source 
 
 ### Rekonsiliasi cabang GitHub
 
-Cabang kerja diselaraskan dengan empat commit terbaru dari main untuk file rekonsiliasi migrasi, skrip validasi, pengarsipan migration agregat yang sudah superseded, serta koreksi nama migration voucher sesuai versi yang sudah tercatat di Supabase. Perubahan UI akses Penjual/Driver/Admin dari main sengaja tidak disalin ke index.html cabang kerja karena bertentangan dengan keputusan aplikasi Pembeli yang hanya untuk buyer. Perbaikan pemeriksaan harga/stok keranjang dari main telah diintegrasikan, dan jalur impor keranjang native kini memiliki fungsi sinkronisasi yang memeriksa ulang produk, harga, stok, serta status toko sebelum data disimpan ke keranjang web.
+Branch `native-android-release` dibuat dari `main` terbaru. Root `index.html` dan jalur `buyer/index.html` tetap memakai versi yang diterbitkan di situs; `MainActivity` Android memuat `/buyer/?client=buyer`. Perbaikan katalog, harga/stok keranjang, serta impor keranjang native diuji pada jalur buyer yang benar.
 
 ### Dasar pemetaan role awal (tanpa menampilkan identitas)
 
