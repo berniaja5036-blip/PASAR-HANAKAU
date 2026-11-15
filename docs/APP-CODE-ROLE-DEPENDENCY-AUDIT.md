@@ -166,3 +166,9 @@ Trigger notify_order_events mencari admin melalui profiles.role='admin' (source 
 ### Rekonsiliasi cabang GitHub
 
 Cabang kerja diselaraskan dengan empat commit terbaru dari main untuk file rekonsiliasi migrasi, skrip validasi, pengarsipan migration agregat yang sudah superseded, serta koreksi nama migration voucher sesuai versi yang sudah tercatat di Supabase. Perubahan UI akses Penjual/Driver/Admin dari main sengaja tidak disalin ke index.html cabang kerja karena bertentangan dengan keputusan aplikasi Pembeli yang hanya untuk buyer. Perbaikan pemeriksaan harga/stok keranjang dari main telah diintegrasikan, dan jalur impor keranjang native kini memiliki fungsi sinkronisasi yang memeriksa ulang produk, harga, stok, serta status toko sebelum data disimpan ke keranjang web.
+
+### Dasar pemetaan role awal (tanpa menampilkan identitas)
+
+Query agregat tambahan menunjukkan seluruh 7 profil memiliki pasangan auth.users dan waktu pembuatan profil berjarak kurang dari 5 detik dari waktu pembuatan akun Auth. Profil seller memiliki satu aplikasi seller approved dan satu toko; kedua profil driver memiliki aplikasi driver approved dan driver_profiles approved; satu dari dua profil driver juga memiliki riwayat sebagai pembeli. Tidak ada profil tanpa pasangan Auth.
+
+Rencana backfill yang paling konservatif berdasarkan bukti saat ini: pertahankan role admin untuk akun admin saja sampai status buyer akun itu dikonfirmasi; buat role buyer bagi 3 akun yang sekarang buyer; untuk akun seller/driver yang memiliki akun Auth dan aplikasi mitra yang telah disetujui, pulihkan role buyer dasar lalu tambahkan role seller/driver aktif sesuai bukti aplikasi, toko, dan driver_profiles yang approved. Nilai raw_user_meta_data.requested_role tidak boleh dipakai sebagai sumber otorisasi atau satu-satunya bukti backfill. Sebelum menjalankan migrasi, lakukan dry-run SELECT yang menampilkan hanya jumlah per role dan daftar konflik tanpa email/nomor telepon.
