@@ -115,6 +115,9 @@ jobs:
       - name: Run marketplace security and native cart regression checks
         run: node scripts/check-inline-js.mjs
 
+      - name: Validate buyer WebView route and PWA scope
+        run: node scripts/check-buyer-webview.mjs
+
       - name: Verify buyer-only public entry points
         run: |
           python3 - <<'PY'
@@ -131,7 +134,14 @@ jobs:
               raise SystemExit("Non-buyer session guard is missing")
           if "if(selectedEntryRole!=='buyer')" not in html:
               raise SystemExit("Buyer-only signup guard is missing")
-          print("Buyer-only public entry points verified")
+          buyer_html = Path("buyer/index.html").read_text(encoding="utf-8")
+          buyer_roles = set(re.findall(r'data-entry-role="([^"]+)"', buyer_html))
+          if buyer_roles != {"buyer"} or 'id="togglePartnerAccess"' in buyer_html:
+              raise SystemExit("Dedicated buyer WebView route must expose buyer-only access")
+          main_activity = Path("android/app/src/main/java/id/pasarhanakau/mobile/MainActivity.java").read_text(encoding="utf-8")
+          if 'https://berniaja5036-blip.github.io/PASAR-HANAKAU/buyer/' not in main_activity:
+              raise SystemExit("Android WebView must load the dedicated buyer route")
+          print("Buyer-only public and Android WebView entry points verified")
           PY
 
       - name: Build signed standalone APK and Android App Bundle
