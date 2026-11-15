@@ -330,6 +330,14 @@ if (!buyerCartSource.includes('function reconcileCartWithCatalog(products)') ||
 
 const nativeCartImporterSource = readFileSync('index.html', 'utf8');
 const nativeCartBridgeSource = readFileSync('android/app/src/main/java/id/pasarhanakau/mobile/MainActivity.java', 'utf8');
+const nativeHomeSource = readFileSync('android/app/src/main/java/id/pasarhanakau/mobile/NativeHomeActivity.kt', 'utf8');
+if (!nativeCartImporterSource.includes('item?.id||item?.product_id') ||
+    !nativeHomeSource.includes('put("product_id", item.product.id)') ||
+    !nativeCartImporterSource.includes('pasar-hanakau-native-cart-pending')) {
+  console.error('Native cart bridge must accept the product_id field emitted by Android checkout payloads.');
+  process.exit(1);
+}
+
 if (!nativeCartImporterSource.includes('async function importNativeCartPending()') ||
     !nativeCartImporterSource.includes('pasar-hanakau-native-cart-pending') ||
     !nativeCartImporterSource.includes(".select('id,shop_id,name,price,stock,status,shops(name,status)')") ||
