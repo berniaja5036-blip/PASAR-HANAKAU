@@ -10,17 +10,17 @@ Tujuan: mencocokkan rancangan tiga aplikasi dengan kode yang benar-benar tersimp
 
 | Area | File | Kondisi aktual | Dampak |
 |---|---|---|---|
-| Antarmuka web pembeli | `index.html` | Masih memiliki CSS `.rolegrid`, `.rolecard`, `.landing-roles` dan tampilan pemilih role | Belum memenuhi ketentuan aplikasi pembeli yang hanya untuk buyer |
+| Antarmuka web pembeli | `buyer/index.html` dan `index.html` pada branch kerja | Jalur `/buyer/` hanya menampilkan buyer; pendaftaran dan sesi non-buyer ditolak. CSS role lama masih tersisa sebagai kode tidak aktif, dan panel mitra/admin lama masih ada di source | Pengalaman Pembeli sudah dipisahkan, tetapi modul Mitra/Admin dan migrasi otorisasi multi-role belum selesai |
 | Checkout | `supabase/functions/checkout-with-delivery/index.ts` | Membaca `profiles.role` dan mensyaratkan nilainya tepat `buyer` | Akun multi-role yang kolom lamanya berisi seller/driver akan ditolak checkout |
 | Admin API | `supabase/functions/admin-account-management/index.ts` | Verifikasi admin dan daftar akun memakai kolom `profiles.role` | Admin multi-role dan daftar multi-role belum didukung |
 | Native buyer home | `android/app/src/main/java/id/pasarhanakau/mobile/NativeHomeActivity.kt` | Tidak ditemukan pembacaan role langsung pada file ini | Tetap perlu memverifikasi titik login WebView dan jalur masuk aplikasi |
-| WebView | `android/app/src/main/java/id/pasarhanakau/mobile/MainActivity.java` | Memuat situs GitHub Pages yang sama | Pemisahan aplikasi Android tidak bisa hanya dilakukan dengan mengganti dashboard di web; harus ada identitas aplikasi dan pembatasan server |
+| WebView | `android/app/src/main/java/id/pasarhanakau/mobile/MainActivity.java` | Memuat jalur khusus `https://berniaja5036-blip.github.io/PASAR-HANAKAU/buyer/?client=buyer` | Jalur buyer kini terpisah dari halaman umum; otorisasi tetap harus ditegakkan di server |
 
 ## Temuan implementasi yang perlu ditangani
 
 ### 1. Aplikasi pembeli masih menampilkan pilihan role
 
-Pada `index.html` ditemukan gaya pemilih role lama dan bagian landing `landing-roles`. Ini bertentangan dengan keputusan bahwa aplikasi pembeli hanya memiliki daftar/login pembeli dan tidak menawarkan pengajuan toko, driver, atau admin.
+CSS `.rolegrid`, `.rolecard`, dan `.landing-roles` lama masih tersimpan, tetapi pemeriksaan markup terbaru memastikan hanya `data-entry-role="buyer"` yang tampil dan tidak ada tombol `togglePartnerAccess`. `refreshSession()` juga melakukan sign-out jika profil bukan buyer. Panel pengajuan dan dashboard mitra/admin masih ada di source lama, tetapi bukan jalur akses yang boleh dipakai aplikasi Pembeli.
 
 **Perbaikan yang direncanakan:** jadikan buyer sebagai jalur pendaftaran publik tunggal; hilangkan pemilih role dari pengalaman buyer. Alur pengajuan mitra dipindahkan ke aplikasi Mitra atau proses undangan/persetujuan admin. Tidak boleh sekadar menyembunyikan tombol: endpoint, RPC, dan RLS tetap harus menolak eskalasi role oleh klien.
 
