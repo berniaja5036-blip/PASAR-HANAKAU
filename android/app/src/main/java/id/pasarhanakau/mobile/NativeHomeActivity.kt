@@ -85,7 +85,6 @@ class NativeHomeActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.rgb(7, 70, 39)
-        hideStatusBar()
         setContent {
             MaterialTheme(colorScheme = lightColorScheme(
                 primary = PhGreen,
@@ -101,6 +100,8 @@ class NativeHomeActivity : ComponentActivity() {
                 )
             }
         }
+        // Wait until Android has attached the decor view before accessing WindowInsetsController.
+        window.decorView.post { hideStatusBar() }
     }
 }
 
