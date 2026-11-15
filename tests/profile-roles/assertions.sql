@@ -20,8 +20,10 @@ begin
   if public.current_user_has_active_role('buyer') then
     raise exception 'No JWT identity should not have an active role';
   end if;
-  if has_table_privilege('authenticated','public.profile_roles','UPDATE') then
-    raise exception 'Authenticated must not receive UPDATE on profile_roles';
+  if has_table_privilege('authenticated','public.profile_roles','UPDATE') or
+     has_table_privilege('authenticated','public.profile_roles','INSERT') or
+     has_table_privilege('authenticated','public.profile_roles','DELETE') then
+    raise exception 'Authenticated must not write profile_roles';
   end if;
   if has_table_privilege('anon','public.profile_roles','SELECT') then
     raise exception 'Anon must not receive SELECT on profile_roles';
@@ -115,5 +117,16 @@ begin
     raise exception 'Rejected driver application did not update role status';
   end if;
 end $$;
+
+update public.profiles set role='buyer' where id='00000000-0000-0000-0000-000000000004';
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000004';
+do $
+begin
+  if public.current_user_has_active_role('admin') then
+    raise exception 'Demoted admin must not retain active admin role';
+  end if;
+end $;
+reset role;
 
 select 'profile_roles migration tests passed' as result;
