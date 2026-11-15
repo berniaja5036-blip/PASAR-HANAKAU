@@ -16,6 +16,37 @@ Branch kerja: `native-android-foundation`
 - Persetujuan seller dan driver saat ini mengubah kolom `profiles.role`. Ini harus diganti agar persetujuan peran kedua tidak menimpa peran pertama.
 - Tidak ada perubahan database yang dilakukan oleh audit ini.
 
+## Audit lanjutan: kebijakan profil, storage, dan fungsi persetujuan
+
+Pemeriksaan langsung database produksi pada 15 November 2026 menemukan:
+
+- Hak kolom untuk role database `authenticated` pada `profiles` hanya SELECT pada kolom `role`; tidak ada UPDATE privilege untuk kolom `role`. Jadi policy `profiles_update_self` yang membatasi baris berdasarkan `id = auth.uid()` tidak dengan sendirinya memberi pengguna kemampuan mengubah perannya.
+- Meski begitu, dua RPC admin yang disetujui secara eksplisit menimpa peran tunggal:
+  - `approve_seller_application(uuid)` menjalankan `UPDATE profiles SET role = 'seller'`.
+  - `admin_review_driver_application(uuid, boolean)` menjalankan `UPDATE profiles SET role = 'driver'`.
+  Inilah penyebab struktural mengapa persetujuan peran kedua dapat menggantikan peran pertama.
+- Policy Storage untuk dokumen driver membatasi folder berdasarkan UID dan akses baca admin/pemilik. Policy foto produk memanggil `can_upload_product_image`; helper tersebut harus ikut dimigrasikan agar hanya pemilik toko dengan role seller aktif yang dapat mengunggah.
+- Tabel `seller_applications` dan `driver_applications` sudah memiliki pembatasan akun aktif, kepemilikan pengajuan, dan pembacaan admin/pemilik. Kebijakan ini harus dipertahankan ketika jalur pendaftaran mitra dipindahkan ke aplikasi Mitra.
+- Data role saat ini: 1 admin aktif, 3 buyer aktif, 1 seller aktif, dan 2 driver aktif. Ini hitungan agregat, bukan daftar identitas.
+- Kolom `profiles.role` tetap dapat dibaca oleh pengguna terautentikasi, sehingga aplikasi baru tidak boleh menganggap nilai tersebut sebagai sumber kebenaran multi-role setelah migrasi.
+
+## Daftar fungsi yang wajib diubah saat migrasi
+
+- `approve_seller_application(uuid)`: ganti penimpaan role dengan aktivasi peran seller; pertahankan pembuatan toko dan audit.
+- `admin_review_driver_application(uuid, boolean)`: ganti penimpaan role dengan aktivasi peran driver; pertahankan verifikasi dokumen KTP/wajah, pembuatan `driver_profiles`, dan status aplikasi.
+- `current_user_has_role(text)`: arahkan ke tabel peran baru dengan syarat status active dan akun aktif.
+- `can_upload_product_image(text)`: pastikan owner toko punya seller role aktif dan toko approved.
+- `seller_can_read_order(uuid)`, `seller_list_orders()`, `seller_set_shop_pickup_location(numeric,numeric)`, `seller_submit_commission_payment(uuid,text)`: audit seluruh pemeriksaan seller.
+- `current_user_is_assigned_driver()`, `driver_update_delivery_status(uuid,text,text)`, `admin_assign_delivery(uuid,uuid)`: pastikan akses driver aktif dan penugasan per pesanan tetap ketat.
+- `is_admin()`, fungsi statistik dan RPC admin lain: gunakan role admin aktif; jangan membuat jalur pendaftaran admin publik.
+- Periksa kembali seluruh policy RLS dan Storage yang memanggil helper lama, bukan hanya policy pada tabel profiles.
+
+## Pengamanan profil yang harus dipertahankan
+
+- Pertahankan hak UPDATE pengguna hanya pada kolom profil yang memang boleh diedit; jangan memberi UPDATE pada `role`, `account_status`, `account_status_note`, atau kolom persetujuan.
+- Jangan menambahkan grant UPDATE tabel penuh pada `profiles` untuk authenticated.
+- Pastikan proses signup membuat buyer melalui trigger/prosedur tepercaya dan tidak mempercayai role dari metadata yang dikirim klien.
+
 ## Model target
 
 Tabel `public.profile_roles`:
