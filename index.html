@@ -771,6 +771,33 @@ async function loadCatalog(){
    const {data,error}=await supabase.from('products').select('id,shop_id,category_id,categories(name),name,description,price,stock,image_path,created_at,shops(name)').eq('status','active').gt('stock',0).order('created_at',{ascending:false}).limit(60);
   if(error)throw error;
   catalogProducts=data||[];
+  if(activeBuyerId&&Object.keys(cart).length){
+   const cartProductIds=Object.keys(cart);
+   cartVerificationPending=true;
+   cartVerificationFailed=false;
+   renderCart();
+   const {data:cartProductRows,error:cartProductError}=await supabase.from('products')
+    .select('id,shop_id,name,price,stock,shops(name)')
+    .in('id',cartProductIds)
+    .eq('status','active')
+    .gt('stock',0);
+   if(cartProductError){
+    cartVerificationPending=false;
+    cartVerificationFailed=Object.keys(cart).length>0;
+    message('checkoutMessage','Harga dan stok keranjang belum dapat diverifikasi. Muat ulang halaman sebelum checkout.',true);
+   }else{
+    cartVerificationPending=false;
+    cartVerificationFailed=false;
+    const changes=reconcileCartWithCatalog(cartProductRows||[]);
+    const notices=[];
+    if(changes.price.length)notices.push(changes.price.length+' harga produk diperbarui sesuai katalog terbaru.');
+    if(changes.stock.length)notices.push(changes.stock.length+' jumlah produk disesuaikan dengan stok terbaru.');
+    if(changes.unavailable.length)notices.push(changes.unavailable.length+' produk tidak tersedia; hapus dari keranjang sebelum checkout.');
+    if(changes.restored.length)notices.push(changes.restored.length+' produk kembali tersedia.');
+    if(notices.length)message('checkoutMessage',notices.join(' '),changes.unavailable.length>0);
+   }
+   renderCart();
+  }
   if(catalogProducts.length){
    const {data:ratingRows,error:ratingError}=await supabase.rpc('get_public_product_review_summaries',{p_product_ids:catalogProducts.map(p=>p.id)});
    if(ratingError)console.warn('Ringkasan ulasan produk belum dapat dimuat:',ratingError.message);
@@ -1448,56 +1475,36 @@ captureDeviceGps('useLegacyShopGps','shopLocationStatus',()=>legacyShopMap,p=>{l
 $('saveLegacyShopLocation').addEventListener('click',async()=>{if(!sellerShopId||!legacyShopPickupPoint){message('shopLocationStatus','Ambil lokasi GPS HP di area toko terlebih dahulu.',true);return}const btn=$('saveLegacyShopLocation');btn.disabled=true;const {error}=await supabase.rpc('seller_set_shop_pickup_location',{p_latitude:legacyShopPickupPoint.latitude,p_longitude:legacyShopPickupPoint.longitude});btn.disabled=false;if(error){message('shopLocationStatus','Gagal menyimpan titik toko: '+error.message,true);return}message('shopLocationStatus','Titik penjemputan toko berhasil disimpan.');});
 
 function cartStorageKey(){return activeBuyerId?'pasar-hanakau-cart-'+activeBuyerId:null;}
-function loadCart(){const key=cartStorageKey();if(!key){cart={};return}try{cart=JSON.parse(localStorage.getItem(key)||'{}')||{};}catch{cart={};}}
-function saveCart(){const key=cartStorageKey();if(key)localStorage.setItem(key,JSON.stringify(cart));}
-function importNativeCartPending(){
- if(!activeBuyerId)return 0;
- const pendingKey='pasar-hanakau-native-cart-pending';
- const raw=localStorage.getItem(pendingKey);
- if(!raw)return 0;
- try{
-  const incoming=JSON.parse(raw);
-  if(!Array.isArray(incoming))throw new Error('Format keranjang dari aplikasi tidak valid.');
-  let added=0;
-  for(const item of incoming){
-   const id=String(item?.product_id||'');
-   const quantity=Math.floor(Number(item?.quantity||0));
-   const product=catalogProducts.find(p=>p.id===id);
-   if(!product||quantity<=0||Number(product.stock)<=0)continue;
-   const existing=Number(cart[id]?.quantity||0);
-   const nextQuantity=Math.min(Number(product.stock),existing+quantity);
-   if(nextQuantity<=existing)continue;
-   cart[id]={
-    id:product.id,
-    name:product.name,
-    price:Number(product.price),
-    stock:Number(product.stock),
-    shopId:product.shop_id,
-    shopName:product.shops?.name||'Toko Pasar Hanakau',
-    quantity:nextQuantity
-   };
-   added+=nextQuantity-existing;
+function loadCart(){cartVerificationPending=false;cartVerificationFailed=false;const key=cartStorageKey();if(!key){cart={};return}try{cart=JSON.parse(localStorage.getItem(key)||'{}')||{};}catch{cart={};}}
+function reconcileCartWithCatalog(products){
+ const byId=new Map((products||[]).map(product=>[product.id,product]));
+ const changes={price:[],stock:[],unavailable:[],restored:[]};
+ let changed=false;
+ for(const [id,item] of Object.entries(cart)){
+  const latest=byId.get(id);
+  if(!latest){
+   if(!item.unavailable){changes.unavailable.push(item.name||'Produk');item.unavailable=true;changed=true;}
+   continue;
   }
-  localStorage.removeItem(pendingKey);
-  saveCart();
-  if(added>0)message('catalogMessage',added+' barang dari keranjang aplikasi berhasil disiapkan. Periksa kembali sebelum checkout.');
-  else if(incoming.length>0)message('catalogMessage','Produk di keranjang aplikasi sudah tidak tersedia atau stoknya habis. Silakan pilih produk terbaru.',true);
-  return added;
- }catch(error){
-  localStorage.removeItem(pendingKey);
-  console.warn('Keranjang native tidak dapat diimpor:',error);
-  message('catalogMessage','Keranjang dari aplikasi tidak dapat dibaca. Silakan tambahkan produk kembali.',true);
-  return 0;
+  const price=Number(latest.price),stock=Number(latest.stock);
+  if(!Number.isFinite(price)||price<0||!Number.isSafeInteger(stock)||stock<1){
+   if(!item.unavailable){changes.unavailable.push(item.name||'Produk');item.unavailable=true;changed=true;}
+   continue;
+  }
+  const oldPrice=Number(item.price),oldQuantity=Number(item.quantity)||1;
+  if(oldPrice!==price)changes.price.push({name:latest.name,oldPrice,newPrice:price});
+  const quantity=Math.min(Math.max(1,Math.floor(oldQuantity)),stock);
+  if(quantity<oldQuantity)changes.stock.push({name:latest.name,quantity});
+  if(item.unavailable)changes.restored.push(latest.name);
+  const nextItem={...item,id:latest.id,name:latest.name,price,stock,shopId:latest.shop_id,shopName:latest.shops?.name||'Toko Pasar Hanakau',quantity};
+  if(item.unavailable===true||item.unavailable!==undefined||item.name!==nextItem.name||item.price!==nextItem.price||item.stock!==nextItem.stock||item.shopId!==nextItem.shopId||item.shopName!==nextItem.shopName||item.quantity!==nextItem.quantity)changed=true;
+  delete nextItem.unavailable;
+  cart[id]=nextItem;
  }
+ if(changed)saveCart();
+ return changes;
 }
-window.addEventListener('pasarhanakau:native-cart-pending',async()=>{
- if(!activeBuyerId)return;
- try{
-  await loadCatalog();
-  importNativeCartPending();
-  renderCart();
- }catch(error){console.warn('Penyegaran katalog untuk keranjang native gagal:',error);}
-});
+function saveCart(){const key=cartStorageKey();if(key)localStorage.setItem(key,JSON.stringify(cart));}
 function formatRupiah(n){return 'Rp '+Number(n||0).toLocaleString('id-ID');}
 function orderStatusLabel(s){return ({pending:'Menunggu konfirmasi',confirmed:'Dikonfirmasi',ready_for_pickup:'Siap dijemput driver',picked_up:'Sudah dijemput driver',delivered:'Terkirim',cancelled:'Dibatalkan'})[s]||s;}
 let checkoutInProgress=false;
@@ -1537,10 +1544,23 @@ function clearCheckoutIdempotencyKey(){
 }
 function renderCart(){
  const entries=Object.values(cart);let total=0;
- if(!entries.length){$('cartItems').textContent='Keranjang masih kosong. Pilih produk dari katalog.';$('cartTotal').textContent='';$('checkoutButton').disabled=true;const quoteBox=$('deliveryQuotePreview');if(quoteBox)quoteBox.textContent='Tambahkan barang ke keranjang untuk melihat estimasi ongkir.';deliveryQuoteSequence++;return}
- $('checkoutButton').disabled=checkoutInProgress;
- $('cartItems').innerHTML=entries.map(p=>{const line=p.price*p.quantity;total+=line;return '<div class="cartline"><div style="flex:1"><b>'+escapeHtml(p.name)+'</b><div class="muted">'+escapeHtml(p.shopName)+' • '+formatRupiah(p.price)+'</div><div class="row"><button class="qtybtn" data-cart-minus="'+p.id+'">−</button><b>'+p.quantity+'</b><button class="qtybtn" data-cart-plus="'+p.id+'">+</button><button class="btn secondary" data-cart-remove="'+p.id+'">Hapus</button></div></div><b>'+formatRupiah(line)+'</b></div>'}).join('');
- $('cartTotal').textContent='Total barang: '+formatRupiah(total)+' (ongkos kirim akan ditampilkan terpisah)';
+ const unavailableEntries=entries.filter(p=>p.unavailable===true);
+ if(!entries.length){
+  if(!cartVerificationPending)cartVerificationFailed=false;
+  $('cartItems').textContent='Keranjang masih kosong. Pilih produk dari katalog.';$('cartTotal').textContent='';$('checkoutButton').disabled=true;
+  const quoteBox=$('deliveryQuotePreview');if(quoteBox)quoteBox.textContent='Tambahkan barang ke keranjang untuk melihat estimasi ongkir.';
+  deliveryQuoteSequence++;return;
+ }
+ $('checkoutButton').disabled=checkoutInProgress||cartVerificationPending||cartVerificationFailed||unavailableEntries.length>0;
+ $('cartItems').innerHTML=entries.map(p=>{
+  const unavailable=p.unavailable===true;
+  const line=unavailable?0:Number(p.price||0)*Number(p.quantity||0);
+  if(!unavailable)total+=line;
+  const controls=unavailable?'<p class="muted">Produk tidak tersedia atau stok habis. Hapus barang ini untuk melanjutkan.</p>':'<div class="row"><button class="qtybtn" data-cart-minus="'+p.id+'">−</button><b>'+p.quantity+'</b><button class="qtybtn" data-cart-plus="'+p.id+'">+</button></div>';
+  return '<div class="cartline"><div style="flex:1"><b>'+escapeHtml(p.name)+'</b><div class="muted">'+escapeHtml(p.shopName||'Toko Pasar Hanakau')+' • '+formatRupiah(p.price)+'</div>'+controls+'<button class="btn secondary" data-cart-remove="'+p.id+'">Hapus</button></div><b>'+(unavailable?'Tidak tersedia':formatRupiah(line))+'</b></div>';
+ }).join('');
+ const cartNotice=cartVerificationPending?'Memverifikasi harga dan stok…':cartVerificationFailed?'Verifikasi gagal. Muat ulang halaman sebelum checkout.':unavailableEntries.length?'Hapus produk yang tidak tersedia sebelum checkout.':'Ongkos kirim akan ditampilkan terpisah.';
+ $('cartTotal').textContent='Total barang tersedia: '+formatRupiah(total)+' • '+cartNotice;
  previewDeliveryQuote();
 }
 $('catalog').addEventListener('click',async e=>{
@@ -1584,6 +1604,7 @@ $('catalog').addEventListener('click',async e=>{
  const b=e.target.closest('[data-add-cart]');if(!b)return;
  if(!activeBuyerId){message('catalogMessage','Masuk atau daftar sebagai pembeli untuk menambahkan produk ke keranjang.',true);window.openMarketplaceCart();return}
  if(checkoutInProgress){message('catalogMessage','Tunggu sampai proses checkout selesai.',true);return}
+ if(cartVerificationPending||cartVerificationFailed){message('catalogMessage','Harga dan stok keranjang belum terverifikasi. Muat ulang halaman sebelum menambah barang.',true);return}
   const id=b.dataset.addCart,stock=Number(b.dataset.stock),existing=cart[id]?.quantity||0;
  if(existing>=stock){message('catalogMessage','Jumlah di keranjang sudah mencapai stok tersedia.',true);return}
  cart[id]={id,name:b.dataset.name,price:Number(b.dataset.price),stock,shopId:b.dataset.shop,shopName:b.dataset.shopName,quantity:existing+1};
@@ -1594,6 +1615,7 @@ $('cartItems').addEventListener('click',e=>{
   const minus=e.target.closest('[data-cart-minus]'),plus=e.target.closest('[data-cart-plus]'),remove=e.target.closest('[data-cart-remove]');
  const id=minus?.dataset.cartMinus||plus?.dataset.cartPlus||remove?.dataset.cartRemove;
  if(!id||!cart[id])return;
+ if((cartVerificationPending||cartVerificationFailed)&&!remove){message('checkoutMessage','Muat ulang halaman untuk memeriksa harga dan stok keranjang sebelum mengubah jumlah.',true);return}
  if(remove){delete cart[id];}
  else if(minus){cart[id].quantity--;if(cart[id].quantity<1)delete cart[id];}
  else if(plus){if(cart[id].quantity>=cart[id].stock){message('checkoutMessage','Jumlah melebihi stok yang tersedia.',true);return}cart[id].quantity++;}
@@ -1605,6 +1627,8 @@ async function previewDeliveryQuote(){
  const seq=++deliveryQuoteSequence;
  const entries=Object.values(cart);
  if(!entries.length){box.textContent='Tambahkan barang ke keranjang untuk melihat estimasi ongkir.';return}
+ if(cartVerificationPending||cartVerificationFailed){box.textContent='Harga dan stok keranjang belum terverifikasi. Muat ulang halaman sebelum menghitung ongkir.';return}
+ if(entries.some(p=>p.unavailable)){box.textContent='Hapus produk yang tidak tersedia sebelum menghitung ongkir.';return}
  if(!buyerDeliveryPoint){box.textContent='Ambil lokasi GPS di titik pengantaran untuk menghitung estimasi ongkir.';return}
  box.textContent='Menghitung jarak rute jalan…';
  try{
@@ -1638,6 +1662,8 @@ async function previewDeliveryQuote(){
 }
 $('checkoutButton').addEventListener('click',async()=>{
  if(checkoutInProgress)return;
+ if(cartVerificationPending||cartVerificationFailed){message('checkoutMessage','Harga dan stok keranjang belum terverifikasi. Muat ulang halaman sebelum membuat pesanan.',true);return}
+ if(Object.values(cart).some(p=>p.unavailable)){message('checkoutMessage','Hapus produk yang tidak tersedia dari keranjang sebelum checkout.',true);return}
  if(!activeBuyerId){message('checkoutMessage','Silakan masuk sebagai pembeli.',true);return}
  const address=$('deliveryAddress').value.trim();if(address.length<8){message('checkoutMessage','Isi alamat pengantaran dengan lengkap.',true);return}
  const items=Object.values(cart).map(p=>({product_id:p.id,quantity:p.quantity}));
