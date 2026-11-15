@@ -1,5 +1,8 @@
 name: Database backup (weekly and manual)
 
+# The main-branch path trigger intentionally runs this read-only backup when the workflow changes.
+# The dump is encrypted before upload; verify this backup before any production schema migration.
+
 on:
   push:
     branches: [main]
