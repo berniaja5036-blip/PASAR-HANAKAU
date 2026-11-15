@@ -24,7 +24,7 @@ jobs:
             const fs = require('fs');
             const data = JSON.parse(fs.readFileSync('/tmp/assetlinks.json', 'utf8'));
             const expectedPackage = 'id.pasarhanakau.mobile';
-            const expectedFingerprint = '13:8A:D3:68:2C:28:C4:58:46:F7:1B:4E:ED:88:82:D3:92:87:0C:1D:BB:C6:2D:16:2A:3F:C7:31:20:E9:DB:7A';
+            const expectedFingerprint = '98:92:93:67:73:C4:92:79:61:29:AF:17:6D:E9:33:C2:8A:45:25:2C:71:2A:3E:79:0D:90:44:C6:1C:9B:3F:1E';
             const ok = Array.isArray(data) && data.some(item =>
               item.target?.namespace === 'android_app' &&
               item.target?.package_name === expectedPackage &&
