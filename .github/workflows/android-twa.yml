@@ -5,14 +5,16 @@ on:
     branches: [main]
     paths:
       - 'android/**'
-      - 'index.html'
+      - 'buyer/**'
+      - 'scripts/check-buyer-webview.mjs'
       - 'scripts/check-inline-js.mjs'
       - '.github/workflows/android-twa.yml'
   push:
     branches: [main, buyer-runtime-mode]
     paths:
       - 'android/**'
-      - 'index.html'
+      - 'buyer/**'
+      - 'scripts/check-buyer-webview.mjs'
       - 'scripts/check-inline-js.mjs'
       - '.github/workflows/android-twa.yml'
   workflow_dispatch:
@@ -75,37 +77,12 @@ jobs:
           curl --fail --silent --show-error "https://berniaja5036-blip.github.io/PASAR-HANAKAU/icons/icon-512.png" -o android/app/src/main/res/drawable-nodpi/launcher.png
           file android/app/src/main/res/drawable-nodpi/launcher.png
 
-      - name: Validate marketplace inline JavaScript
-        run: |
-          python3 - <<'PY'
-          from html.parser import HTMLParser
-          from pathlib import Path
-          class InlineScripts(HTMLParser):
-              def __init__(self):
-                  super().__init__(); self.current=None; self.scripts=[]
-              def handle_starttag(self, tag, attrs):
-                  if tag.lower()=="script" and not dict(attrs).get("src"): self.current=[]
-              def handle_endtag(self, tag):
-                  if tag.lower()=="script" and self.current is not None: self.scripts.append("".join(self.current)); self.current=None
-              def handle_data(self, data):
-                  if self.current is not None: self.current.append(data)
-          parser=InlineScripts(); parser.feed(Path("index.html").read_text(encoding="utf-8"))
-          for i,script in enumerate(parser.scripts): Path(f"/tmp/ph-{i}.js").write_text(script,encoding="utf-8")
-          if not parser.scripts: raise SystemExit("No inline scripts found")
-          PY
-          for script in /tmp/ph-*.js; do node --check "$script"; done
-      - name: Run marketplace security and native buyer regression checks
+      - name: Run marketplace security regression checks
         run: node scripts/check-inline-js.mjs
-      - name: Verify buyer runtime mode
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          html=Path("index.html").read_text(encoding="utf-8")
-          required=["get('client') === 'buyer'","if(nativeBuyerMode&&role!=='buyer')","nativeBuyerMode&&selectedEntryRole!=='buyer'","id=\"togglePartnerAccess\"", "if(nativeBuyerMode){"]
-          for item in required:
-              if item not in html: raise SystemExit("Missing native buyer mode guard: "+item)
-          print("Buyer runtime mode checks passed")
-          PY
+
+      - name: Validate dedicated buyer WebView route
+        run: node scripts/check-buyer-webview.mjs
+
       - name: Build signed standalone APK and Android App Bundle
         run: |
           cd android
