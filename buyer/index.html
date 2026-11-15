@@ -499,6 +499,11 @@ async function refreshSession(){
   message('authMessage','Akun ini bukan akun pembeli. Gunakan aplikasi khusus '+accountType+'.',true);
   return;
  }
+ $('accountRole').textContent='Peran: Pembeli';
+ activePanelRole='buyer';$('buyerPanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');
+ setupBuyerWorkspace();initBuyerMap();activeBuyerId=session.user.id;loadCart();
+ renderBuyerLocationStatus();renderCart();await loadCatalog();await importNativeCartPending();renderCart();
+ await loadBuyerOrders();await loadBuyerChatConversations();return;
  const requestedRole='buyer';
  $('accountRole').textContent='Peran: '+role;
  if(requestedRole && requestedRole!==role && !(role==='buyer' && ['seller','driver'].includes(requestedRole))){$('accountRole').textContent='Akun ini terdaftar sebagai '+role+'. Silakan keluar dan pilih akses yang sesuai.';return}
@@ -524,7 +529,7 @@ async function refreshSession(){
    return;
   }
   $('accountRole').textContent='Peran: Pembeli';
-  activePanelRole='buyer';$('buyerPanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');setupBuyerWorkspace();initBuyerMap();activeBuyerId=session.user.id;loadCart();renderBuyerLocationStatus();renderCart();await loadCatalog();importNativeCartPending();renderCart();await loadBuyerOrders();await loadBuyerChatConversations();return;
+  activePanelRole='buyer';$('buyerPanel').classList.remove('hidden');$('catalogPanel').classList.remove('hidden');setupBuyerWorkspace();initBuyerMap();activeBuyerId=session.user.id;loadCart();renderBuyerLocationStatus();renderCart();await loadCatalog();await importNativeCartPending();renderCart();await loadBuyerOrders();await loadBuyerChatConversations();return;
  }
  if(role==='driver' && driverApplication?.status==='approved'){
   $('accountRole').textContent='Peran: Driver';
@@ -2088,7 +2093,7 @@ function setupDriverWorkspace(){
  document.body.classList.add('ph-buyer-mode');document.querySelector('.ph-driver-nav')?.classList.remove('hidden');showDriverWorkspacePage('tasks');
 }
 
-await refreshSession();await loadCatalog();
+await refreshSession();if(!activeBuyerId)await loadCatalog();
 </script><script>
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
