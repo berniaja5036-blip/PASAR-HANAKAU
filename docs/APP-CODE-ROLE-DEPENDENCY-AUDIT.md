@@ -147,3 +147,22 @@ Izin kolom profiles yang terbaca untuk authenticated hanya SELECT pada role/stat
 ### Catatan advisor performa
 
 Advisor performa saat audit menandai 5 foreign key tanpa indeks penutup dan 7 kasus beberapa policy permisif pada operasi yang sama; juga 23 indeks belum pernah dipakai pada statistik saat itu. Ini bukan alasan untuk menghapus indeks atau merombak policy secara otomatis. Setelah fitur stabil, periksa masing-masing berdasarkan query plan dan beban nyata. Perubahan role jangan digabung dengan optimasi indeks/policy yang tidak terkait.
+
+### Pemeriksaan mendalam Edge Function dan helper SQL
+
+Pembacaan source aktif memperluas daftar fungsi role-dependent:
+
+- admin-account-management: verifikasi admin melalui profiles.role; daftar akun memakai filter role tunggal; proses suspend/resume memilih tindakan seller atau driver berdasarkan satu nilai role. Dalam model multi-role, tindakan suspend harus mempertimbangkan semua role aktif dan seluruh aset/pekerjaan yang terkait, bukan hanya role pertama.
+- push-notifications (versi 20): endpoint pengaturan kunci push memverifikasi profiles.role='admin' dan account_status='active'. Endpoint pendaftaran/perangkat memeriksa account_status aktif; jangan sampai pemeriksaan admin terlewat saat multi-role.
+- checkout-with-delivery: verifikasi buyer tunggal sudah dicatat di atas.
+- route-distance hanya memeriksa account_status aktif; tidak ada keputusan role tunggal pada source yang diperiksa.
+
+Helper SQL saat ini: current_user_has_role(required_role) memeriksa profiles.role dan account_status='active'; is_admin() memanggil helper tersebut untuk role admin; current_user_is_active() hanya memeriksa status akun aktif. Ketiganya harus dipisahkan secara jelas saat model role baru diterapkan: helper role membaca role aktif, helper status tetap memblokir akun ditangguhkan, dan admin tidak boleh diwariskan dari metadata pengguna.
+
+Fungsi admin_assign_delivery juga memeriksa profiles.role='driver' dan account_status aktif sebelum memeriksa driver_profiles.approval_status, dokumen privat, status pesanan, serta tugas driver lain. Semua pemeriksaan tersebut tetap wajib; sumber role driver saja yang berpindah ke tabel role baru. admin_get_marketplace_statistics menghitung total buyer/seller/driver dari profiles.role dan perlu menghitung role aktif dari tabel baru agar statistik tidak kehilangan akun multi-role.
+
+Trigger notify_order_events mencari admin melalui profiles.role='admin' (source yang diperiksa tidak memfilter account_status pada jalur notifikasi pesanan), sedangkan notify_admin_application_submissions juga memeriksa account_status aktif. Saat migrasi, notifikasi admin harus memakai daftar admin aktif dan tetap mencegah duplikasi event.
+
+### Rekonsiliasi cabang GitHub
+
+Cabang kerja diselaraskan dengan empat commit terbaru dari main untuk file rekonsiliasi migrasi, skrip validasi, pengarsipan migration agregat yang sudah superseded, serta koreksi nama migration voucher sesuai versi yang sudah tercatat di Supabase. Perubahan UI akses Penjual/Driver/Admin dari main sengaja tidak disalin ke index.html cabang kerja karena bertentangan dengan keputusan aplikasi Pembeli yang hanya untuk buyer. Perbaikan pemeriksaan harga/stok keranjang dari main telah diintegrasikan, dan jalur impor keranjang native kini memiliki fungsi sinkronisasi yang memeriksa ulang produk, harga, stok, serta status toko sebelum data disimpan ke keranjang web.
