@@ -5,11 +5,15 @@ on:
     branches: [main]
     paths:
       - 'android/**'
+      - 'index.html'
+      - 'docs/**'
       - '.github/workflows/android-twa.yml'
   push:
     branches: [main, native-android-foundation]
     paths:
       - 'android/**'
+      - 'index.html'
+      - 'docs/**'
       - '.github/workflows/android-twa.yml'
   workflow_dispatch:
 
@@ -107,6 +111,25 @@ jobs:
           for script in /tmp/pasar-hanakau-inline-*.js; do
             node --check "$script"
           done
+
+      - name: Verify buyer-only public entry points
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          html = Path("index.html").read_text(encoding="utf-8")
+          roles = set(re.findall(r'data-entry-role=["\\']([^"\\']+)', html))
+          if roles != {"buyer"}:
+              raise SystemExit(f"Public entry roles must be buyer-only; found: {sorted(roles)}")
+          if 'id="togglePartnerAccess"' in html:
+              raise SystemExit("Public buyer app must not expose partner access toggle")
+          if "if(role!=='buyer')" not in html:
+              raise SystemExit("Non-buyer session guard is missing")
+          if "if(selectedEntryRole!=='buyer')" not in html:
+              raise SystemExit("Buyer-only signup guard is missing")
+          print("Buyer-only public entry points verified")
+          PY
 
       - name: Build signed standalone APK and Android App Bundle
         run: |
