@@ -1,10 +1,25 @@
 name: Build Pasar Hanakau Android App
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - 'index.html'
+      - 'buyer/**'
+      - 'scripts/check-buyer-webview.mjs'
+      - 'docs/**'
+      - '.github/workflows/android-twa.yml'
   push:
     branches: [main]
     paths:
       - 'android/**'
+      - 'index.html'
+      - 'buyer/**'
+      - 'scripts/check-inline-js.mjs'
+      - 'scripts/check-buyer-webview.mjs'
+      - 'icons/**'
+      - 'docs/**'
       - '.github/workflows/android-twa.yml'
   workflow_dispatch:
 
@@ -12,8 +27,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: pasar-hanakau-android-release
-  cancel-in-progress: false
+  group: pasar-hanakau-android-release-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-android:
@@ -65,6 +80,72 @@ jobs:
           EOF
           curl --fail --silent --show-error "https://berniaja5036-blip.github.io/PASAR-HANAKAU/icons/icon-512.png" -o android/app/src/main/res/drawable-nodpi/launcher.png
           file android/app/src/main/res/drawable-nodpi/launcher.png
+
+      - name: Validate marketplace inline JavaScript
+        run: |
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          class InlineScripts(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.current = None
+                  self.scripts = []
+
+              def handle_starttag(self, tag, attrs):
+                  if tag.lower() == "script" and not dict(attrs).get("src"):
+                      self.current = []
+
+              def handle_endtag(self, tag):
+                  if tag.lower() == "script" and self.current is not None:
+                      self.scripts.append("".join(self.current))
+                      self.current = None
+
+              def handle_data(self, data):
+                  if self.current is not None:
+                      self.current.append(data)
+
+          parser = InlineScripts()
+          for source_path in ["index.html", "buyer/index.html"]:
+              parser.feed(Path(source_path).read_text(encoding="utf-8"))
+          if not parser.scripts:
+              raise SystemExit("No inline marketplace scripts found")
+          for index, script in enumerate(parser.scripts):
+              Path(f"/tmp/pasar-hanakau-inline-{index}.js").write_text(script, encoding="utf-8")
+          print(f"Found {len(parser.scripts)} inline script block(s)")
+          PY
+          for script in /tmp/pasar-hanakau-inline-*.js; do
+            node --check "$script"
+          done
+
+      - name: Run marketplace security and native cart regression checks
+        run: node scripts/check-inline-js.mjs
+
+      - name: Validate buyer WebView route and PWA scope
+        run: node scripts/check-buyer-webview.mjs
+
+      - name: Verify buyer-only public entry points
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          buyer_html = Path("buyer/index.html").read_text(encoding="utf-8")
+          buyer_roles = set(re.findall(r'data-entry-role="([^"]+)"', buyer_html))
+          if buyer_roles != {"buyer"}:
+              raise SystemExit(f"Buyer WebView roles must be buyer-only; found: {sorted(buyer_roles)}")
+          if 'id="togglePartnerAccess"' in buyer_html:
+              raise SystemExit("Buyer WebView must not expose partner access toggle")
+          if "if(role!=='buyer')" not in buyer_html:
+              raise SystemExit("Non-buyer session guard is missing from buyer WebView")
+          if "if(selectedEntryRole!=='buyer')" not in buyer_html:
+              raise SystemExit("Buyer-only signup guard is missing from buyer WebView")
+          main_activity = Path("android/app/src/main/java/id/pasarhanakau/mobile/MainActivity.java").read_text(encoding="utf-8")
+          if 'https://berniaja5036-blip.github.io/PASAR-HANAKAU/buyer/' not in main_activity:
+              raise SystemExit("Android WebView must load the dedicated buyer route")
+          print("Dedicated buyer WebView and Android route verified; root website remains independent")
+          PY
 
       - name: Build signed standalone APK and Android App Bundle
         run: |
