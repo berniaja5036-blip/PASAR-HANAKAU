@@ -334,7 +334,9 @@ if (!buyerRuntimeSource.includes("get('client') === 'buyer'") ||
     !buyerRuntimeSource.includes("nativeBuyerMode&&selectedEntryRole!=='buyer'") ||
     !buyerRuntimeSource.includes('async function importNativeCartPending()') ||
     !buyerRuntimeSource.includes('item?.id||item?.product_id') ||
-    !buyerRuntimeSource.includes('pasar-hanakau-native-cart-pending')) {
+    !buyerRuntimeSource.includes('pasar-hanakau-native-cart-pending') ||
+    buyerRuntimeSource.indexOf('if(nativeBuyerMode){') < 0 ||
+    buyerRuntimeSource.indexOf('if(nativeBuyerMode){') > buyerRuntimeSource.indexOf("const {data:driverApplication")) {
   console.error('Native buyer mode must enforce buyer-only sessions and safely import the Android cart.');
   process.exit(1);
 }
