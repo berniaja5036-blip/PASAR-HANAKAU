@@ -4,7 +4,7 @@ Last reviewed: 2026-11-15.
 
 ## Current production status (15 November 2026)
 
-The live Supabase project reports **86 applied migration records**. The active `supabase/migrations/` directory on this branch contains **86 SQL files**. A direct comparison of every 14-digit version and migration name now reports **86 exact matches, zero missing versions, zero extra files, and zero duplicate version prefixes**.
+The live Supabase project reports **87 applied migration records**. The active `supabase/migrations/` directory on this branch contains **87 SQL files**. A direct comparison of every 14-digit version and migration name now reports **87 exact matches, zero missing versions, zero extra files, and zero duplicate version prefixes**.
 
 The seven migration source files that were absent from the repository have been restored from the authoritative `statements[1]` values stored in production's `supabase_migrations.schema_migrations` table:
 
@@ -16,7 +16,9 @@ The seven migration source files that were absent from the repository have been 
 - `20261114121726_scope_marketplace_ads_product_to_owned_shop.sql`
 - `20261114135451_seed_marketplace_product_categories_and_require_category.sql`
 
-Each recovered file was compared with the corresponding stored SQL statement. The SQL bodies match exactly; only a trailing newline was added where the stored statement did not include one. The seven records have no rollback statements in the production migration-history table. These files are source recovery only: **no migration SQL was executed and the live database was not changed**.
+Each recovered file was compared with the corresponding stored SQL statement. The SQL bodies match exactly; only a trailing newline was added where the stored statement did not include one. The seven records have no rollback statements in the production migration-history table. These files are source recovery only: **no migration SQL was executed and the live database was not changed by the source-recovery commit**.
+
+The 87th migration, `20261115082931_disable_legacy_buyer_order_transfer.sql`, was subsequently applied to production after a successful encrypted database-backup workflow. It removes only the buyer INSERT and resubmission RLS policies on `order_payment_submissions`; the table contained zero rows at application time. The buyer historical-read policy and admin-only management policy remain. Post-apply verification confirmed both buyer write policies are absent, seller advertising payment policies remain, and the database migration history records the same version/name as the repository file.
 
 Three repository-history corrections remain documented:
 
