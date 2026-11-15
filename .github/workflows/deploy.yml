@@ -25,6 +25,8 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Check inline JavaScript and security regression checks
         run: node scripts/check-inline-js.mjs
+      - name: Check buyer-only Android web entry
+        run: node scripts/check-buyer-webview.mjs
       - name: Check PWA manifest and icons
         run: node scripts/check-pwa-manifest.mjs
       - name: Configure Pages

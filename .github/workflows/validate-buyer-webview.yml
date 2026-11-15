@@ -1,0 +1,29 @@
+name: Validate Pasar Hanakau buyer web entry
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'buyer/**'
+      - 'scripts/check-buyer-webview.mjs'
+      - '.github/workflows/validate-buyer-webview.yml'
+  push:
+    branches: [main, buyer-app-webview]
+    paths:
+      - 'buyer/**'
+      - 'scripts/check-buyer-webview.mjs'
+      - '.github/workflows/validate-buyer-webview.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-buyer-entry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validate buyer-only route
+        run: node scripts/check-buyer-webview.mjs
