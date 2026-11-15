@@ -185,3 +185,22 @@ Aturan backfill yang disarankan untuk migration (belum diterapkan):
 - Akun suspended, aplikasi pending/rejected, toko belum approved, driver profile belum approved, atau dokumen identitas yang hilang tidak boleh memperoleh role operasional aktif.
 
 Backfill harus dibuat per user ID melalui query verifikasi internal, dengan hasil agregat untuk audit dan tanpa menyalin email, nomor telepon, nama, atau dokumen identitas ke log. `profiles.role` tetap dipertahankan sebagai kompatibilitas sampai seluruh klien, RPC, policy, trigger, Storage, dan Edge Functions berpindah ke helper multi-role. Tidak ada perubahan database produksi yang dilakukan untuk menulis aturan ini.
+
+## Temuan tambahan: policy kepemilikan yang belum memeriksa role aktif
+
+Pemeriksaan policy RLS yang menggunakan helper aktif/penugasan menemukan bahwa sebagian akses saat ini hanya bergantung pada akun global aktif dan kepemilikan/penugasan, bukan status role tertentu. Ini tidak otomatis menjadi celah pada model lama yang hanya memiliki `profiles.account_status`, tetapi akan menjadi celah bila model baru mengizinkan seller/driver/buyer ditangguhkan per-role tanpa menangguhkan seluruh akun.
+
+Policy yang harus diperketat saat migrasi multi-role:
+- `orders.orders_read_scoped`: cabang `buyer_id = auth.uid()` perlu mensyaratkan buyer aktif; cabang driver perlu helper driver aktif.
+- `order_items.order_items_read_scoped`: cabang pemilik pesanan perlu buyer aktif; cabang seller sudah memakai helper seller tetapi helper itu harus dialihkan ke tabel role baru; cabang driver perlu helper driver aktif.
+- `deliveries.deliveries_read_scoped`: cabang `driver_id = auth.uid()` perlu diganti/ditambah helper driver aktif, bukan hanya cocok ID; cabang baca berdasarkan kepemilikan buyer/seller perlu helper role aktif.
+- `driver_profiles.driver_profiles_read_scoped`: akses diri sendiri dapat dipertahankan untuk melihat profil sendiri; akses melalui tugas pengiriman harus mensyaratkan role driver aktif.
+
+Helper/RPC terkait yang saat ini hanya memeriksa akun global aktif atau kepemilikan:
+- `current_user_can_read_delivery_order(uuid)` memeriksa `current_user_is_active()` dan buyer/shop ownership, tetapi belum memastikan role buyer atau seller aktif.
+- `current_user_is_assigned_driver(uuid)` memeriksa akun aktif dan penugasan delivery, tetapi belum memastikan role driver aktif.
+- `buyer_request_order_cancellation(uuid,text)` memeriksa akun aktif dan `orders.buyer_id=auth.uid()`, tetapi belum memanggil helper role buyer.
+
+Catatan: policy `active_account_required` yang tersebar di banyak tabel dan Storage hanya memastikan akun global aktif. Policy itu tidak boleh dianggap sebagai pengganti pengecekan role aktif. Policy kepemilikan/penugasan tetap harus mempertahankan pembatasan UID, shop owner, buyer_id, driver_id, status tugas, dan admin. Fungsi ringkasan rating publik yang hanya mensyaratkan akun aktif dapat tetap berlaku untuk semua pengguna aktif jika memang itu kebijakan produk.
+
+**Tindakan wajib sebelum role per-role suspension diaktifkan:** tambahkan pemeriksaan helper multi-role pada tiga helper/RPC di atas dan semua cabang RLS terkait; uji akun dengan role buyer/seller/driver yang berbeda statusnya secara bersamaan. Jangan menerapkan model status role baru hanya dengan mengganti `current_user_has_role()` dan membiarkan cabang ownership-only tetap aktif.
