@@ -99,3 +99,35 @@ Jangan menerapkan perubahan skema produksi sebelum:
 - Mitra memakai application ID terpisah dan hanya menampilkan dashboard peran aktif.
 - Admin memakai application ID terpisah, tidak memiliki pendaftaran publik, dan wajib memiliki kontrol sesi serta audit aksi sensitif.
 - Tidak ada secret/service-role key di aplikasi Android mana pun.
+
+
+## Hasil inventaris dependensi terukur (15 November 2026)
+
+Pencarian katalog PostgreSQL pada database aktif menemukan 24 fungsi publik yang definisinya merujuk helper role atau kolom role profil, serta 5 policy RLS yang memanggil helper role. Daftar nama berikut adalah hasil pencarian aktual, bukan asumsi:
+
+**Fungsi (24):**
+- `admin_assign_delivery`, `admin_get_marketplace_statistics`, `admin_review_driver_application`, `approve_seller_application`
+- `buyer_confirm_delivery_fee`, `buyer_confirm_order_received`, `buyer_report_delivery_fee_dispute`, `checkout_cart`, `checkout_cart_secure`
+- `can_upload_product_image`, `current_user_has_role`, `is_admin`
+- `capture_admin_audit_row`, `capture_seller_application_admin_audit`, `handle_new_user`
+- `driver_confirm_delivery_fee`, `driver_update_delivery_status`
+- `notify_admin_application_submissions`, `notify_delivery_events`, `notify_order_events`
+- `seller_can_read_order`, `seller_list_orders`, `seller_set_shop_pickup_location`, `seller_submit_commission_payment`
+
+**Policy RLS (5):**
+- `marketplace_ads.marketplace_ads_seller_insert_own`
+- `order_items.order_items_read_scoped`
+- `products.products_seller_insert_own_shop`
+- `products.products_seller_update_own_shop`
+- `shops.shops_seller_insert_own`
+
+**Implikasi penting:**
+- Pemeriksaan langsung kolom `profiles.role` masih muncul di alur penugasan driver, unggah foto produk, verifikasi pembayaran/aktivitas driver, pencatatan audit admin, dan proses persetujuan seller/driver. Migrasi helper saja belum cukup.
+- `handle_new_user` adalah trigger signup; sumber role buyer harus tetap ditetapkan di sisi server. Metadata yang dapat diedit pengguna tidak boleh menentukan otorisasi.
+- `checkout_cart_secure` merupakan jalur server/service-role. Jangan mengubah validasi identitas pembeli atau membuka RPC ini untuk klien.
+- Lima policy di atas harus diubah secara atomik dengan helper baru, lalu diuji menggunakan akun multi-role, akun non-mitra, akun ditangguhkan, dan pemilik toko lain.
+- Inventaris ini merupakan pencarian dependensi pada fungsi dan policy yang terdaftar di schema public; pemeriksaan lanjutan masih diperlukan pada definisi lengkap trigger, Edge Functions, klien web/Android, serta policy Storage.
+
+## Keputusan implementasi tahap berikutnya
+
+Belum aman membuat atau menjalankan migrasi produksi. Langkah berikutnya adalah menyiapkan rancangan migrasi bertahap yang mempertahankan kolom lama, mengisi role berdasarkan bukti persetujuan, mengubah seluruh RPC/policy yang terdampak, dan menyediakan rollback. Draft SQL baru boleh dianggap siap setelah definisi lengkap fungsi yang akan diganti dan seluruh aturan Storage/trigger dicocokkan satu per satu. Tidak ada perubahan skema yang diterapkan pada tahap audit ini.
