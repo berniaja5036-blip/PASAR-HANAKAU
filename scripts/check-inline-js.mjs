@@ -367,3 +367,15 @@ if (!nativeCartBridgeSource.includes('https://berniaja5036-blip.github.io/PASAR-
   console.error('Android WebView must load the dedicated buyer-only route.');
   process.exit(1);
 }
+if (!nativeHomeSource.includes('data class NativeCartItem(val product: NativeProduct, val quantity: Int, val available: Boolean = true)') ||
+    !nativeHomeSource.includes('latest == null -> saved.copy(available = false)') ||
+    !nativeHomeSource.includes('latest.stock <= 0 -> NativeCartItem(latest, saved.quantity, available = false)') ||
+    !nativeHomeSource.includes('put("available", item.available)') ||
+    !nativeHomeSource.includes('val hasUnavailableItems = cart.any { !it.available }') ||
+    !nativeHomeSource.includes('enabled = catalogVerified && !hasUnavailableItems && cart.isNotEmpty()') ||
+    !nativeHomeSource.includes('Harga dan stok belum berhasil diperiksa.') ||
+    !nativeHomeSource.includes('cart.filter { it.available && it.quantity > 0 }')) {
+  console.error('Native cart must preserve unavailable products, hide unverified prices, and block checkout until catalog verification succeeds.');
+  process.exit(1);
+}
+
