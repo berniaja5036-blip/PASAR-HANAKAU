@@ -4,7 +4,7 @@ Marketplace multi-penjual untuk tahap awal Desa Hanakau Jaya, Kecamatan Sungkai 
 
 ## Status saat ini
 
-Pasar Hanakau adalah aplikasi web/PWA yang terhubung ke Supabase dan di-host melalui GitHub Pages. Aplikasi masih dalam uji coba terbatas dan **belum siap untuk peluncuran publik atau transaksi uang sungguhan**.
+Pasar Hanakau adalah marketplace web/PWA yang terhubung ke Supabase dan di-host melalui GitHub Pages, dengan aplikasi Android Pembeli terpisah. Sistem masih dalam uji coba terbatas dan **belum siap untuk peluncuran publik atau transaksi uang sungguhan**.
 
 Website: https://berniaja5036-blip.github.io/PASAR-HANAKAU/
 
@@ -24,27 +24,26 @@ Fitur-fitur tersebut sudah memiliki implementasi kode/database. Uji simulasi dat
 ## Batasan yang masih berlaku
 
 - **Tarif ongkir masih nonaktif.** Checkout saat ini menghasilkan ongkir Rp0; jangan menganggapnya sebagai tarif final atau mengaktifkannya sebelum uji jarak jalan dan penyimpanan tarif selesai.
-- Pembayaran online, integrasi COD, top-up, dan dompet saldo belum tersedia. Pembayaran barang kepada penjual dan ongkir kepada driver masih di luar aplikasi.
+- Pembayaran pesanan pembeli saat ini **COD saja** (bayar langsung saat barang diterima); tidak ada payment gateway, top-up, atau dompet saldo. Pembayaran barang kepada penjual dan biaya pengantaran kepada driver masih diselesaikan di luar aplikasi.
 - Backend Web Push sudah tersedia dan pengujian notifikasi untuk peran Admin, Driver, Seller, dan Buyer pernah berhasil dilakukan secara terpisah. Pemeriksaan terakhir menemukan satu langganan aktif pada akun Buyer di browser/perangkat yang terakhir digunakan. Satu browser pada satu perangkat tidak otomatis berlangganan untuk semua akun; tiap akun/perangkat perlu mengaktifkan notifikasi sendiri. Pengujian jalur notifikasi dari setiap peristiwa pesanan masih perlu dilanjutkan.
 - WhatsApp belum terintegrasi.
-- Belum tersedia APK Android; versi sekarang digunakan melalui browser/PWA.
+- Aplikasi Android Pembeli sudah memiliki beranda dan keranjang native, lalu membuka jalur web khusus pembeli `/buyer/` untuk login, checkout, pesanan, chat, dan akun. GitHub Actions menghasilkan APK dan AAB bertanda tangan untuk pengujian internal; **belum dinyatakan rilis publik karena uji perangkat fisik masih diperlukan**.
 - Ulasan produk dan penilaian driver dapat dikirim pembeli setelah pesanan diterima. Katalog kini menampilkan rata-rata dan jumlah ulasan produk; rincian pesanan menampilkan ringkasan rating driver. Teks ulasan dan identitas pembeli tetap tidak dibuka ke publik.
 - Validasi arsip backup database/Storage dan pemulihan pada runner terisolasi telah lulus pada 12 November 2026 (73 tabel database dan 8 file dari 4 bucket Storage). Pemulihan ke proyek Supabase baru belum diuji. Uji penerimaan langsung di perangkat dan pemeriksaan privasi operasional tetap perlu sebelum peluncuran publik.
 
-## Persiapan aplikasi Android (APK dan Google Play)
+## Aplikasi Android Pembeli (uji coba)
 
-Pengemasan Android direncanakan menggunakan Trusted Web Activity (TWA) dengan Bubblewrap, bukan WebView biasa. Pilihan ini mempertahankan origin Chrome untuk service worker dan Web Push sehingga alur notifikasi PWA tidak sengaja diputus oleh pembungkus WebView.
+Aplikasi Android saat ini adalah aplikasi hybrid native, bukan Trusted Web Activity (TWA):
 
-**Penghalang rilis yang sudah diketahui:** situs saat ini berada pada URL proyek GitHub Pages `https://berniaja5036-blip.github.io/PASAR-HANAKAU/`. TWA memerlukan Digital Asset Links di akar origin, yaitu `https://berniaja5036-blip.github.io/.well-known/assetlinks.json`. File di dalam subfolder proyek (`/PASAR-HANAKAU/.well-known/`) tidak menggantikan file pada akar origin. Sebelum build Android final, sediakan hosting file akar tersebut melalui situs GitHub Pages tingkat akun `berniaja5036-blip.github.io` atau domain milik sendiri yang diarahkan ke GitHub Pages. Jangan mengubah URL PWA/backend yang sudah berjalan hanya untuk melewati pemeriksaan ini.
+- Application ID tetap: `id.pasarhanakau.mobile`; versi build saat ini `1.3.0` (versionCode `4`). Jangan mengubah ID atau signing key karena pembaruan harus tetap dapat dipasang di atas aplikasi yang sudah ada.
+- `NativeHomeActivity` menyediakan beranda, pencarian katalog, detail produk, dan keranjang native yang disimpan secara lokal.
+- Saat pembeli melanjutkan checkout, `MainActivity` membuka jalur khusus `/buyer/?client=buyer`. Login, checkout COD, riwayat pesanan, chat, dan akun tetap memakai backend serta alur web pembeli yang sama.
+- Web root tetap dipertahankan untuk situs umum; aplikasi Android tidak membuka panel Seller, Driver, atau Admin.
+- Workflow **Build Pasar Hanakau Android App** membangun APK dan AAB bertanda tangan melalui GitHub Actions menggunakan kunci rilis yang disimpan sebagai GitHub Actions secrets. Jangan menaruh keystore atau kata sandi di repositori/chat.
+- Artefak APK/AAB adalah build untuk uji internal, bukan bukti aplikasi sudah lolos uji perangkat atau siap dipublikasikan. Uji instalasi, pemulihan keranjang, login pembeli, checkout COD, lokasi, unggahan, tautan eksternal, dan perilaku saat koneksi terputus masih wajib dilakukan pada HP Android.
+- Karena pembungkus saat ini memakai WebView, persyaratan Digital Asset Links untuk TWA bukan gerbang build versi ini. Jangan mengubah hosting/origin hanya untuk memenuhi panduan TWA lama.
 
-Sebelum build rilis:
-1. Tetapkan application ID Android yang permanen dan nama aplikasi; jangan mengganti application ID setelah publikasi.
-2. Siapkan satu keystore rilis dan simpan salinan cadangannya secara aman. Jangan commit keystore atau password ke repositori.
-3. Bangun APK untuk uji instalasi dan AAB untuk Play Store melalui GitHub Actions; simpan keystore/password hanya sebagai GitHub Actions secrets.
-4. Ambil SHA-256 fingerprint dari sertifikat yang benar, terbitkan `assetlinks.json` pada akar origin, lalu validasi verifikasi TWA.
-5. Uji login seluruh peran, peta/lokasi, unggah dokumen, tautan eksternal, dan notifikasi pada APK di perangkat Android sebelum menganggapnya siap rilis.
-
-Jangan unggah AAB ke Play Store atau mengumumkan APK final sebelum Digital Asset Links, tanda tangan, uji perangkat, dan persyaratan akun Play Console benar-benar lolos. PWA tetap dipertahankan dan terus diperbarui secara terpisah dari proses paket Android.
+Jangan mengunggah AAB ke Play Store atau menyebut APK sebagai rilis publik sebelum uji perangkat, pemeriksaan privasi, dan persyaratan Play Console benar-benar selesai. Website/PWA tetap dipublikasikan terpisah melalui GitHub Pages.
 
 ## Peran
 
@@ -60,7 +59,7 @@ Jangan unggah AAB ke Play Store atau mengumumkan APK final sebelum Digital Asset
 - Website: GitHub Pages melalui GitHub Actions.
 - Migrasi database berada di `supabase/migrations/`. Jangan menjalankan ulang migrasi yang sudah diterapkan atau menjalankan seluruh file SQL sebagai satu batch.
 
-**Status rekonsiliasi migrasi (14 November 2026):** direktori `supabase/migrations/` kini berisi 72 migrasi kanonis yang cocok dengan riwayat proyek aktif. Sebanyak 34 file historis tetap disimpan tanpa perubahan SQL di `supabase/migrations-archive/`. Migrasi terbaru mencakup `20261114024945_scope_driver_profile_visibility_to_related_orders.sql` (membatasi pembacaan profil driver), `20261114025139_fix_driver_application_review_trim_function.sql` (memperbaiki validasi dokumen driver), `20261114025617_harden_driver_delivery_status_role_and_null_validation.sql` (memperketat role dan status tugas driver), `20261114030034_support_multi_shop_order_commissions.sql` (mendukung pencatatan komisi per toko dalam satu pesanan), `20261114030104_tighten_buyer_receipt_and_commission_review.sql` (memperketat konfirmasi penerimaan dan verifikasi komisi), `20261114030136_require_buyer_role_for_fee_actions.sql` (mewajibkan role buyer untuk konfirmasi/sengketa ongkir), dan `20261114030338_report_commission_paid_at_payment_time.sql` (menghitung komisi lunas berdasarkan waktu pembayaran diverifikasi, dengan batas tanggal laporan WIB). Migrasi `20261114032016_report_delivered_metrics_by_delivery_date.sql` memperbaiki laporan agar penjualan dan jumlah pesanan terkirim dikelompokkan berdasarkan waktu status terkirim, bukan waktu pesanan dibuat. Sebelum perubahan database berikutnya, cocokkan `supabase migration list --remote` dengan file kanonis. Jangan menjalankan arsip, mengulang migrasi, atau mengubah tabel riwayat migrasi secara manual. Lihat `DATABASE_MIGRATION_RECONCILIATION.md` untuk rincian dan prosedur aman.
+**Status rekonsiliasi migrasi (15 November 2026):** pemeriksaan langsung hari ini menemukan 87 catatan migrasi Supabase dan 87 file kanonis di `supabase/migrations/`, dengan 87 pasangan versi/nama cocok, tanpa versi hilang, file tambahan, atau prefix duplikat. Tujuh sumber migrasi yang sebelumnya hilang sudah dipulihkan dari riwayat SQL produksi; isi SQL dicocokkan dan tidak dieksekusi ulang. Migrasi COD-only `20261115082931_disable_legacy_buyer_order_transfer.sql` tercatat di kedua sisi. Sebelum perubahan database berikutnya, cocokkan kembali `supabase migration list --remote` dengan file kanonis dan pastikan backup serta lingkungan uji terisolasi tersedia. Jangan menjalankan arsip, mengulang migrasi, atau mengubah tabel riwayat migrasi secara manual. Lihat `DATABASE_MIGRATION_RECONCILIATION.md` untuk rincian dan prosedur aman.
 
 ### Backup otomatis database dan Storage
 
@@ -84,27 +83,10 @@ Setiap artefak disimpan GitHub selama 14 hari. Unduh salinan berkala ke tempat p
 - Jangan mengaktifkan pembayaran uang sungguhan sebelum integrasi penyedia pembayaran, verifikasi callback, rekonsiliasi, refund, dan pemeriksaan kepatuhan selesai.
 - Pertahankan backup dan uji perubahan di lingkungan yang sesuai sebelum peluncuran.
 
-
-### Pengemasan Android (TWA / Bubblewrap)
-
-Konfigurasi awal Android disiapkan di `android/twa-manifest.template.json` dengan ID aplikasi sementara yang ditetapkan untuk proyek ini: `id.pasarhanakau.mobile`. Jangan mengubah ID tersebut setelah aplikasi dipublikasikan karena pembaruan harus memakai ID dan kunci penandatanganan yang sama.
-
-Workflow **Android TWA build** dapat dijalankan manual dari tab Actions. Workflow memvalidasi PWA, menyiapkan proyek TWA, memeriksa Digital Asset Links dan sertifikat, lalu menghasilkan APK dan AAB bertanda tangan sebagai artefak GitHub Actions.
-
-Sebelum build rilis dapat berhasil, dua prasyarat eksternal harus diselesaikan:
-
-1. Buat situs GitHub Pages tingkat akun dengan repositori publik bernama persis `berniaja5036-blip.github.io` (atau gunakan domain khusus milik proyek). Situs saat ini berada di jalur `/PASAR-HANAKAU/`, sehingga file `PASAR-HANAKAU/.well-known/assetlinks.json` tidak memenuhi persyaratan TWA. File verifikasi harus tersedia pada origin root: `https://berniaja5036-blip.github.io/.well-known/assetlinks.json`.
-2. Buat satu keystore produksi yang permanen untuk alias `pasar-hanakau`. Simpan file dan password di tempat aman milik pengelola. Tambahkan GitHub Actions repository secrets bernama `ANDROID_KEYSTORE_BASE64` (isi file keystore dalam Base64), `ANDROID_KEYSTORE_PASSWORD`, dan `ANDROID_KEY_PASSWORD`. Jangan commit file keystore, jangan kirim password ke chat, dan jangan membuat ulang kunci untuk rilis berikutnya.
-
-Isi `assetlinks.json` harus memuat package ID `id.pasarhanakau.mobile` dan sidik jari SHA-256 sertifikat dari keystore produksi yang sama. Jangan menebak sidik jari. Setelah berkas root dan secrets siap, jalankan workflow **Android TWA build**. Build harus menghasilkan APK untuk uji instalasi perangkat dan AAB untuk jalur Google Play. APK/AAB belum dianggap rilis sampai keduanya berhasil dibuat, APK diuji di perangkat Android, notifikasi/lokasi/unggahan/tautan diuji, dan Digital Asset Links tervalidasi.
-
-Workflow Android hanya berjalan manual; perubahan PWA tetap dideploy melalui workflow website yang sudah ada. Tidak ada biaya layanan berbayar yang ditambahkan oleh konfigurasi ini.
-
 ## Tahap berikutnya
 
-1. Unduh dan simpan artefak backup database serta Storage sebelum masa retensinya berakhir; lakukan uji pemulihan ke proyek Supabase terpisah sebelum peluncuran publik bila lingkungan uji tersedia.
-2. Uji penerimaan Buyer–Seller–Admin–Driver menggunakan akun dan data uji khusus.
-3. Uji rute dan tarif ongkir tanpa mengaktifkan tarif pada pengguna umum.
-4. Aktifkan ulang dan uji notifikasi pada perangkat Android.
-5. Uji backup/pemulihan serta pemantauan operasional.
-6. Evaluasi PWA dan pengemasan Android setelah alur web stabil.
+1. Uji APK Pembeli pada HP fisik: instalasi/pembaruan, beranda, keranjang, sinkronisasi ke akun, checkout COD, riwayat pesanan, lokasi, unggahan, dan pemulihan setelah aplikasi ditutup paksa.
+2. Lanjutkan audit penerimaan Buyer–Seller–Admin–Driver di akun uji; jangan memakai transaksi uang sungguhan.
+3. Selesaikan rancangan multi-role dan aplikasi Mitra/Admin hanya setelah tersedia database uji terisolasi serta seluruh dependensi RLS, RPC, Storage, trigger, dan Edge Function diuji.
+4. Uji rute dan tarif ongkir tanpa mengaktifkan tarif pada pengguna umum.
+5. Uji notifikasi per peristiwa pesanan dan prosedur pemulihan backup pada lingkungan terpisah.
