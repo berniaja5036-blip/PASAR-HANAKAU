@@ -43,15 +43,23 @@ public class MainActivity extends Activity {
     private PermissionRequest pendingWebPermissionRequest;
 
     private void hideStatusBar() {
+        if (isFinishing() || isDestroyed()) return;
+        final android.view.Window window = getWindow();
+        if (window == null) return;
+        final View decorView = window.getDecorView();
+        if (decorView == null || !decorView.isAttachedToWindow()) return;
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            getWindow().setDecorFitsSystemWindows(true);
-            if (getWindow().getInsetsController() != null) {
-                getWindow().getInsetsController().hide(android.view.WindowInsets.Type.statusBars());
-                getWindow().getInsetsController().setSystemBarsBehavior(
+            window.setDecorFitsSystemWindows(true);
+            final android.view.WindowInsetsController controller =
+                decorView.getWindowInsetsController();
+            if (controller != null) {
+                controller.hide(android.view.WindowInsets.Type.statusBars());
+                controller.setSystemBarsBehavior(
                     android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
             }
         } else {
-            getWindow().getDecorView().setSystemUiVisibility(
+            decorView.setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_FULLSCREEN
                     | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                     | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
@@ -71,7 +79,6 @@ public class MainActivity extends Activity {
 
         getWindow().setStatusBarColor(Color.TRANSPARENT);
         getWindow().setNavigationBarColor(Color.rgb(18, 63, 45));
-        hideStatusBar();
 
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Color.rgb(243, 247, 242));
@@ -119,6 +126,8 @@ public class MainActivity extends Activity {
             ViewGroup.LayoutParams.MATCH_PARENT, dp(3), Gravity.TOP);
         root.addView(progressBar, progressParams);
         setContentView(root);
+        // Access WindowInsetsController only after the decor view is attached.
+        getWindow().getDecorView().post(this::hideStatusBar);
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
