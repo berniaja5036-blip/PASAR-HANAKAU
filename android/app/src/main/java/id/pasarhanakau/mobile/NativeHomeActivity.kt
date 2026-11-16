@@ -56,7 +56,7 @@ data class NativeProduct(
     val categoryName: String
 )
 
-data class NativeCartItem(val product: NativeProduct, val quantity: Int)
+data class NativeCartItem(val product: NativeProduct, val quantity: Int, val available: Boolean = true)
 
 class NativeHomeActivity : ComponentActivity() {
     private fun hideStatusBar() {
@@ -111,6 +111,7 @@ private fun NativeMarketplaceHome(onOpenMarketplace: (String?) -> Unit) {
     var query by remember { mutableStateOf("") }
     var products by remember { mutableStateOf<List<NativeProduct>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
+    var catalogVerified by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var selectedProduct by remember { mutableStateOf<NativeProduct?>(null) }
     var cart by remember { mutableStateOf(loadSavedCart(context)) }
@@ -125,8 +126,10 @@ private fun NativeMarketplaceHome(onOpenMarketplace: (String?) -> Unit) {
         try {
             products = withContext(Dispatchers.IO) { fetchNativeProducts() }
             cart = reconcileSavedCart(cart, products)
+            catalogVerified = true
             error = null
         } catch (e: Exception) {
+            catalogVerified = false
             error = "Katalog belum dapat dimuat. Periksa koneksi internet."
         } finally {
             loading = false
@@ -136,6 +139,7 @@ private fun NativeMarketplaceHome(onOpenMarketplace: (String?) -> Unit) {
     if (showCart) {
         NativeCartScreen(
             cart = cart,
+            catalogVerified = catalogVerified,
             onBack = { showCart = false },
             onQuantityChange = { id, qty ->
                 cart = if (qty <= 0) cart.filterNot { it.product.id == id }
@@ -322,11 +326,13 @@ private fun NativeProductDetail(product: NativeProduct, onBack: () -> Unit, onAd
 @Composable
 private fun NativeCartScreen(
     cart: List<NativeCartItem>,
+    catalogVerified: Boolean,
     onBack: () -> Unit,
     onQuantityChange: (String, Int) -> Unit,
     onCheckout: () -> Unit
 ) {
-    val total = cart.sumOf { it.product.price * it.quantity }
+    val hasUnavailableItems = cart.any { !it.available }
+    val total = cart.filter { it.available }.sumOf { it.product.price * it.quantity }
     Column(Modifier.fillMaxSize().background(PhBackground)) {
         Row(
             modifier = Modifier.fillMaxWidth().background(PhDark).padding(16.dp),
@@ -354,13 +360,32 @@ private fun NativeCartScreen(
                             Spacer(Modifier.width(10.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(item.product.name, color = PhDark, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
-                                Text("Rp " + "%,d".format(item.product.price).replace(',', '.'), color = PhGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                                 Text(item.product.shopName, color = Color.Gray, fontSize = 10.sp)
+                                if (catalogVerified && item.available) {
+                                    Text("Rp " + "%,d".format(item.product.price).replace(',', '.'), color = PhGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                } else {
+                                    Text(
+                                        if (!catalogVerified) "Harga dan stok belum diperiksa."
+                                        else "Produk tidak tersedia. Hapus dari keranjang.",
+                                        color = Color(0xFFB42318),
+                                        fontSize = 10.sp
+                                    )
+                                }
                             }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("−", color = PhGreen, fontSize = 22.sp, modifier = Modifier.clickable { onQuantityChange(item.product.id, item.quantity - 1) }.padding(5.dp))
-                                Text(item.quantity.toString(), color = PhDark, fontWeight = FontWeight.Bold)
-                                Text("+", color = PhGreen, fontSize = 20.sp, modifier = Modifier.clickable { onQuantityChange(item.product.id, item.quantity + 1) }.padding(5.dp))
+                            if (catalogVerified && item.available) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("−", color = PhGreen, fontSize = 22.sp, modifier = Modifier.clickable { onQuantityChange(item.product.id, item.quantity - 1) }.padding(5.dp))
+                                    Text(item.quantity.toString(), color = PhDark, fontWeight = FontWeight.Bold)
+                                    Text("+", color = PhGreen, fontSize = 20.sp, modifier = Modifier.clickable { onQuantityChange(item.product.id, item.quantity + 1) }.padding(5.dp))
+                                }
+                            } else {
+                                Text(
+                                    "Hapus",
+                                    color = Color(0xFFB42318),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.clickable { onQuantityChange(item.product.id, 0) }.padding(6.dp)
+                                )
                             }
                         }
                     }
@@ -368,13 +393,33 @@ private fun NativeCartScreen(
             }
             Surface(color = Color.White, shadowElevation = 8.dp) {
                 Column(Modifier.fillMaxWidth().padding(16.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Total sementara", color = Color.DarkGray)
-                        Text("Rp " + "%,d".format(total).replace(',', '.'), color = PhGreen, fontWeight = FontWeight.ExtraBold)
+                    if (catalogVerified) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Total sementara", color = Color.DarkGray)
+                            Text("Rp " + "%,d".format(total).replace(',', '.'), color = PhGreen, fontWeight = FontWeight.ExtraBold)
+                        }
+                        if (hasUnavailableItems) {
+                            Text("Hapus produk yang tidak tersedia sebelum checkout.", color = Color(0xFFB42318), fontSize = 11.sp)
+                        }
+                        Text("Pembayaran pesanan: COD (bayar saat barang diterima).", color = Color.Gray, fontSize = 11.sp)
+                    } else {
+                        Text(
+                            "Harga dan stok belum berhasil diperiksa. Sambungkan internet dan buka ulang aplikasi sebelum checkout.",
+                            color = Color(0xFFB42318),
+                            fontSize = 11.sp
+                        )
                     }
-                    Text("Pembayaran pesanan: COD (bayar saat barang diterima).", color = Color.Gray, fontSize = 11.sp)
-                    Button(onClick = onCheckout, modifier = Modifier.fillMaxWidth().padding(top = 10.dp).height(48.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = PhOrange), shape = RoundedCornerShape(12.dp)) {
+                    Button(
+                        onClick = onCheckout,
+                        enabled = catalogVerified && !hasUnavailableItems && cart.isNotEmpty(),
+                        modifier = Modifier.fillMaxWidth().padding(top = 10.dp).height(48.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = PhOrange,
+                            disabledContainerColor = Color.LightGray,
+                            disabledContentColor = Color.DarkGray
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
                         Text("Lanjut ke checkout COD", color = Color.White, fontWeight = FontWeight.Bold)
                     }
                 }
@@ -465,7 +510,8 @@ private fun loadSavedCart(context: Context): List<NativeCartItem> {
             val name = item.optString("name")
             val quantity = item.optInt("quantity", 0)
             val stock = item.optInt("stock", 0)
-            if (id.isBlank() || name.isBlank() || quantity <= 0 || stock <= 0) return@mapNotNull null
+            val available = item.optBoolean("available", stock > 0) && stock > 0
+            if (id.isBlank() || name.isBlank() || quantity <= 0) return@mapNotNull null
             val product = NativeProduct(
                 id = id,
                 name = name,
@@ -476,7 +522,7 @@ private fun loadSavedCart(context: Context): List<NativeCartItem> {
                 stock = stock,
                 categoryName = item.optString("categoryName", "")
             )
-            NativeCartItem(product, quantity.coerceAtMost(stock))
+            NativeCartItem(product, if (available) quantity.coerceAtMost(stock) else quantity, available)
         }
     } catch (_: Exception) {
         emptyList()
@@ -497,6 +543,7 @@ private fun saveSavedCart(context: Context, cart: List<NativeCartItem>) {
             put("stock", product.stock)
             put("categoryName", product.categoryName)
             put("quantity", item.quantity)
+            put("available", item.available)
         })
     }
     context.getSharedPreferences(CART_PREFS, Context.MODE_PRIVATE)
@@ -510,15 +557,18 @@ private fun reconcileSavedCart(
     latestProducts: List<NativeProduct>
 ): List<NativeCartItem> {
     val latestById = latestProducts.associateBy { it.id }
-    return savedCart.mapNotNull { saved ->
-        val latest = latestById[saved.product.id] ?: return@mapNotNull null
-        if (latest.stock <= 0) return@mapNotNull null
-        NativeCartItem(latest, saved.quantity.coerceAtMost(latest.stock))
+    return savedCart.map { saved ->
+        val latest = latestById[saved.product.id]
+        when {
+            latest == null -> saved.copy(available = false)
+            latest.stock <= 0 -> NativeCartItem(latest, saved.quantity, available = false)
+            else -> NativeCartItem(latest, saved.quantity.coerceAtMost(latest.stock), available = true)
+        }
     }
 }
 private fun serializeNativeCartForCheckout(cart: List<NativeCartItem>): String {
     val array = JSONArray()
-    cart.filter { it.quantity > 0 }.forEach { item ->
+    cart.filter { it.available && it.quantity > 0 }.forEach { item ->
         array.put(org.json.JSONObject().apply {
             put("product_id", item.product.id)
             put("quantity", item.quantity)
