@@ -62,6 +62,11 @@ jobs:
             }
             console.log('SUCCESS: Production recovery redirect URL is configured and verified.');
             console.log('RECOVERY EMAIL SUBJECT:', verified.mailer_subjects_recovery || '(default Supabase subject)');
+            console.log('SMTP HOST CONFIGURED:', Boolean(verified.smtp_host));
+            console.log('SMTP SENDER CONFIGURED:', Boolean(verified.smtp_admin_email));
+            console.log('SMTP USER CONFIGURED:', Boolean(verified.smtp_user));
+            console.log('AUTH EMAIL RATE LIMIT:', verified.rate_limit_email_sent ?? '(not exposed)');
+            console.log('AUTH EMAIL OTP EXPIRY:', verified.email_otp_exp ?? '(not exposed)');
             console.log('RECOVERY EMAIL TEMPLATE:', verified.mailer_templates_recovery_content || '(empty; Supabase built-in default template is in use)');
             console.log('NOTE: Recovery email template was intentionally not modified because Supabase Free with the default email provider blocks custom templates.');
           }
