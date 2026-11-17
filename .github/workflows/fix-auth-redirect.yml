@@ -28,7 +28,10 @@ jobs:
           async function main() {
             const currentResponse = await fetch(base, { headers });
             if (!currentResponse.ok) {
+              const detail = await currentResponse.text();
               console.error('Could not read Supabase Auth config. HTTP', currentResponse.status);
+              console.error('Supabase response:', detail.slice(0, 1500));
+              console.error('Check that the token has Auth Config (Read) access for this project.');
               process.exit(1);
             }
             const current = await currentResponse.json();
@@ -42,7 +45,10 @@ jobs:
               body: JSON.stringify(payload)
             });
             if (!updateResponse.ok) {
+              const detail = await updateResponse.text();
               console.error('Supabase Auth config update failed. HTTP', updateResponse.status);
+              console.error('Supabase response:', detail.slice(0, 1500));
+              console.error('Required permissions: Auth Config (Read-write) and Project Settings (Read-write).');
               process.exit(1);
             }
             console.log('Supabase Auth Site URL and recovery redirect allow-list updated.');
