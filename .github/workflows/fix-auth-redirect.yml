@@ -61,6 +61,8 @@ jobs:
               throw new Error('Production Site URL or redirect allow-list verification failed.');
             }
             console.log('SUCCESS: Production recovery redirect URL is configured and verified.');
+            console.log('RECOVERY EMAIL SUBJECT:', verified.mailer_subjects_recovery || '(default Supabase subject)');
+            console.log('RECOVERY EMAIL TEMPLATE:', verified.mailer_templates_recovery_content || '(empty; Supabase built-in default template is in use)');
             console.log('NOTE: Recovery email template was intentionally not modified because Supabase Free with the default email provider blocks custom templates.');
           }
           main().catch(error => {
