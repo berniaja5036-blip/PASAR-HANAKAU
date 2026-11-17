@@ -422,9 +422,20 @@ function pushBase64ToBytes(value){
  return Uint8Array.from(atob(base64),ch=>ch.charCodeAt(0));
 }
 $("enablePushNotifications").addEventListener("click",async()=>{
- const button=$("enablePushNotifications");button.disabled=true;let pushStage="memeriksa dukungan browser";
+ const button=$("enablePushNotifications");
+ if(window.PasarHanakauNative?.openInChrome){
+  message("pushStatusMessage","Aplikasi Android ini memakai WebView yang belum mendukung notifikasi push. Buka Pasar Hanakau di Chrome untuk mengaktifkannya.",true);
+  let openButton=document.getElementById("openPasarHanakauChrome");
+  if(!openButton){
+   openButton=document.createElement("button");openButton.id="openPasarHanakauChrome";openButton.type="button";openButton.className="btn secondary";openButton.textContent="Buka Pasar Hanakau di Chrome";
+   openButton.addEventListener("click",()=>window.PasarHanakauNative.openInChrome());
+   $("pushStatusMessage").appendChild(openButton);
+  }
+  return;
+ }
+ button.disabled=true;let pushStage="memeriksa dukungan browser";
  try{
-  if(!("serviceWorker" in navigator)||!("PushManager" in window)||!("Notification" in window))throw new Error("Browser ini belum mendukung notifikasi web. Gunakan Chrome Android dan pasang Pasar Hanakau ke layar utama.");
+  if(!("serviceWorker" in navigator)||!("PushManager" in window)||!("Notification" in window))throw new Error("Browser ini belum mendukung notifikasi web. Buka melalui Chrome Android, lalu pasang Pasar Hanakau ke layar utama.");
   if(!activeAccountUserId)throw new Error("Silakan masuk terlebih dahulu.");
   pushStage="meminta izin notifikasi";
   const permission=await Notification.requestPermission();
