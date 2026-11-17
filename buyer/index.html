@@ -329,7 +329,7 @@ $('forgotPassword').addEventListener('click',async()=>{
  if(!email){message('authMessage','Masukkan alamat email akun terlebih dahulu.',true);$('email').focus();return}
  const button=$('forgotPassword');button.disabled=true;message('authMessage','Mengirim tautan pemulihan…');
  try{
-  const redirectTo=window.location.origin+window.location.pathname;
+  const redirectTo='https://berniaja5036-blip.github.io/PASAR-HANAKAU/';
   const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo});
   if(error)throw error;
   message('authMessage','Jika email terdaftar, tautan pemulihan telah dikirim. Periksa kotak masuk dan folder spam.');
