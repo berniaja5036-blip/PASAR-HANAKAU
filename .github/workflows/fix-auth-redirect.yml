@@ -1,14 +1,14 @@
-name: Fix password recovery redirect
+name: Fix password recovery redirect and email template
 on:
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  update-auth-redirect:
+  update-auth-recovery:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Set production Site URL and allow password recovery redirect
+      - name: Restore recovery email template and verify redirect configuration
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_REF: wnnnhiocyyozlkfqupav
@@ -25,20 +25,32 @@ jobs:
             Authorization: 'Bearer ' + process.env.SUPABASE_ACCESS_TOKEN,
             'Content-Type': 'application/json'
           };
+          const recoveryTemplate = [
+            '<h2>Atur ulang kata sandi Pasar Hanakau</h2>',
+            '<p>Kami menerima permintaan untuk mengatur ulang kata sandi akun Anda.</p>',
+            '<p><a href="{{ .ConfirmationURL }}">BUAT KATA SANDI BARU</a></p>',
+            '<p>Jika tombol tidak dapat dibuka, salin dan buka tautan berikut:</p>',
+            '<p>{{ .ConfirmationURL }}</p>',
+            '<p>Jika Anda tidak meminta pengaturan ulang kata sandi, abaikan email ini.</p>'
+          ].join('');
           async function main() {
             const currentResponse = await fetch(base, { headers });
             if (!currentResponse.ok) {
               const detail = await currentResponse.text();
               console.error('Could not read Supabase Auth config. HTTP', currentResponse.status);
               console.error('Supabase response:', detail.slice(0, 1500));
-              console.error('Check that the token has Auth Config (Read) access for this project.');
               process.exit(1);
             }
             const current = await currentResponse.json();
             const url = process.env.PRODUCTION_URL;
             const existing = String(current.uri_allow_list || '').split(',').map(x => x.trim()).filter(Boolean);
             if (!existing.includes(url)) existing.push(url);
-            const payload = { site_url: url, uri_allow_list: existing.join(',') };
+            const payload = {
+              site_url: url,
+              uri_allow_list: existing.join(','),
+              mailer_subjects_recovery: 'Atur ulang kata sandi Pasar Hanakau',
+              mailer_templates_recovery_content: recoveryTemplate
+            };
             const updateResponse = await fetch(base, {
               method: 'PATCH',
               headers,
@@ -48,25 +60,25 @@ jobs:
               const detail = await updateResponse.text();
               console.error('Supabase Auth config update failed. HTTP', updateResponse.status);
               console.error('Supabase response:', detail.slice(0, 1500));
-              console.error('Required permissions: Auth Config (Read-write) and Project Settings (Read-write).');
+              console.error('The access token needs Auth Config read/write and project admin permissions.');
               process.exit(1);
             }
-            console.log('Supabase Auth Site URL and recovery redirect allow-list updated.');
             const verifyResponse = await fetch(base, { headers });
-            if (!verifyResponse.ok) {
-              console.error('Update sent, but verification read failed. HTTP', verifyResponse.status);
-              process.exit(1);
-            }
+            if (!verifyResponse.ok) throw new Error('Could not verify updated Auth configuration.');
             const verified = await verifyResponse.json();
             const allowed = String(verified.uri_allow_list || '').split(',').map(x => x.trim());
+            const template = String(verified.mailer_templates_recovery_content || '');
             if (verified.site_url !== url || !allowed.includes(url)) {
-              console.error('Verification did not match the expected production URL.');
-              process.exit(1);
+              throw new Error('Production Site URL or redirect allow-list verification failed.');
             }
-            console.log('Verified production Site URL and recovery redirect allow-list.');
+            if (!template.includes('{{ .ConfirmationURL }}') ||
+                !template.includes('BUAT KATA SANDI BARU')) {
+              throw new Error('Recovery email template verification failed.');
+            }
+            console.log('Verified production redirect URL and recovery email template with ConfirmationURL.');
           }
           main().catch(error => {
-            console.error('Unexpected error while updating Auth URL configuration:', error.message);
+            console.error('Auth recovery configuration update failed:', error.message);
             process.exit(1);
           });
           NODE
