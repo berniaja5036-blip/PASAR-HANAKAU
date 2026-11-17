@@ -379,3 +379,16 @@ if (!nativeHomeSource.includes('data class NativeCartItem(val product: NativePro
   process.exit(1);
 }
 
+if (!nativeHomeSource.includes('private var resumeVersion by mutableStateOf(-1)') ||
+    !nativeHomeSource.includes('override fun onResume()') ||
+    !nativeHomeSource.includes('resumeVersion += 1') ||
+    !nativeHomeSource.includes('NativeMarketplaceHome(\n                    resumeVersion = resumeVersion') ||
+    !nativeHomeSource.includes('LaunchedEffect(resumeVersion, refreshRequest)') ||
+    !nativeHomeSource.includes('val savedCart = withContext(Dispatchers.IO) { loadSavedCart(context) }') ||
+    !nativeHomeSource.includes('cart = reconcileSavedCart(savedCart, latestProducts)') ||
+    !nativeHomeSource.includes('onRetryCatalog = { refreshRequest++ }') ||
+    !nativeHomeSource.includes('TextButton(onClick = onRetryCatalog, enabled = !catalogLoading)')) {
+  console.error('Native buyer must reload the persisted cart and reverify catalog on resume, with manual retry when offline.');
+  process.exit(1);
+}
+
