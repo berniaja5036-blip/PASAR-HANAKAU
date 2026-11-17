@@ -1,0 +1,70 @@
+name: Fix password recovery redirect
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/fix-auth-redirect.yml"
+permissions:
+  contents: read
+jobs:
+  update-auth-redirect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Set production Site URL and allow password recovery redirect
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: wnnnhiocyyozlkfqupav
+          PRODUCTION_URL: https://berniaja5036-blip.github.io/PASAR-HANAKAU/
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ]; then
+            echo "::error::SUPABASE_ACCESS_TOKEN repository secret is missing."
+            exit 1
+          fi
+          node <<'NODE'
+          const base = 'https://api.supabase.com/v1/projects/' + process.env.SUPABASE_PROJECT_REF + '/config/auth';
+          const headers = {
+            Authorization: 'Bearer ' + process.env.SUPABASE_ACCESS_TOKEN,
+            'Content-Type': 'application/json'
+          };
+          async function main() {
+            const currentResponse = await fetch(base, { headers });
+            if (!currentResponse.ok) {
+              console.error('Could not read Supabase Auth config. HTTP', currentResponse.status);
+              process.exit(1);
+            }
+            const current = await currentResponse.json();
+            const url = process.env.PRODUCTION_URL;
+            const existing = String(current.uri_allow_list || '').split(',').map(x => x.trim()).filter(Boolean);
+            if (!existing.includes(url)) existing.push(url);
+            const payload = { site_url: url, uri_allow_list: existing.join(',') };
+            const updateResponse = await fetch(base, {
+              method: 'PATCH',
+              headers,
+              body: JSON.stringify(payload)
+            });
+            if (!updateResponse.ok) {
+              console.error('Supabase Auth config update failed. HTTP', updateResponse.status);
+              process.exit(1);
+            }
+            console.log('Supabase Auth Site URL and recovery redirect allow-list updated.');
+            const verifyResponse = await fetch(base, { headers });
+            if (!verifyResponse.ok) {
+              console.error('Update sent, but verification read failed. HTTP', verifyResponse.status);
+              process.exit(1);
+            }
+            const verified = await verifyResponse.json();
+            const allowed = String(verified.uri_allow_list || '').split(',').map(x => x.trim());
+            if (verified.site_url !== url || !allowed.includes(url)) {
+              console.error('Verification did not match the expected production URL.');
+              process.exit(1);
+            }
+            console.log('Verified production Site URL and recovery redirect allow-list.');
+          }
+          main().catch(error => {
+            console.error('Unexpected error while updating Auth URL configuration:', error.message);
+            process.exit(1);
+          });
+          NODE
