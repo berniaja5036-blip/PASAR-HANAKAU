@@ -276,6 +276,25 @@ const SUPABASE_URL = 'https://wnnnhiocyyozlkfqupav.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_zbG3DUtwN-jpvWATBhN77g_K6V_YbsI';
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 const $ = id => document.getElementById(id);
+// Detect recovery links before restoring any previously signed-in account session.
+const recoveryHashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+const recoveryQueryParams = new URLSearchParams(window.location.search);
+let passwordRecoveryMode =
+ recoveryHashParams.get('type') === 'recovery' ||
+ recoveryQueryParams.get('type') === 'recovery' ||
+ recoveryQueryParams.get('mode') === 'recovery';
+function showPasswordRecoveryPanel(){
+ $('rolePanel').classList.add('hidden');
+ $('authPanel').classList.add('hidden');
+ $('accountPanel').classList.add('hidden');
+ $('passwordRecoveryPanel').classList.remove('hidden');
+ $('passwordRecoveryForm').classList.remove('hidden');
+ $('backFromRecovery').classList.add('hidden');
+ $('passwordRecoveryTitle').textContent='Buat kata sandi baru';
+ $('passwordRecoveryDescription').textContent='Masukkan kata sandi baru untuk akun Pasar Hanakau.';
+ $('passwordRecoveryMessage').textContent='Tautan pemulihan terdeteksi. Silakan buat kata sandi baru.';
+}
+if(passwordRecoveryMode) showPasswordRecoveryPanel();
 
 /* Organize long dashboards into clear expandable work areas.
    Existing controls keep their IDs and event listeners; only their visual grouping changes. */
@@ -327,13 +346,12 @@ $('backToRoles').addEventListener('click',()=>{$('authPanel').classList.add('hid
 $('togglePartnerAccess').addEventListener('click',()=>{const panel=$('rolePanel'),roles=$('landingRoles'),button=$('togglePartnerAccess');const opening=!panel.classList.contains('partner-access-open');panel.classList.toggle('partner-access-open',opening);button.setAttribute('aria-expanded',String(opening));if(opening){roles.style.display='block';requestAnimationFrame(()=>roles.scrollIntoView({behavior:'smooth',block:'start'}));}else{roles.style.display='none';}});
 function message(id,text,isError=false){$(id).textContent=text;$(id).style.color=isError?'#b42318':'#176b45'}
 function validCredentials(){const email=$('email').value.trim(),password=$('password').value;if(!email||!password){message('authMessage','Isi email dan kata sandi terlebih dahulu.',true);return null}return {email,password}}
-let passwordRecoveryMode=false;
 $('forgotPassword').addEventListener('click',async()=>{
  const email=$('email').value.trim();
  if(!email){message('authMessage','Masukkan alamat email akun terlebih dahulu.',true);$('email').focus();return}
  const button=$('forgotPassword');button.disabled=true;message('authMessage','Mengirim tautan pemulihan…');
  try{
-  const redirectTo='https://berniaja5036-blip.github.io/PASAR-HANAKAU/';
+  const redirectTo='https://berniaja5036-blip.github.io/PASAR-HANAKAU/?mode=recovery';
   const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo});
   if(error)throw error;
   message('authMessage','Jika email terdaftar, tautan pemulihan telah dikirim. Periksa kotak masuk dan folder spam.');
@@ -466,6 +484,7 @@ $("copyVapidPrivateKey").addEventListener("click",async()=>{
 });
 let sessionRefreshSequence=0;
 async function refreshSession(){
+ if(passwordRecoveryMode){showPasswordRecoveryPanel();return;}
  const refreshId=++sessionRefreshSequence;
  activePanelRole=null;
  const {data:{session}}=await supabase.auth.getSession();
@@ -701,7 +720,7 @@ $('addProduct').addEventListener('click',async()=>{
  await loadSellerProducts();
 });
 $('signOut').addEventListener('click',async()=>{try{const registration=await navigator.serviceWorker?.ready;const subscription=await registration?.pushManager?.getSubscription();if(subscription){await callPushFunction({action:"remove_subscription",endpoint:subscription.endpoint});await subscription.unsubscribe();}}catch(error){console.warn("Pelepasan langganan notifikasi gagal:",error);}const {error}=await supabase.auth.signOut();if(error)message('catalogMessage',error.message,true);else{await refreshSession();message('catalogMessage','Anda sudah keluar.')}});
-supabase.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY'){passwordRecoveryMode=true;$('rolePanel').classList.add('hidden');$('authPanel').classList.add('hidden');$('accountPanel').classList.add('hidden');$('passwordRecoveryPanel').classList.remove('hidden');$('passwordRecoveryForm').classList.remove('hidden');$('backFromRecovery').classList.add('hidden');$('passwordRecoveryTitle').textContent='Buat kata sandi baru';$('passwordRecoveryDescription').textContent='Masukkan kata sandi baru untuk akun Pasar Hanakau.';$('passwordRecoveryMessage').textContent='Tautan pemulihan valid. Silakan buat kata sandi baru.';return;}if(passwordRecoveryMode)return;setTimeout(()=>{refreshSession().catch(error=>message('authMessage','Gagal memuat sesi akun: '+(error?.message||'Kesalahan tidak diketahui'),true));},0);});
+supabase.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY'){passwordRecoveryMode=true;showPasswordRecoveryPanel();$('passwordRecoveryMessage').textContent='Tautan pemulihan valid. Silakan buat kata sandi baru.';return;}if(passwordRecoveryMode)return;setTimeout(()=>{refreshSession().catch(error=>message('authMessage','Gagal memuat sesi akun: '+(error?.message||'Kesalahan tidak diketahui'),true));},0);});
 let catalogProducts=[];
 let productCategories=[];
 let activeCategoryId='';
@@ -2025,7 +2044,7 @@ function setupDriverWorkspace(){
  document.body.classList.add('ph-buyer-mode');document.querySelector('.ph-driver-nav')?.classList.remove('hidden');showDriverWorkspacePage('tasks');
 }
 
-await refreshSession();await loadCatalog();
+if(!passwordRecoveryMode)await refreshSession();await loadCatalog();
 </script><script>
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
