@@ -13,6 +13,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.CookieManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.GeolocationPermissions;
 import android.webkit.PermissionRequest;
 import android.webkit.DownloadListener;
@@ -94,6 +95,31 @@ public class MainActivity extends Activity {
         });
 
         webView = new WebView(this);
+        // A WebView does not expose the browser Web Push API. Provide a safe
+        // bridge so the account screen can open the same site in full Chrome.
+        webView.addJavascriptInterface(new Object() {
+            @JavascriptInterface
+            public void openInChrome() {
+                runOnUiThread(() -> {
+                    Uri uri = Uri.parse(HOME_URL);
+                    Intent chromeIntent = new Intent(Intent.ACTION_VIEW, uri);
+                    chromeIntent.setPackage("com.android.chrome");
+                    try {
+                        startActivity(chromeIntent);
+                    } catch (ActivityNotFoundException e) {
+                        try {
+                            startActivity(Intent.createChooser(
+                                new Intent(Intent.ACTION_VIEW, uri),
+                                "Buka Pasar Hanakau dengan browser"
+                            ));
+                        } catch (ActivityNotFoundException ignored) {
+                            Toast.makeText(MainActivity.this,
+                                "Browser tidak ditemukan.", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+            }
+        }, "PasarHanakauNative");
         webView.setBackgroundColor(Color.rgb(243, 247, 242));
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
