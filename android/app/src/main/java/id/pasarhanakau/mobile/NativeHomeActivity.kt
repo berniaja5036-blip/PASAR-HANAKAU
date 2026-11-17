@@ -59,6 +59,8 @@ data class NativeProduct(
 data class NativeCartItem(val product: NativeProduct, val quantity: Int, val available: Boolean = true)
 
 class NativeHomeActivity : ComponentActivity() {
+    private var resumeVersion by mutableStateOf(-1)
+
     private fun hideStatusBar() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
             window.setDecorFitsSystemWindows(true)
@@ -81,6 +83,11 @@ class NativeHomeActivity : ComponentActivity() {
         if (hasFocus) hideStatusBar()
     }
 
+    override fun onResume() {
+        super.onResume()
+        resumeVersion += 1
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.statusBarColor = android.graphics.Color.TRANSPARENT
@@ -92,6 +99,7 @@ class NativeHomeActivity : ComponentActivity() {
                 background = PhBackground
             )) {
                 NativeMarketplaceHome(
+                    resumeVersion = resumeVersion,
                     onOpenMarketplace = { cartJson ->
                         val intent = Intent(this, MainActivity::class.java)
                         if (cartJson != null) intent.putExtra(MainActivity.EXTRA_NATIVE_CART, cartJson)
@@ -106,7 +114,7 @@ class NativeHomeActivity : ComponentActivity() {
 }
 
 @Composable
-private fun NativeMarketplaceHome(onOpenMarketplace: (String?) -> Unit) {
+private fun NativeMarketplaceHome(resumeVersion: Int, onOpenMarketplace: (String?) -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var query by remember { mutableStateOf("") }
     var products by remember { mutableStateOf<List<NativeProduct>>(emptyList()) }
@@ -116,18 +124,25 @@ private fun NativeMarketplaceHome(onOpenMarketplace: (String?) -> Unit) {
     var selectedProduct by remember { mutableStateOf<NativeProduct?>(null) }
     var cart by remember { mutableStateOf(loadSavedCart(context)) }
     var showCart by remember { mutableStateOf(false) }
+    var refreshRequest by remember { mutableStateOf(0) }
 
     LaunchedEffect(cart) {
         withContext(Dispatchers.IO) { saveSavedCart(context, cart) }
     }
     var selectedCategory by remember { mutableStateOf("Semua") }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(resumeVersion, refreshRequest) {
+        if (resumeVersion < 0) return@LaunchedEffect
+        loading = true
+        catalogVerified = false
+        error = null
         try {
-            products = withContext(Dispatchers.IO) { fetchNativeProducts() }
-            cart = reconcileSavedCart(cart, products)
+            val savedCart = withContext(Dispatchers.IO) { loadSavedCart(context) }
+            cart = savedCart
+            val latestProducts = withContext(Dispatchers.IO) { fetchNativeProducts() }
+            products = latestProducts
+            cart = reconcileSavedCart(savedCart, latestProducts)
             catalogVerified = true
-            error = null
         } catch (e: Exception) {
             catalogVerified = false
             error = "Katalog belum dapat dimuat. Periksa koneksi internet."
@@ -140,7 +155,9 @@ private fun NativeMarketplaceHome(onOpenMarketplace: (String?) -> Unit) {
         NativeCartScreen(
             cart = cart,
             catalogVerified = catalogVerified,
+            catalogLoading = loading,
             onBack = { showCart = false },
+            onRetryCatalog = { refreshRequest++ },
             onQuantityChange = { id, qty ->
                 cart = if (qty <= 0) cart.filterNot { it.product.id == id }
                 else cart.map { if (it.product.id == id) it.copy(quantity = qty.coerceAtMost(it.product.stock)) else it }
@@ -244,7 +261,12 @@ private fun NativeMarketplaceHome(onOpenMarketplace: (String?) -> Unit) {
                 loading -> Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = PhGreen)
                 }
-                error != null -> Text(error!!, color = Color(0xFF9B3D26), fontSize = 13.sp, modifier = Modifier.padding(12.dp))
+                error != null -> Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                    Text(error!!, color = Color(0xFF9B3D26), fontSize = 13.sp)
+                    TextButton(onClick = { refreshRequest++ }, enabled = !loading) {
+                        Text("Coba lagi")
+                    }
+                }
                 else -> {
                     val shown = products.filter {
                         (it.name.contains(query, ignoreCase = true) || it.shopName.contains(query, ignoreCase = true)) &&
@@ -327,7 +349,9 @@ private fun NativeProductDetail(product: NativeProduct, onBack: () -> Unit, onAd
 private fun NativeCartScreen(
     cart: List<NativeCartItem>,
     catalogVerified: Boolean,
+    catalogLoading: Boolean,
     onBack: () -> Unit,
+    onRetryCatalog: () -> Unit,
     onQuantityChange: (String, Int) -> Unit,
     onCheckout: () -> Unit
 ) {
@@ -404,10 +428,14 @@ private fun NativeCartScreen(
                         Text("Pembayaran pesanan: COD (bayar saat barang diterima).", color = Color.Gray, fontSize = 11.sp)
                     } else {
                         Text(
-                            "Harga dan stok belum berhasil diperiksa. Sambungkan internet dan buka ulang aplikasi sebelum checkout.",
+                            if (catalogLoading) "Sedang memeriksa harga dan stok..."
+                            else "Harga dan stok belum berhasil diperiksa. Periksa koneksi lalu coba lagi.",
                             color = Color(0xFFB42318),
                             fontSize = 11.sp
                         )
+                        TextButton(onClick = onRetryCatalog, enabled = !catalogLoading) {
+                            Text(if (catalogLoading) "Memeriksa..." else "Periksa ulang katalog")
+                        }
                     }
                     Button(
                         onClick = onCheckout,
