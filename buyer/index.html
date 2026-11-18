@@ -271,6 +271,12 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const SUPABASE_URL = 'https://wnnnhiocyyozlkfqupav.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_zbG3DUtwN-jpvWATBhN77g_K6V_YbsI';
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+function syncNativeFcmToken(session){
+ if(!session?.access_token || !window.PasarHanakauNative?.registerFcmToken)return;
+ try{window.PasarHanakauNative.registerFcmToken(session.access_token);}catch(error){console.warn('Pendaftaran notifikasi Android gagal:',error);}
+}
+supabase.auth.getSession().then(({data})=>syncNativeFcmToken(data?.session));
+supabase.auth.onAuthStateChange((event,session)=>{if(session)syncNativeFcmToken(session);});
 const $ = id => document.getElementById(id);
 
 /* Organize long dashboards into clear expandable work areas.
@@ -711,7 +717,7 @@ $('addProduct').addEventListener('click',async()=>{
  message('productMessage','Produk tersimpan sebagai draft. Menunggu persetujuan admin.');
  await loadSellerProducts();
 });
-$('signOut').addEventListener('click',async()=>{try{const registration=await navigator.serviceWorker?.ready;const subscription=await registration?.pushManager?.getSubscription();if(subscription){await callPushFunction({action:"remove_subscription",endpoint:subscription.endpoint});await subscription.unsubscribe();}}catch(error){console.warn("Pelepasan langganan notifikasi gagal:",error);}const {error}=await supabase.auth.signOut();if(error)message('catalogMessage',error.message,true);else{await refreshSession();message('catalogMessage','Anda sudah keluar.')}});
+$('signOut').addEventListener('click',async()=>{try{const {data:{session:currentSession}}=await supabase.auth.getSession();if(currentSession?.access_token && window.PasarHanakauNative?.removeFcmToken)window.PasarHanakauNative.removeFcmToken(currentSession.access_token);}catch(error){console.warn('Pelepasan token Android gagal:',error);}try{const registration=await navigator.serviceWorker?.ready;const subscription=await registration?.pushManager?.getSubscription();if(subscription){await callPushFunction({action:"remove_subscription",endpoint:subscription.endpoint});await subscription.unsubscribe();}}catch(error){console.warn("Pelepasan langganan notifikasi gagal:",error);}const {error}=await supabase.auth.signOut();if(error)message('catalogMessage',error.message,true);else{await refreshSession();message('catalogMessage','Anda sudah keluar.')}});
 supabase.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY'){passwordRecoveryMode=true;$('rolePanel').classList.add('hidden');$('authPanel').classList.add('hidden');$('accountPanel').classList.add('hidden');$('passwordRecoveryPanel').classList.remove('hidden');$('passwordRecoveryForm').classList.remove('hidden');$('backFromRecovery').classList.add('hidden');$('passwordRecoveryTitle').textContent='Buat kata sandi baru';$('passwordRecoveryDescription').textContent='Masukkan kata sandi baru untuk akun Pasar Hanakau.';$('passwordRecoveryMessage').textContent='Tautan pemulihan valid. Silakan buat kata sandi baru.';return;}if(passwordRecoveryMode)return;setTimeout(()=>{refreshSession().catch(error=>message('authMessage','Gagal memuat sesi akun: '+(error?.message||'Kesalahan tidak diketahui'),true));},0);});
 let catalogProducts=[];
 let catalogLoaded=false;
