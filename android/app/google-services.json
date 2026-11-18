@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "157781046061",
+    "project_id": "pasar-hanakau-a998b",
+    "storage_bucket": "pasar-hanakau-a998b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:157781046061:android:2fb9a22039a83d3ebd99a4",
+        "android_client_info": {
+          "package_name": "id.pasarhanakau.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBs-AUHgkZdtHe4MBWSqzr_VXpVW72Uvm8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
