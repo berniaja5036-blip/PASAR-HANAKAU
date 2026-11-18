@@ -13,6 +13,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.CookieManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.GeolocationPermissions;
 import android.webkit.PermissionRequest;
 import android.webkit.DownloadListener;
@@ -24,6 +25,14 @@ import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 import android.widget.Toast;
+import com.google.firebase.messaging.FirebaseMessaging;
+import org.json.JSONObject;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends Activity {
     private static final String HOME_URL =
@@ -32,6 +41,43 @@ public class MainActivity extends Activity {
     public static final String EXTRA_NATIVE_CART = "id.pasarhanakau.mobile.EXTRA_NATIVE_CART";
 
     private WebView webView;
+    private final ExecutorService notificationExecutor = Executors.newSingleThreadExecutor();
+
+    private class NativeNotificationBridge {
+        @JavascriptInterface
+        public void registerFcmToken(String accessToken) { syncFcmToken(accessToken, false); }
+        @JavascriptInterface
+        public void removeFcmToken(String accessToken) { syncFcmToken(accessToken, true); }
+    }
+
+    private void syncFcmToken(String accessToken, boolean remove) {
+        if (accessToken == null || accessToken.trim().isEmpty()) return;
+        FirebaseMessaging.getInstance().getToken().addOnSuccessListener(token -> {
+            notificationExecutor.execute(() -> {
+                HttpURLConnection connection = null;
+                try {
+                    URL endpoint = new URL("https://wnnnhiocyyozlkfqupav.supabase.co/functions/v1/push-notifications");
+                    connection = (HttpURLConnection) endpoint.openConnection();
+                    connection.setRequestMethod("POST");
+                    connection.setConnectTimeout(15000);
+                    connection.setReadTimeout(15000);
+                    connection.setDoOutput(true);
+                    connection.setRequestProperty("Authorization", "Bearer " + accessToken);
+                    connection.setRequestProperty("apikey", "sb_publishable_zbG3DUtwN-jpvWATBhN77g_K6V_YbsI");
+                    connection.setRequestProperty("Content-Type", "application/json");
+                    JSONObject payload = new JSONObject();
+                    payload.put("action", remove ? "remove_android_token" : "register_android_token");
+                    payload.put("token", token);
+                    byte[] body = payload.toString().getBytes(StandardCharsets.UTF_8);
+                    try (OutputStream output = connection.getOutputStream()) { output.write(body); }
+                    int status = connection.getResponseCode();
+                    if (status < 200 || status >= 300) android.util.Log.w("PasarHanakauFCM", "Token sync HTTP " + status);
+                } catch (Exception error) {
+                    android.util.Log.w("PasarHanakauFCM", "Token sync failed", error);
+                } finally { if (connection != null) connection.disconnect(); }
+            });
+        }).addOnFailureListener(error -> android.util.Log.w("PasarHanakauFCM", "FCM token unavailable", error));
+    }
     private String pendingNativeCartJson;
     private ProgressBar progressBar;
     private android.webkit.ValueCallback<Uri[]> uploadCallback;
@@ -94,6 +140,7 @@ public class MainActivity extends Activity {
         });
 
         webView = new WebView(this);
+        webView.addJavascriptInterface(new NativeNotificationBridge(), "PasarHanakauNative");
         webView.setBackgroundColor(Color.rgb(243, 247, 242));
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -249,6 +296,10 @@ public class MainActivity extends Activity {
                     Toast.LENGTH_SHORT).show();
             }
         });
+
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[] { Manifest.permission.POST_NOTIFICATIONS }, 4105);
+        }
 
         if (savedInstanceState == null) {
             webView.loadUrl(HOME_URL);
