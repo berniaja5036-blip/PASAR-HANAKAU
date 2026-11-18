@@ -15,6 +15,13 @@
         android:roundIcon="@drawable/launcher"
         android:theme="@style/AppTheme"
         android:supportsRtl="true">
+        <service
+            android:name=".PasarHanakauMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
         <activity
             android:name=".NativeHomeActivity"
             android:exported="false"
