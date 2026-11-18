@@ -1768,7 +1768,7 @@ $('checkoutButton').addEventListener('click',async()=>{
  }finally{
   checkoutInProgress=false;
   button.textContent=originalButtonText;
-  button.disabled=Object.keys(cart).length===0;
+  renderCart();
  }
 });
 function renderBuyerCODPayment(order){

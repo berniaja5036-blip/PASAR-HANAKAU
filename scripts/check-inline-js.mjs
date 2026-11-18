@@ -336,6 +336,13 @@ if (!codOnlyMigration.includes('drop policy if exists order_payment_submissions_
 
 
 const buyerCartSource = readFileSync('buyer/index.html', 'utf8');
+const checkoutButtonStatePattern = /finally\s*\{\s*checkoutInProgress\s*=\s*false\s*;\s*button\.textContent\s*=\s*originalButtonText\s*;\s*renderCart\(\)\s*;\s*\}/;
+for (const [surface, source] of [['website', html], ['buyer WebView', buyerCartSource]]) {
+  if (!checkoutButtonStatePattern.test(source)) {
+    console.error('Checkout must restore its button through renderCart() so verification and unavailable-item guards remain enforced on ' + surface + '.');
+    process.exit(1);
+  }
+}
 if (!buyerCartSource.includes('function reconcileCartWithCatalog(products)') ||
     !buyerCartSource.includes(".in('id',cartProductIds)") ||
     !buyerCartSource.includes('const price=Number(latest.price),stock=Number(latest.stock)') ||
