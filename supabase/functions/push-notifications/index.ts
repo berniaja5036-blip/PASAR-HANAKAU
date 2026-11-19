@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.119.0";
+import { SignJWT, importPKCS8 } from "npm:jose@5.9.6";
 import { generateVapidKey, vapidPublicKey, send } from "jsr:@daaku/webpush@0.2.0";
 
 // Deno 2.1 compatibility for Base64 typed-array methods used by @daaku/webpush.
@@ -108,6 +109,26 @@ Deno.serve(async (req: Request) => {
     return json({ ok: true });
   }
 
+  if (payload?.action === "register_android_token" || payload?.action === "remove_android_token") {
+    const user = await authenticatedUser();
+    if (!user) return json({ error: "Invalid session" }, 401);
+    const { data: profile, error: profileError } = await admin.from("profiles")
+      .select("account_status").eq("id", user.id).maybeSingle();
+    if (profileError || profile?.account_status !== "active") return json({ error: "Account is not active" }, 403);
+    const token = payload?.token;
+    if (typeof token !== "string" || token.length < 40 || token.length > 4096) return json({ error: "Invalid FCM token" }, 400);
+    if (payload.action === "remove_android_token") {
+      const { error } = await admin.from("android_push_tokens").delete().eq("user_id", user.id).eq("fcm_token", token);
+      if (error) return json({ error: "Could not remove Android token" }, 500);
+      return json({ ok: true });
+    }
+    const { error } = await admin.from("android_push_tokens").upsert({
+      user_id: user.id, fcm_token: token, platform: "android", updated_at: new Date().toISOString()
+    }, { onConflict: "fcm_token" });
+    if (error) return json({ error: "Could not save Android token" }, 500);
+    return json({ ok: true });
+  }
+
   if (payload?.action === "generate_vapid") {
     const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
     if (!token) return json({ error: "Authentication required" }, 401);
@@ -165,5 +186,56 @@ Deno.serve(async (req: Request) => {
       } else console.error("Push delivery failed", status, String(err));
     }
   }
-  return json({ ok: true, sent, removed });
+  let fcmSent = 0, fcmRemoved = 0;
+  const serviceAccountRaw = Deno.env.get("FIREBASE_SERVICE_ACCOUNT");
+  if (serviceAccountRaw) {
+    try {
+      const serviceAccount = JSON.parse(serviceAccountRaw);
+      const pem = String(serviceAccount.private_key || "").replace(/\\n/g, "\n");
+      const privateKey = await importPKCS8(pem, "RS256");
+      const now = Math.floor(Date.now() / 1000);
+      const assertion = await new SignJWT({ scope: "https://www.googleapis.com/auth/firebase.messaging" })
+        .setProtectedHeader({ alg: "RS256", typ: "JWT" })
+        .setIssuer(serviceAccount.client_email)
+        .setAudience("https://oauth2.googleapis.com/token")
+        .setIssuedAt(now).setExpirationTime(now + 3600).sign(privateKey);
+      const oauthResponse = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion })
+      });
+      const oauth = await oauthResponse.json();
+      if (!oauthResponse.ok || !oauth.access_token) throw new Error("Firebase OAuth token request failed");
+      const { data: androidTokens, error: tokenError } = await admin.from("android_push_tokens")
+        .select("id,fcm_token").eq("user_id", record.user_id);
+      if (tokenError) throw new Error("Could not load Android device tokens");
+      for (const device of androidTokens || []) {
+        try {
+          const response = await fetch(`https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`, {
+            method: "POST",
+            headers: { "Authorization": "Bearer " + oauth.access_token, "Content-Type": "application/json" },
+            body: JSON.stringify({ message: {
+              token: device.fcm_token,
+              notification: { title: record.title, body: record.body },
+              data: { route: record.target_path || "./", notificationId: record.id || "" },
+              android: { priority: "HIGH", notification: { channel_id: "pasar_hanakau_updates", sound: "default" } }
+            }})
+          });
+          if (response.ok) fcmSent++;
+          else {
+            const failure = await response.json().catch(() => ({}));
+            const code = failure?.error?.details?.[0]?.errorCode || failure?.error?.status;
+            if (response.status === 404 || code === "UNREGISTERED" || code === "INVALID_ARGUMENT") {
+              await admin.from("android_push_tokens").delete().eq("id", device.id);
+              fcmRemoved++;
+            } else console.error("FCM delivery failed", response.status, failure?.error?.status || "unknown");
+          }
+        } catch (err) { console.error("FCM delivery error", String(err)); }
+      }
+    } catch (err) {
+      console.error("FCM setup/delivery failed", String(err));
+    }
+  } else {
+    console.error("FIREBASE_SERVICE_ACCOUNT secret is missing");
+  }
+  return json({ ok: true, sent, removed, fcmSent, fcmRemoved });
 });

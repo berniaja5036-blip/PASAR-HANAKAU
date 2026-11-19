@@ -399,3 +399,40 @@ if (!nativeHomeSource.includes('private var resumeVersion by mutableStateOf(-1)'
   process.exit(1);
 }
 
+const androidTokenMigration = readMigration('android_fcm_device_tokens');
+const pushNotificationSource = readFileSync('supabase/functions/push-notifications/index.ts', 'utf8');
+const nativeMessagingSource = readFileSync('android/app/src/main/java/id/pasarhanakau/mobile/PasarHanakauMessagingService.java', 'utf8');
+if (!androidTokenMigration.includes('create table if not exists public.android_push_tokens') ||
+    !androidTokenMigration.includes('references auth.users(id) on delete cascade') ||
+    !androidTokenMigration.includes('fcm_token text not null unique') ||
+    !androidTokenMigration.includes('alter table public.android_push_tokens enable row level security')) {
+  console.error('Android FCM token storage must use unique device tokens, auth-user ownership, and RLS.');
+  process.exit(1);
+}
+if (!pushNotificationSource.includes('payload?.action === "register_android_token"') ||
+    !pushNotificationSource.includes('payload?.action === "remove_android_token"') ||
+    !pushNotificationSource.includes('const user = await authenticatedUser()') ||
+    !pushNotificationSource.includes('profile?.account_status !== "active"') ||
+    !pushNotificationSource.includes('token.length < 40 || token.length > 4096') ||
+    !pushNotificationSource.includes('.eq("user_id", user.id).eq("fcm_token", token)') ||
+    !pushNotificationSource.includes('{ onConflict: "fcm_token" }')) {
+  console.error('Android FCM registration/removal must authenticate the owner, require an active account, validate tokens, and scope writes to that user.');
+  process.exit(1);
+}
+if (!pushNotificationSource.includes('FIREBASE_SERVICE_ACCOUNT') ||
+    !pushNotificationSource.includes('https://fcm.googleapis.com/v1/projects/')) {
+  console.error('FCM delivery must use the server-side Firebase HTTP v1 service-account flow.');
+  process.exit(1);
+}
+if (!nativeCartBridgeSource.includes('registerFcmToken(String accessToken)') ||
+    !nativeCartBridgeSource.includes('removeFcmToken(String accessToken)') ||
+    !nativeCartBridgeSource.includes('register_android_token') ||
+    !nativeCartBridgeSource.includes('remove_android_token') ||
+    !buyerCartSource.includes('window.PasarHanakauNative?.registerFcmToken') ||
+    !buyerCartSource.includes('window.PasarHanakauNative.removeFcmToken') ||
+    !nativeMessagingSource.includes('void onNewToken(String token)') ||
+    !nativeMessagingSource.includes('.putString("fcm_token", token)')) {
+  console.error('Android and buyer WebView FCM token lifecycle must remain connected to the authenticated server endpoint.');
+  process.exit(1);
+}
+

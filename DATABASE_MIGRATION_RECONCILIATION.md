@@ -1,10 +1,10 @@
 # Database migration reconciliation
 
-Last reviewed: 2026-11-15.
+Last reviewed: 2026-11-19.
 
-## Current production status (15 November 2026)
+## Current production status (19 November 2026)
 
-The live Supabase project reports **87 applied migration records**. The active `supabase/migrations/` directory on this branch contains **87 SQL files**. A direct comparison of every 14-digit version and migration name now reports **87 exact matches, zero missing versions, zero extra files, and zero duplicate version prefixes**.
+The live Supabase project reports **88 applied migration records**. The active `supabase/migrations/` directory on this branch contains **88 SQL files** after the Android FCM migration source was restored. A direct comparison of every 14-digit version and migration name reports **88 exact matches, zero missing versions, zero extra files, and zero duplicate version prefixes**.
 
 The seven migration source files that were absent from the repository have been restored from the authoritative `statements[1]` values stored in production's `supabase_migrations.schema_migrations` table:
 
@@ -27,6 +27,15 @@ Three repository-history corrections remain documented:
 - The local-only aggregate `20261114130000_create_marketplace_ads.sql` is moved to `supabase/migrations-archive/`. Production already has the marketplace-ads table and its later policy/payment columns; the active local aggregate is superseded by the seven smaller production migrations and must not be run.
 
 **Important:** Migration history and source files now reconcile, but this does not authorize applying migrations. Before any future database deployment, create and verify a backup and test the proposed migration in an isolated non-production database. The live database was not changed during this repository reconciliation.
+
+
+## 18 November 2026 — Android FCM token source recovery
+
+A read-only comparison on 19 November found one migration-source gap: production had 88 applied records while main contained 87 migration files. The missing record was 20261118025532_android_fcm_device_tokens. Its original SQL statement was recovered from the production migration-history record and committed as the canonical file. It creates public.android_push_tokens with a unique FCM token, an auth.users foreign key with cascade deletion, a user index, and row-level security. The live catalog was checked separately: RLS is enabled, there are no client policies, and only service_role has table-level SELECT/INSERT/UPDATE/DELETE grants.
+
+The deployed push-notifications Edge Function was version 22 and already implemented the Android token registration/removal actions plus Firebase HTTP v1 delivery. The repository copy did not contain those handlers even though the Android bridge called them. The deployed source has now been synchronized into supabase/functions/push-notifications/index.ts, and regression checks cover the migration, authenticated owner scoping, active-account guard, token validation, Android bridge, and server-side FCM sender.
+
+No SQL was re-applied and no Edge Function was redeployed in this source-recovery change: both were already present in production. The Firebase service-account environment value was not inspected or exposed; actual FCM delivery remains dependent on that server-side configuration and has not been claimed as device-tested.
 
 ## Historical baseline (14 November 2026)
 
