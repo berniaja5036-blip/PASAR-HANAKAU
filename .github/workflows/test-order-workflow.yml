@@ -6,6 +6,7 @@ on:
     paths:
       - 'supabase/migrations/20261111161000_restore_stock_on_admin_order_cancellation.sql'
       - 'supabase/migrations/20261112165833_fix_driver_assignment_document_trim.sql'
+      - 'supabase/migrations/20261114025617_harden_driver_delivery_status_role_and_null_validation.sql'
       - 'tests/order-workflow/**'
       - '.github/workflows/test-order-workflow.yml'
   pull_request:
@@ -53,7 +54,11 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20261112165833_fix_driver_assignment_document_trim.sql
-      - name: Assert cancellation, stock restoration, document and driver availability rules
+      - name: Apply production driver pickup and delivery status functions
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20261114025617_harden_driver_delivery_status_role_and_null_validation.sql
+      - name: Assert cancellation, stock restoration, document, driver availability and delivery status rules
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/order-workflow/assertions.sql

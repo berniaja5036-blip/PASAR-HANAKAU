@@ -3,6 +3,7 @@
 -- Isolated fixture for exercising the production workflow functions.
 -- This database is created by the GitHub Actions PostgreSQL service only.
 create schema if not exists storage;
+create schema if not exists auth;
 
 create or replace function public.is_admin()
 returns boolean
@@ -27,6 +28,24 @@ as $$
     )
   end;
 $$;
+
+create or replace function public.current_user_is_active()
+returns boolean
+language sql
+stable
+set search_path = pg_catalog
+as $
+  select coalesce(current_setting('test.account_active', true), 'false') = 'true';
+$;
+
+create or replace function auth.uid()
+returns uuid
+language sql
+stable
+set search_path = pg_catalog
+as $
+  select nullif(current_setting('test.user_id', true), '')::uuid;
+$;
 
 create table public.profiles (
   id uuid primary key,
@@ -54,7 +73,14 @@ create table storage.objects (
 
 create table public.orders (
   id uuid primary key,
-  status text not null
+  status text not null,
+  delivery_fee numeric not null default 0,
+  buyer_received_at timestamptz,
+  driver_fee_confirmed_at timestamptz,
+  delivery_fee_payment_status text,
+  delivery_fee_payment_method text,
+  buyer_fee_confirmed_at timestamptz,
+  delivery_fee_paid_at timestamptz
 );
 
 create table public.deliveries (
@@ -63,6 +89,9 @@ create table public.deliveries (
   status text not null,
   driver_id uuid,
   assigned_at timestamptz,
+  picked_up_at timestamptz,
+  delivered_at timestamptz,
+  pickup_notes text,
   delivery_notes text
 );
 

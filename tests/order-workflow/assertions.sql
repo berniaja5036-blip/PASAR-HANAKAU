@@ -285,6 +285,105 @@ begin
 end;
 $$;
 
+-- Only the assigned, active and approved driver may advance a task.
+-- The pickup and delivery transitions update both delivery and order atomically.
+select pg_catalog.set_config('test.user_id', '30000000-0000-4000-8000-000000000002', false);
+select pg_catalog.set_config('test.account_active', 'true', false);
+select public.driver_update_delivery_status(
+  (select id from public.deliveries where order_id = '10000000-0000-4000-8000-000000000004'),
+  'picked_up',
+  'Barang sudah dijemput dari toko.'
+);
+do $
+begin
+  if (select status from public.deliveries where order_id = '10000000-0000-4000-8000-000000000004') <> 'picked_up' then
+    raise exception 'Driver pickup did not advance the delivery.';
+  end if;
+  if (select status from public.orders where id = '10000000-0000-4000-8000-000000000004') <> 'picked_up' then
+    raise exception 'Driver pickup did not advance the order.';
+  end if;
+  if (select pickup_notes from public.deliveries where order_id = '10000000-0000-4000-8000-000000000004') <> 'Barang sudah dijemput dari toko.' then
+    raise exception 'Pickup note was not persisted.';
+  end if;
+end;
+$;
+
+select public.driver_update_delivery_status(
+  (select id from public.deliveries where order_id = '10000000-0000-4000-8000-000000000004'),
+  'delivered',
+  'Barang diterima pembeli.'
+);
+do $
+declare
+  v_error text;
+begin
+  if (select status from public.deliveries where order_id = '10000000-0000-4000-8000-000000000004') <> 'delivered' then
+    raise exception 'Driver delivery did not complete the task.';
+  end if;
+  if (select status from public.orders where id = '10000000-0000-4000-8000-000000000004') <> 'delivered' then
+    raise exception 'Driver delivery did not complete the order.';
+  end if;
+  if (select delivery_notes from public.deliveries where order_id = '10000000-0000-4000-8000-000000000004') <> 'Barang diterima pembeli.' then
+    raise exception 'Delivery note was not persisted.';
+  end if;
+
+  begin
+    perform public.driver_update_delivery_status(
+      (select id from public.deliveries where order_id = '10000000-0000-4000-8000-000000000004'),
+      'picked_up',
+      ''
+    );
+  exception when others then
+    v_error := sqlerrm;
+  end;
+  if v_error is null then
+    raise exception 'A completed delivery accepted an invalid backward transition.';
+  end if;
+end;
+$;
+
+-- A different driver cannot mutate another driver's delivery, and inactive accounts fail closed.
+select pg_catalog.set_config('test.user_id', '30000000-0000-4000-8000-000000000001', false);
+do $
+declare
+  v_error text;
+begin
+  begin
+    perform public.driver_update_delivery_status(
+      (select id from public.deliveries where order_id = '10000000-0000-4000-8000-000000000004'),
+      'delivered',
+      ''
+    );
+  exception when others then
+    v_error := sqlerrm;
+  end;
+  if v_error is null or v_error not like '%tidak ditemukan untuk akun driver ini%' then
+    raise exception 'A different driver was allowed to update an unassigned delivery.';
+  end if;
+end;
+$;
+
+select pg_catalog.set_config('test.user_id', '30000000-0000-4000-8000-000000000002', false);
+select pg_catalog.set_config('test.account_active', 'false', false);
+do $
+declare
+  v_error text;
+begin
+  begin
+    perform public.driver_update_delivery_status(
+      (select id from public.deliveries where order_id = '10000000-0000-4000-8000-000000000004'),
+      'delivered',
+      ''
+    );
+  exception when others then
+    v_error := sqlerrm;
+  end;
+  if v_error is null or v_error not like '%Akun tidak aktif%' then
+    raise exception 'An inactive account was allowed to update a delivery.';
+  end if;
+end;
+$;
+
 -- Dispatch must also fail closed for non-admin callers.
 select pg_catalog.set_config('test.is_admin', 'false', false);
 do $$
