@@ -12,6 +12,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'supabase/migrations/20261114025617_harden_driver_delivery_status_role_and_null_validation.sql'
       - 'supabase/migrations/20261111161000_restore_stock_on_admin_order_cancellation.sql'
       - 'supabase/migrations/20261112165833_fix_driver_assignment_document_trim.sql'
       - 'tests/order-workflow/**'

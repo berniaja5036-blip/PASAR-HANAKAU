@@ -34,18 +34,18 @@ returns boolean
 language sql
 stable
 set search_path = pg_catalog
-as $
+as $test$
   select coalesce(current_setting('test.account_active', true), 'false') = 'true';
-$;
+$test$;
 
 create or replace function auth.uid()
 returns uuid
 language sql
 stable
 set search_path = pg_catalog
-as $
+as $test$
   select nullif(current_setting('test.user_id', true), '')::uuid;
-$;
+$test$;
 
 create table public.profiles (
   id uuid primary key,
