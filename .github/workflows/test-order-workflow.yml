@@ -1,0 +1,59 @@
+name: Test transactional order and driver workflows
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/20261111161000_restore_stock_on_admin_order_cancellation.sql'
+      - 'supabase/migrations/20261112165833_fix_driver_assignment_document_trim.sql'
+      - 'tests/order-workflow/**'
+      - '.github/workflows/test-order-workflow.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/20261111161000_restore_stock_on_admin_order_cancellation.sql'
+      - 'supabase/migrations/20261112165833_fix_driver_assignment_document_trim.sql'
+      - 'tests/order-workflow/**'
+      - '.github/workflows/test-order-workflow.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-17:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Bootstrap isolated PostgreSQL fixture
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/order-workflow/bootstrap.sql
+      - name: Apply production order-cancellation function
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20261111161000_restore_stock_on_admin_order_cancellation.sql
+      - name: Apply production driver-assignment function
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20261112165833_fix_driver_assignment_document_trim.sql
+      - name: Assert cancellation, stock restoration, document and driver availability rules
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/order-workflow/assertions.sql
