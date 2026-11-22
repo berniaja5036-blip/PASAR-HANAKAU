@@ -48,10 +48,46 @@ public class MainActivity extends Activity {
         public void registerFcmToken(String accessToken) { syncFcmToken(accessToken, false); }
         @JavascriptInterface
         public void removeFcmToken(String accessToken) { syncFcmToken(accessToken, true); }
+        @JavascriptInterface
+        public void enableNotifications(String accessToken) { enableNativeNotifications(accessToken); }
+    }
+
+    private String pendingNotificationAccessToken;
+
+    private void enableNativeNotifications(String accessToken) {
+        if (accessToken == null || accessToken.trim().isEmpty()) {
+            notifyNotificationStatus("Sesi masuk tidak ditemukan. Silakan masuk kembali.", true);
+            return;
+        }
+        runOnUiThread(() -> {
+            if (Build.VERSION.SDK_INT >= 33
+                    && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                pendingNotificationAccessToken = accessToken;
+                requestPermissions(new String[] { Manifest.permission.POST_NOTIFICATIONS }, 4106);
+            } else {
+                syncFcmToken(accessToken, false, true);
+            }
+        });
+    }
+
+    private void notifyNotificationStatus(String text, boolean isError) {
+        runOnUiThread(() -> {
+            if (webView == null) return;
+            String script = "if(window.PasarHanakauNotify){window.PasarHanakauNotify("
+                    + JSONObject.quote(text) + "," + (isError ? "true" : "false") + ");}";
+            webView.evaluateJavascript(script, null);
+        });
     }
 
     private void syncFcmToken(String accessToken, boolean remove) {
-        if (accessToken == null || accessToken.trim().isEmpty()) return;
+        syncFcmToken(accessToken, remove, false);
+    }
+
+    private void syncFcmToken(String accessToken, boolean remove, boolean notifyUser) {
+        if (accessToken == null || accessToken.trim().isEmpty()) {
+            if (notifyUser) notifyNotificationStatus("Sesi masuk tidak ditemukan. Silakan masuk kembali.", true);
+            return;
+        }
         FirebaseMessaging.getInstance().getToken().addOnSuccessListener(token -> {
             notificationExecutor.execute(() -> {
                 HttpURLConnection connection = null;
@@ -71,12 +107,25 @@ public class MainActivity extends Activity {
                     byte[] body = payload.toString().getBytes(StandardCharsets.UTF_8);
                     try (OutputStream output = connection.getOutputStream()) { output.write(body); }
                     int status = connection.getResponseCode();
-                    if (status < 200 || status >= 300) android.util.Log.w("PasarHanakauFCM", "Token sync HTTP " + status);
+                    if (status < 200 || status >= 300) {
+                        throw new Exception("Server menolak pendaftaran perangkat (HTTP " + status + ").");
+                    }
+                    if (notifyUser && !remove) {
+                        notifyNotificationStatus("Notifikasi Android berhasil diaktifkan pada perangkat ini.", false);
+                    }
                 } catch (Exception error) {
                     android.util.Log.w("PasarHanakauFCM", "Token sync failed", error);
-                } finally { if (connection != null) connection.disconnect(); }
+                    if (notifyUser) notifyNotificationStatus(
+                            "Pendaftaran notifikasi gagal: " + (error.getMessage() == null ? "Kesalahan jaringan." : error.getMessage()), true);
+                } finally {
+                    if (connection != null) connection.disconnect();
+                }
             });
-        }).addOnFailureListener(error -> android.util.Log.w("PasarHanakauFCM", "FCM token unavailable", error));
+        }).addOnFailureListener(error -> {
+            android.util.Log.w("PasarHanakauFCM", "FCM token unavailable", error);
+            if (notifyUser) notifyNotificationStatus(
+                    "Token Firebase tidak dapat diambil: " + (error.getMessage() == null ? "Kesalahan tidak diketahui." : error.getMessage()), true);
+        });
     }
     private String pendingNativeCartJson;
     private ProgressBar progressBar;
@@ -84,6 +133,7 @@ public class MainActivity extends Activity {
     private static final int FILE_CHOOSER_REQUEST = 4102;
     private static final int LOCATION_PERMISSION_REQUEST = 4103;
     private static final int CAMERA_PERMISSION_REQUEST = 4104;
+    private static final int NOTIFICATION_PERMISSION_REQUEST = 4106;
     private GeolocationPermissions.Callback pendingGeoCallback;
     private String pendingGeoOrigin;
     private PermissionRequest pendingWebPermissionRequest;
@@ -332,7 +382,17 @@ public class MainActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == LOCATION_PERMISSION_REQUEST && pendingGeoCallback != null) {
+        if (requestCode == NOTIFICATION_PERMISSION_REQUEST) {
+            String accessToken = pendingNotificationAccessToken;
+            pendingNotificationAccessToken = null;
+            boolean granted = grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            if (granted && accessToken != null) {
+                syncFcmToken(accessToken, false, true);
+            } else {
+                notifyNotificationStatus("Izin notifikasi belum diberikan. Aktifkan izin Pasar Hanakau pada Pengaturan HP > Aplikasi > Pasar Hanakau > Notifikasi.", true);
+            }
+        } else if (requestCode == LOCATION_PERMISSION_REQUEST && pendingGeoCallback != null) {
             boolean granted = false;
             for (int result : grantResults) {
                 if (result == PackageManager.PERMISSION_GRANTED) granted = true;
