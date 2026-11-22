@@ -343,6 +343,14 @@ for (const [surface, source] of [['website', html], ['buyer WebView', buyerCartS
     process.exit(1);
   }
 }
+const unavailablePriceLabel = "const priceLabel=unavailable?'Harga tidak tersedia':formatRupiah(p.price);";
+for (const [surface, source] of [['website', html], ['buyer WebView', buyerCartSource]]) {
+  if (!source.includes(unavailablePriceLabel) || !source.includes("+' • '+priceLabel+'</div>'+controls")) {
+    console.error('Unavailable cart items must not display a stale cached product price on ' + surface + '.');
+    process.exit(1);
+  }
+}
+
 if (!buyerCartSource.includes('function reconcileCartWithCatalog(products)') ||
     !buyerCartSource.includes(".in('id',cartProductIds)") ||
     !buyerCartSource.includes('const price=Number(latest.price),stock=Number(latest.stock)') ||

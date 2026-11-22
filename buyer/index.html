@@ -1667,7 +1667,8 @@ function renderCart(){
   const line=unavailable?0:Number(p.price||0)*Number(p.quantity||0);
   if(!unavailable)total+=line;
   const controls=unavailable?'<p class="muted">Produk tidak tersedia atau stok habis. Hapus barang ini untuk melanjutkan.</p>':'<div class="row"><button class="qtybtn" data-cart-minus="'+p.id+'">−</button><b>'+p.quantity+'</b><button class="qtybtn" data-cart-plus="'+p.id+'">+</button></div>';
-  return '<div class="cartline"><div style="flex:1"><b>'+escapeHtml(p.name)+'</b><div class="muted">'+escapeHtml(p.shopName||'Toko Pasar Hanakau')+' • '+formatRupiah(p.price)+'</div>'+controls+'<button class="btn secondary" data-cart-remove="'+p.id+'">Hapus</button></div><b>'+(unavailable?'Tidak tersedia':formatRupiah(line))+'</b></div>';
+  const priceLabel=unavailable?'Harga tidak tersedia':formatRupiah(p.price);
+  return '<div class="cartline"><div style="flex:1"><b>'+escapeHtml(p.name)+'</b><div class="muted">'+escapeHtml(p.shopName||'Toko Pasar Hanakau')+' • '+priceLabel+'</div>'+controls+'<button class="btn secondary" data-cart-remove="'+p.id+'">Hapus</button></div><b>'+(unavailable?'Tidak tersedia':formatRupiah(line))+'</b></div>';
  }).join('');
  const cartNotice=cartVerificationPending?'Memverifikasi harga dan stok…':cartVerificationFailed?'Verifikasi gagal. Muat ulang halaman sebelum checkout.':unavailableEntries.length?'Hapus produk yang tidak tersedia sebelum checkout.':'Ongkos kirim akan ditampilkan terpisah.';
  $('cartTotal').textContent='Total barang tersedia: '+formatRupiah(total)+' • '+cartNotice;
