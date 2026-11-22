@@ -1,10 +1,10 @@
 # Database migration reconciliation
 
-Last reviewed: 2026-11-19.
+Last reviewed: 2026-11-22.
 
-## Current production status (19 November 2026)
+## Current production status (22 November 2026)
 
-The live Supabase project reports **88 applied migration records**. The active `supabase/migrations/` directory on this branch contains **88 SQL files** after the Android FCM migration source was restored. A direct comparison of every 14-digit version and migration name reports **88 exact matches, zero missing versions, zero extra files, and zero duplicate version prefixes**.
+The live Supabase project reports **89 applied migration records**. The active `supabase/migrations/` directory on this branch contains **89 SQL files** after the public table privilege-hardening migration was applied. A direct comparison of every 14-digit version and migration name reports **89 exact matches, zero missing versions, zero extra files, and zero duplicate version prefixes**.
 
 The seven migration source files that were absent from the repository have been restored from the authoritative `statements[1]` values stored in production's `supabase_migrations.schema_migrations` table:
 
@@ -36,6 +36,12 @@ A read-only comparison on 19 November found one migration-source gap: production
 The deployed push-notifications Edge Function was version 22 and already implemented the Android token registration/removal actions plus Firebase HTTP v1 delivery. The repository copy did not contain those handlers even though the Android bridge called them. The deployed source has now been synchronized into supabase/functions/push-notifications/index.ts, and regression checks cover the migration, authenticated owner scoping, active-account guard, token validation, Android bridge, and server-side FCM sender.
 
 No SQL was re-applied and no Edge Function was redeployed in this source-recovery change: both were already present in production. The Firebase service-account environment value was not inspected or exposed; actual FCM delivery remains dependent on that server-side configuration and has not been claimed as device-tested.
+
+## 22 November 2026 — Public table privilege hardening
+
+The 89th migration, `20261122053642_revoke_unneeded_public_table_maintenance_privileges`, was applied through the reviewed migration API after the PostgreSQL 17 regression workflow passed. It removes `TRUNCATE`, `REFERENCES`, `TRIGGER`, and `MAINTAIN` from `anon` and `authenticated` on all existing public tables, and removes those privileges from future public tables created by `postgres`. Ordinary `SELECT`, `INSERT`, `UPDATE`, and `DELETE` grants and all RLS policies remain unchanged. Post-apply verification found zero remaining extra grants, no matching default privileges for `postgres`, and RLS enabled on all 34 public tables. No row data, orders, payments, stock, or account status was changed.
+
+All 34 current public tables are owned by `postgres`. The separate default ACL owned by `supabase_admin` remains platform-managed because the migration executor is not a member of that superuser role; no current public table is owned by `supabase_admin`. No role membership or privilege escalation was attempted. The CI regression test simulates the non-superuser `postgres` migration owner and verifies existing and future `postgres`-owned tables.
 
 ## Historical baseline (14 November 2026)
 

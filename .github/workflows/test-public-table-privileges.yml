@@ -4,13 +4,13 @@ on:
   push:
     branches: [main]
     paths:
-      - 'supabase/migrations/20261122052600_revoke_unneeded_public_table_maintenance_privileges.sql'
+      - 'supabase/migrations/20261122053642_revoke_unneeded_public_table_maintenance_privileges.sql'
       - 'tests/security-privileges/**'
       - '.github/workflows/test-public-table-privileges.yml'
   pull_request:
     branches: [main]
     paths:
-      - 'supabase/migrations/20261122052600_revoke_unneeded_public_table_maintenance_privileges.sql'
+      - 'supabase/migrations/20261122053642_revoke_unneeded_public_table_maintenance_privileges.sql'
       - 'tests/security-privileges/**'
       - '.github/workflows/test-public-table-privileges.yml'
 
@@ -46,7 +46,7 @@ jobs:
       - name: Apply production privilege-hardening migration
         env:
           PGPASSWORD: postgres
-        run: psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20261122052600_revoke_unneeded_public_table_maintenance_privileges.sql
+        run: psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20261122053642_revoke_unneeded_public_table_maintenance_privileges.sql
       - name: Assert existing and future public tables have least-privilege grants
         env:
           PGPASSWORD: postgres
