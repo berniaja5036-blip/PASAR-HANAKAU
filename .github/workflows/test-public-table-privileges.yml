@@ -24,8 +24,8 @@ jobs:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: bootstrap
+          POSTGRES_PASSWORD: bootstrap
           POSTGRES_DB: postgres
         ports:
           - 5432:5432
