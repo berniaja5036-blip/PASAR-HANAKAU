@@ -427,28 +427,45 @@ function pushBase64ToBytes(value){
  const base64=(value+padding).replace(/-/g,"+").replace(/_/g,"/");
  return Uint8Array.from(atob(base64),ch=>ch.charCodeAt(0));
 }
+window.PasarHanakauNotify=(text,isError)=>message("pushStatusMessage",text,Boolean(isError));
 $("enablePushNotifications").addEventListener("click",async()=>{
- button.disabled=true;let pushStage="memeriksa dukungan browser";
+ const button=$("enablePushNotifications");
+ button.disabled=true;
+ let pushStage="memeriksa dukungan notifikasi";
  try{
-  if(!("serviceWorker" in navigator)||!("PushManager" in window)||!("Notification" in window))throw new Error("Browser ini belum mendukung notifikasi web. Fitur ini hanya tersedia melalui browser yang mendukung Web Push.");
   if(!activeAccountUserId)throw new Error("Silakan masuk terlebih dahulu.");
+  const {data:sessionData,error:sessionError}=await supabase.auth.getSession();
+  if(sessionError)throw sessionError;
+  const session=sessionData?.session;
+  if(!session?.access_token)throw new Error("Sesi masuk tidak ditemukan. Silakan masuk kembali.");
+  if(window.PasarHanakauNative&&typeof window.PasarHanakauNative.enableNotifications==="function"){
+   pushStage="meminta izin notifikasi Android";
+   message("pushStatusMessage","Memeriksa izin notifikasi Android…");
+   window.PasarHanakauNative.enableNotifications(session.access_token);
+   return;
+  }
+  if(!("serviceWorker" in navigator)||!("PushManager" in window)||!("Notification" in window))throw new Error("Perangkat ini tidak mendukung Web Push. Gunakan aplikasi Pasar Hanakau Android versi terbaru.");
   pushStage="meminta izin notifikasi";
   const permission=await Notification.requestPermission();
-  if(permission!=="granted")throw new Error("Izin notifikasi belum diberikan. Izinkan notifikasi Pasar Hanakau melalui pengaturan situs di Chrome.");
+  if(permission!=="granted")throw new Error("Izin notifikasi belum diberikan. Aktifkan izin notifikasi Pasar Hanakau melalui pengaturan situs/browser.");
   pushStage="mengambil kunci notifikasi dari server";
   const {data:settings,error}=await supabase.from("push_settings").select("public_key").eq("id",1).maybeSingle();
   if(error)throw error;
   if(!settings?.public_key)throw new Error("Admin belum membuat kunci notifikasi. Silakan hubungi admin.");
   pushStage="menyiapkan service worker";
   const registration=await navigator.serviceWorker.ready;
-  pushStage="memeriksa langganan push Chrome";
+  pushStage="memeriksa langganan push browser";
   let subscription=await registration.pushManager.getSubscription();
-  if(!subscription){pushStage="mendaftarkan perangkat ke layanan push Chrome";subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:pushBase64ToBytes(settings.public_key)});}
+  if(!subscription){pushStage="mendaftarkan perangkat ke layanan push browser";subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:pushBase64ToBytes(settings.public_key)});}
   pushStage="menyimpan langganan perangkat ke server";
   await callPushFunction({action:"register_subscription",subscription:subscription.toJSON()});
   message("pushStatusMessage","Notifikasi berhasil diaktifkan pada perangkat ini.");
- }catch(error){const detail=error?.message||String(error)||"Kesalahan tidak diketahui";const name=error?.name?error.name+": ":"";message("pushStatusMessage","Gagal saat "+pushStage+". "+name+detail,true);console.error("Push registration diagnostic:",pushStage,error);}
- finally{button.disabled=false;}
+ }catch(error){
+  const detail=error?.message||String(error)||"Kesalahan tidak diketahui";
+  const name=error?.name?error.name+": ":"";
+  message("pushStatusMessage","Gagal saat "+pushStage+". "+name+detail,true);
+  console.error("Push registration diagnostic:",pushStage,error);
+ }finally{button.disabled=false;}
 });
 $("generateVapidKey").addEventListener("click",async()=>{
  const button=$("generateVapidKey");button.disabled=true;$("vapidPrivateKey").value="";
@@ -775,58 +792,81 @@ $('catalogShopFilter').addEventListener('change',renderCatalog);
 $('catalogMinPrice').addEventListener('input',renderCatalog);
 $('catalogMaxPrice').addEventListener('input',renderCatalog);
 $('clearCatalogFilters').addEventListener('click',()=>{$('catalogSearch').value='';$('catalogSort').value='newest';$('catalogShopFilter').value='';$('catalogMinPrice').value='';$('catalogMaxPrice').value='';activeCategoryId='';document.querySelectorAll('[data-home-category]').forEach(item=>item.classList.toggle('active',!item.dataset.homeCategory));renderCatalog()});
+async function withCatalogTimeout(promise,label,timeoutMs=18000){
+ let timer;
+ try{return await Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(label+" melewati batas waktu.")),timeoutMs);})]);}
+ finally{clearTimeout(timer);}
+}
 async function loadCatalog(){
  catalogLoaded=false;
  $('catalog').innerHTML='<div class="tile muted">Menghubungkan ke katalog…</div>';
  $('catalogMessage').textContent='';
  try{
-  await loadProductCategories();
-   const {data,error}=await supabase.from('products').select('id,shop_id,category_id,categories(name),name,description,price,stock,image_path,created_at,shops(name)').eq('status','active').gt('stock',0).order('created_at',{ascending:false}).limit(60);
-  if(error)throw error;
-  catalogProducts=data||[];
+  try{
+   await withCatalogTimeout(loadProductCategories(),'Pemuatan kategori',12000);
+  }catch(categoryError){
+   console.warn('Kategori tidak dapat dimuat; katalog produk tetap dilanjutkan:',categoryError);
+   productCategories=[];
+   const shortcuts=$('marketCategoryShortcuts');
+   if(shortcuts)shortcuts.innerHTML='<button type="button" data-home-category="">✨<span>Semua</span></button>';
+  }
+  const productResult=await withCatalogTimeout(
+   supabase.from('products').select('id,shop_id,category_id,categories(name),name,description,price,stock,image_path,created_at,shops(name)').eq('status','active').gt('stock',0).order('created_at',{ascending:false}).limit(60),
+   'Pengambilan produk katalog',22000
+  );
+  if(productResult.error)throw productResult.error;
+  catalogProducts=productResult.data||[];
   catalogLoaded=true;
+  const shopSelect=$('catalogShopFilter');
+  if(shopSelect){
+   const previousShop=shopSelect.value;
+   const shopOptions=[...new Map(catalogProducts.map(p=>[p.shop_id,p.shops?.name||'Toko Pasar Hanakau'])).entries()].sort((a,b)=>a[1].localeCompare(b[1],'id'));
+   shopSelect.innerHTML='<option value="">Semua toko</option>'+shopOptions.map(([id,name])=>'<option value="'+id+'">'+escapeHtml(name)+'</option>').join('');
+   if(shopOptions.some(([id])=>id===previousShop))shopSelect.value=previousShop;
+  }
+  // Render barang segera; layanan tambahan tidak boleh menahan katalog utama.
+  renderCatalog();
   if(activeBuyerId&&Object.keys(cart).length){
    const cartProductIds=Object.keys(cart);
-   cartVerificationPending=true;
-   cartVerificationFailed=false;
-   renderCart();
-   const {data:cartProductRows,error:cartProductError}=await supabase.from('products')
-    .select('id,shop_id,name,price,stock,shops(name)')
-    .in('id',cartProductIds)
-    .eq('status','active')
-    .gt('stock',0);
-   if(cartProductError){
-    cartVerificationPending=false;
-    cartVerificationFailed=Object.keys(cart).length>0;
-    message('checkoutMessage','Harga dan stok keranjang belum dapat diverifikasi. Muat ulang halaman sebelum checkout.',true);
-   }else{
-    cartVerificationPending=false;
-    cartVerificationFailed=false;
-    const changes=reconcileCartWithCatalog(cartProductRows||[]);
+   cartVerificationPending=true;cartVerificationFailed=false;renderCart();
+   try{
+    const cartResult=await withCatalogTimeout(
+     supabase.from('products').select('id,shop_id,name,price,stock,shops(name)').in('id',cartProductIds).eq('status','active').gt('stock',0),
+     'Pemeriksaan keranjang',12000
+    );
+    if(cartResult.error)throw cartResult.error;
+    cartVerificationPending=false;cartVerificationFailed=false;
+    const changes=reconcileCartWithCatalog(cartResult.data||[]);
     const notices=[];
     if(changes.price.length)notices.push(changes.price.length+' harga produk diperbarui sesuai katalog terbaru.');
     if(changes.stock.length)notices.push(changes.stock.length+' jumlah produk disesuaikan dengan stok terbaru.');
     if(changes.unavailable.length)notices.push(changes.unavailable.length+' produk tidak tersedia; hapus dari keranjang sebelum checkout.');
     if(changes.restored.length)notices.push(changes.restored.length+' produk kembali tersedia.');
     if(notices.length)message('checkoutMessage',notices.join(' '),changes.unavailable.length>0);
+   }catch(cartError){
+    cartVerificationPending=false;cartVerificationFailed=Object.keys(cart).length>0;
+    message('checkoutMessage','Harga dan stok keranjang belum dapat diverifikasi. Muat ulang halaman sebelum checkout.',true);
+    console.warn('Pemeriksaan keranjang gagal:',cartError);
    }
    renderCart();
   }
   if(catalogProducts.length){
-   const {data:ratingRows,error:ratingError}=await supabase.rpc('get_public_product_review_summaries',{p_product_ids:catalogProducts.map(p=>p.id)});
-   if(ratingError)console.warn('Ringkasan ulasan produk belum dapat dimuat:',ratingError.message);
-   const ratingMap=new Map((ratingRows||[]).map(row=>[row.product_id,row]));
-   catalogProducts=catalogProducts.map(product=>({...product,average_rating:ratingMap.get(product.id)?.average_rating??null,review_count:ratingMap.get(product.id)?.review_count??0}));
+   try{
+    const ratingResult=await withCatalogTimeout(
+     supabase.rpc('get_public_product_review_summaries',{p_product_ids:catalogProducts.map(p=>p.id)}),
+     'Pemuatan ulasan',10000
+    );
+    if(ratingResult.error)throw ratingResult.error;
+    const ratingMap=new Map((ratingResult.data||[]).map(row=>[row.product_id,row]));
+    catalogProducts=catalogProducts.map(product=>({...product,average_rating:ratingMap.get(product.id)?.average_rating??null,review_count:ratingMap.get(product.id)?.review_count??0}));
+    renderCatalog();
+   }catch(ratingError){console.warn('Ringkasan ulasan produk dilewati:',ratingError);}
   }
-  const shopSelect=$('catalogShopFilter');const previousShop=shopSelect.value;const shopOptions=[...new Map(catalogProducts.map(p=>[p.shop_id,p.shops?.name||'Toko Pasar Hanakau'])).entries()].sort((a,b)=>a[1].localeCompare(b[1],'id'));
-  shopSelect.innerHTML='<option value="">Semua toko</option>'+shopOptions.map(([id,name])=>'<option value="'+id+'">'+escapeHtml(name)+'</option>').join('');
-  if(shopOptions.some(([id])=>id===previousShop))shopSelect.value=previousShop;
-  renderCatalog();
-  await loadMarketplaceAds();
-  if(activeBuyerId)await loadBuyerWishlist();
+  loadMarketplaceAds().catch(error=>console.warn('Iklan dilewati:',error));
+  if(activeBuyerId)loadBuyerWishlist().catch(error=>console.warn('Favorit dilewati:',error));
  }catch(error){
   catalogLoaded=false;
-  $('catalog').innerHTML='<div class="tile muted">Katalog belum dapat dimuat. Periksa koneksi internet lalu coba muat ulang.</div>';
+  $('catalog').innerHTML='<div class="tile muted">Katalog belum dapat dimuat. Periksa koneksi internet lalu tekan Muat ulang.</div>';
   message('catalogMessage','Keterangan: '+(error?.message||'Permintaan data katalog gagal.'),true);
   console.error('Gagal memuat katalog:',error);
  }
