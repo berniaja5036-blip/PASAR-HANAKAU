@@ -4,12 +4,8 @@ REVOKE TRUNCATE, REFERENCES, TRIGGER, MAINTAIN
 ON ALL TABLES IN SCHEMA public
 FROM anon, authenticated;
 
--- Supabase migrations and dashboard-created tables may be owned by either role.
--- Prevent these unnecessary privileges from returning on future public tables.
+-- Public tables in this project are owned by postgres. Keep future tables
+-- created by the migration/database owner free of these unnecessary privileges.
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
-REVOKE TRUNCATE, REFERENCES, TRIGGER, MAINTAIN
-ON TABLES FROM anon, authenticated;
-
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public
 REVOKE TRUNCATE, REFERENCES, TRIGGER, MAINTAIN
 ON TABLES FROM anon, authenticated;

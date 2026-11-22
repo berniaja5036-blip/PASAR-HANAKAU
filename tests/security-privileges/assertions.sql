@@ -1,9 +1,5 @@
 CREATE TABLE public.future_postgres_table (id bigint PRIMARY KEY);
 
-SET ROLE supabase_admin;
-CREATE TABLE public.future_supabase_admin_table (id bigint PRIMARY KEY);
-RESET ROLE;
-
 DO $$
 DECLARE
   role_name text;
@@ -12,8 +8,7 @@ BEGIN
   FOREACH role_name IN ARRAY ARRAY['anon', 'authenticated'] LOOP
     FOREACH table_name IN ARRAY ARRAY[
       'public.existing_privilege_fixture',
-      'public.future_postgres_table',
-      'public.future_supabase_admin_table'
+      'public.future_postgres_table'
     ] LOOP
       IF has_table_privilege(role_name, table_name, 'TRUNCATE') THEN
         RAISE EXCEPTION '% unexpectedly has TRUNCATE on %', role_name, table_name;
@@ -41,12 +36,6 @@ BEGIN
   END IF;
   IF NOT has_table_privilege('authenticated', 'public.existing_privilege_fixture', 'DELETE') THEN
     RAISE EXCEPTION 'Existing DELETE privilege was unexpectedly removed';
-  END IF;
-  IF NOT has_table_privilege('anon', 'public.future_supabase_admin_table', 'SELECT') THEN
-    RAISE EXCEPTION 'Expected ordinary default SELECT privilege was unexpectedly removed';
-  END IF;
-  IF NOT has_table_privilege('authenticated', 'public.future_supabase_admin_table', 'INSERT') THEN
-    RAISE EXCEPTION 'Expected ordinary default INSERT privilege was unexpectedly removed';
   END IF;
 END
 $$;
