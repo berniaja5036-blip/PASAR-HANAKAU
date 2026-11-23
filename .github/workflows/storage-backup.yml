@@ -22,7 +22,9 @@ jobs:
       - name: Install Supabase CLI and GPG
         run: |
           set -euo pipefail
-          npm install --global supabase@2
+          npm install --prefix "$RUNNER_TEMP/supabase-cli" supabase@3.0.0
+          echo "$RUNNER_TEMP/supabase-cli/node_modules/.bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/supabase-cli/node_modules/.bin/supabase" --version
           sudo apt-get update
           sudo apt-get install --yes gnupg
 
