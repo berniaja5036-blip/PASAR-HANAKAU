@@ -1,0 +1,61 @@
+name: Test checkout idempotency
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/20261112022146_checkout_request_idempotency.sql'
+      - 'supabase/migrations/20261112024316_checkout_idempotency_retry_preflight.sql'
+      - 'supabase/migrations/20261112024509_checkout_idempotency_in_progress_response.sql'
+      - 'tests/checkout-idempotency/**'
+      - '.github/workflows/test-checkout-idempotency.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/20261112022146_checkout_request_idempotency.sql'
+      - 'supabase/migrations/20261112024316_checkout_idempotency_retry_preflight.sql'
+      - 'supabase/migrations/20261112024509_checkout_idempotency_in_progress_response.sql'
+      - 'tests/checkout-idempotency/**'
+      - '.github/workflows/test-checkout-idempotency.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-17:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Bootstrap isolated checkout fixture
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/checkout-idempotency/bootstrap.sql
+      - name: Apply production checkout idempotency migrations
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20261112022146_checkout_request_idempotency.sql
+          psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20261112024316_checkout_idempotency_retry_preflight.sql
+          psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20261112024509_checkout_idempotency_in_progress_response.sql
+      - name: Assert idempotent replay, payload binding, in-progress behavior, and least-privilege grants
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/checkout-idempotency/assertions.sql
