@@ -479,7 +479,7 @@ if (!html.includes('const ADMIN_ORDER_PAGE_SIZE=50;') ||
   process.exit(1);
 }
 if (!adminOrderFilter.includes('Muat pesanan lebih lama untuk memperluas pencarian.') ||
-    !adminOrderFunction.includes("'<div class=\"muted\">Pesanan dimuat</div>'")) {
+    !adminOrderFunction.includes('<div class="muted">Pesanan dimuat</div>')) {
   console.error('Admin order filters and summary must disclose that older, not-yet-loaded orders are outside the current search.');
   process.exit(1);
 }
