@@ -469,7 +469,7 @@ if (!adminOrderMarkup.includes('id="loadMoreAdminOrders"') ||
 if (!html.includes('const ADMIN_ORDER_PAGE_SIZE=50;') ||
     !adminOrderFunction.includes("order('created_at',{ascending:false}).order('id',{ascending:false})") ||
     !adminOrderFunction.includes("orderQuery.or('created_at.lt.'+adminOrdersCursor.created_at") ||
-    !adminOrderFunction.includes('id.lt.'+adminOrdersCursor.id') ||
+    !adminOrderFunction.includes("id.lt.'+adminOrdersCursor.id") ||
     !adminOrderFunction.includes('Math.max(ADMIN_ORDER_PAGE_SIZE,loadedBefore)') ||
     !adminOrderFunction.includes('.limit(queryLimit+1)') ||
     !adminOrderFunction.includes("box.insertAdjacentHTML('beforeend',orderCardsHtml)") ||
