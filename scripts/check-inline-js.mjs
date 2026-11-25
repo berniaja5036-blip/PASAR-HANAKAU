@@ -444,3 +444,42 @@ if (!nativeCartBridgeSource.includes('registerFcmToken(String accessToken)') ||
   process.exit(1);
 }
 
+const adminOrderMarkupStart = html.indexOf('<h3>Ringkasan pesanan</h3>');
+const adminOrderMarkupEnd = html.indexOf('<h3>Pengajuan toko</h3>', adminOrderMarkupStart);
+const adminOrderMarkup = adminOrderMarkupStart >= 0 && adminOrderMarkupEnd > adminOrderMarkupStart
+  ? html.slice(adminOrderMarkupStart, adminOrderMarkupEnd)
+  : '';
+const adminOrderFunctionStart = html.indexOf('async function loadAdminOrders(');
+const adminOrderFunctionEnd = html.indexOf("$('refreshAdminOrders').addEventListener", adminOrderFunctionStart);
+const adminOrderFunction = adminOrderFunctionStart >= 0 && adminOrderFunctionEnd > adminOrderFunctionStart
+  ? html.slice(adminOrderFunctionStart, adminOrderFunctionEnd)
+  : '';
+const adminOrderFilterStart = html.indexOf('function filterAdminOrders()');
+const adminOrderFilterEnd = html.indexOf("$('adminOrderSearch').addEventListener", adminOrderFilterStart);
+const adminOrderFilter = adminOrderFilterStart >= 0 && adminOrderFilterEnd > adminOrderFilterStart
+  ? html.slice(adminOrderFilterStart, adminOrderFilterEnd)
+  : '';
+if (!adminOrderMarkup.includes('id="loadMoreAdminOrders"') ||
+    !adminOrderMarkup.includes('id="adminOrderPaginationStatus"') ||
+    !adminOrderMarkup.includes('aria-live="polite"') ||
+    !adminOrderMarkup.includes('Ringkasan status dihitung dari pesanan yang sudah dimuat')) {
+  console.error('Admin order history must expose an accessible load-more control and clearly scoped loaded-order summary.');
+  process.exit(1);
+}
+if (!html.includes('const ADMIN_ORDER_PAGE_SIZE=50;') ||
+    !adminOrderFunction.includes("order('created_at',{ascending:false}).order('id',{ascending:false})") ||
+    !adminOrderFunction.includes("orderQuery.or('created_at.lt.'+adminOrdersCursor.created_at") ||
+    !adminOrderFunction.includes('id.lt.'+adminOrdersCursor.id') ||
+    !adminOrderFunction.includes('Math.max(ADMIN_ORDER_PAGE_SIZE,loadedBefore)') ||
+    !adminOrderFunction.includes('.limit(queryLimit+1)') ||
+    !adminOrderFunction.includes("box.insertAdjacentHTML('beforeend',orderCardsHtml)") ||
+    !adminOrderFunction.includes('adminOrdersHasMore=fetchedOrders.length>queryLimit') ||
+    !html.includes("$('loadMoreAdminOrders').addEventListener('click',()=>loadAdminOrders({append:true}));")) {
+  console.error('Admin order history must use stable keyset pagination, preserve loaded rows on refresh, and append older orders without duplicates.');
+  process.exit(1);
+}
+if (!adminOrderFilter.includes('Muat pesanan lebih lama untuk memperluas pencarian.') ||
+    !adminOrderFunction.includes("'<div class=\"muted\">Pesanan dimuat</div>'")) {
+  console.error('Admin order filters and summary must disclose that older, not-yet-loaded orders are outside the current search.');
+  process.exit(1);
+}
