@@ -234,7 +234,7 @@ body:not(.ph-guest-mode) .market-header-actions{display:none}
 </section>
 <section id="driverApplyPanel" class="panel hidden"><h2>🚚 Pendaftaran Driver</h2><p class="muted">Nomor WhatsApp dan alamat diambil dari profil akun. Admin akan memeriksa data kendaraan serta foto KTP dan wajah sebelum menyetujui pendaftaran.</p><div id="driverProfileSummary" class="notice">Memuat data profil…</div><label for="driverVehicle">Jenis kendaraan</label><input id="driverVehicle" class="field" maxlength="60" placeholder="Contoh: Motor atau mobil pickup"><label for="driverPlate">Nomor kendaraan</label><input id="driverPlate" class="field" maxlength="20" placeholder="Contoh: BE 1234 XX"><label for="driverKtp">Foto KTP (JPG/PNG, maksimal 5 MB)</label><input id="driverKtp" class="field" type="file" accept="image/jpeg,image/png,image/webp"><label for="driverFace">Foto wajah (JPG/PNG, maksimal 5 MB)</label><input id="driverFace" class="field" type="file" accept="image/jpeg,image/png,image/webp"><p class="muted">Dokumen hanya dapat dilihat oleh pemilik akun dan admin yang berwenang.</p><button class="btn" id="applyDriver">Ajukan menjadi driver</button><div id="driverApplyMessage" class="status" role="status"></div></section>
 <section id="adminPanel" class="panel hidden"><h2>🛡️ Panel admin</h2><div class="tile" style="margin:12px 0"><b>Konfigurasi notifikasi HP</b><p class="muted">Buat kunci VAPID satu kali. Salin kunci privat ke Supabase Edge Function Secrets dengan nama <b>VAPID_PRIVATE_KEY</b>. Jangan bagikan kunci privat kepada siapa pun.</p><button class="btn secondary" id="generateVapidKey" type="button">Buat kunci notifikasi</button><div id="vapidMessage" class="status" role="status"></div><label for="vapidPrivateKey">Kunci privat VAPID (rahasia)</label><textarea id="vapidPrivateKey" class="field" rows="4" readonly placeholder="Kunci privat akan tampil setelah dibuat."></textarea><button class="btn secondary" id="copyVapidPrivateKey" type="button">Salin kunci privat</button><p class="muted">Trigger database untuk tabel <b>notifications</b> sudah aktif dan meneruskan event ke Edge Function <b>push-notifications</b>; jangan membuat webhook duplikat. Jika mengganti pasangan kunci, perbarui secret <b>VAPID_PRIVATE_KEY</b> sebelum perangkat mengaktifkan notifikasi kembali.</p></div><p class="muted">Kelola pengajuan toko, produk, dan pesanan pembeli.</p><section class="tile" id="adminPaymentSettings"><h3>🏦 Pengaturan rekening pembayaran</h3><p class="muted">Masukkan rekening resmi Pasar Hanakau. Rekening aktif akan ditampilkan kepada penjual yang harus membayar tagihan iklan. Jangan mengaktifkan rekening sebelum datanya diperiksa.</p><div class="formgrid"><div><label for="paymentLabel">Nama metode</label><input id="paymentLabel" class="field" maxlength="60" placeholder="Transfer Bank BRI"></div><div><label for="paymentBankName">Nama bank</label><input id="paymentBankName" class="field" maxlength="80" placeholder="BRI / BCA / Mandiri"></div><div><label for="paymentAccountName">Nama pemilik rekening</label><input id="paymentAccountName" class="field" maxlength="120" placeholder="Nama pemilik rekening resmi"></div><div><label for="paymentAccountNumber">Nomor rekening</label><input id="paymentAccountNumber" class="field" maxlength="40" inputmode="numeric" placeholder="Nomor rekening sebenarnya"></div></div><label for="paymentInstructions">Petunjuk tambahan (opsional)</label><textarea id="paymentInstructions" class="field" rows="2" maxlength="300" placeholder="Contoh: Cantumkan kode tagihan pada berita transfer."></textarea><button class="btn" id="addPaymentMethod" type="button">Simpan metode rekening</button><div id="adminPaymentMessage" class="status" role="status"></div><div id="adminPaymentMethodsList" class="ad-request-list">Memuat rekening…</div></section><section class="ad-admin-card"><div class="ad-section-head"><div><span class="ad-kicker">RUANG KENDALI PROMOSI</span><h3>📢 Manajemen Iklan</h3><p>Periksa materi iklan, tetapkan biaya, dan aktifkan setelah pembayaran dikonfirmasi.</p></div><span class="ad-emoji">✦</span></div><div class="row"><button class="btn secondary" id="refreshAdminAds" type="button">↻ Muat ulang iklan</button></div><div id="adminAdsMessage" class="status" role="status"></div><div id="adminAdsList" class="ad-request-list">Memuat pengajuan iklan…</div></section><h3>👥 Pengelolaan akun</h3><p class="muted">Akun yang bermasalah dapat dinonaktifkan. Penonaktifan memblokir login, menghentikan toko/produk atau akses driver terkait, dan mempertahankan riwayat pesanan serta transaksi.</p><div class="row"><button class="btn secondary" id="refreshAdminAccounts" type="button">↻ Muat ulang daftar akun</button></div><div id="adminAccounts" class="muted">Memuat daftar akun…</div><div id="adminAccountsMessage" class="status" role="status"></div><h3>🚚 Pengaturan tarif pengantaran</h3><p class="muted">Tarif awal yang disepakati: dasar Rp2.000, per kilometer Rp2.000, minimum Rp5.000, dan jarak maksimum 15 km. Ongkir tetap nonaktif sampai perhitungan rute jalan diuji dan admin mengaktifkannya.</p><div class="tile"><label class="row" style="gap:8px"><input id="deliveryFeeEnabled" type="checkbox" style="width:auto"> Aktifkan perhitungan ongkir</label><div class="formgrid"><div><label for="deliveryBaseFee">Tarif dasar (Rp)</label><input class="field" id="deliveryBaseFee" type="number" min="0" step="500" value="2000"></div><div><label for="deliveryPerKmFee">Tarif per kilometer (Rp)</label><input class="field" id="deliveryPerKmFee" type="number" min="0" step="500" value="2000"></div><div><label for="deliveryMinimumFee">Biaya minimum (Rp)</label><input class="field" id="deliveryMinimumFee" type="number" min="0" step="500" value="5000"></div><div><label for="deliveryMaxDistance">Batas jarak (km)</label><input class="field" id="deliveryMaxDistance" type="number" min="0.1" step="0.5" value="15"></div></div><button class="btn secondary" id="saveDeliveryFeeSettings" type="button">Simpan pengaturan ongkir</button><div id="deliveryFeeSettingsMessage" class="status" role="status"></div></div><h3>🎟️ Voucher dan promo</h3><p class="muted">Buat voucher yang biaya diskonnya ditanggung anggaran Pasar Hanakau, bukan dipotong dari pendapatan penjual. Setiap voucher wajib memiliki batas anggaran, kuota, dan masa berlaku. Diskon hanya berlaku pada nilai barang, bukan ongkir.</p><div class="tile"><div class="formgrid"><div><label for="promoCode">Kode voucher</label><input id="promoCode" class="field" maxlength="40" placeholder="HEMAT10"></div><div><label for="promoDescription">Keterangan</label><input id="promoDescription" class="field" maxlength="160" placeholder="Promo belanja"></div><div><label for="promoBudgetLimit">Anggaran promosi platform (Rp)</label><input id="promoBudgetLimit" class="field" type="number" min="1" step="1000" required placeholder="Contoh: 100000"></div><div><label for="promoType">Jenis diskon</label><select id="promoType" class="field"><option value="percentage">Persentase (%)</option><option value="fixed">Potongan tetap (Rp)</option></select></div><div><label for="promoValue">Nilai diskon</label><input id="promoValue" class="field" type="number" min="1" step="1"></div><div><label for="promoMinSubtotal">Minimal belanja (Rp)</label><input id="promoMinSubtotal" class="field" type="number" min="0" step="1000" value="0"></div><div><label for="promoMaxDiscount">Maksimal potongan (Rp, opsional)</label><input id="promoMaxDiscount" class="field" type="number" min="1" step="1000" placeholder="Tanpa batas"></div><div><label for="promoUsageLimit">Kuota seluruh pengguna (opsional)</label><input id="promoUsageLimit" class="field" type="number" min="1" step="1" placeholder="Tanpa batas"></div><div><label for="promoBuyerLimit">Batas per akun</label><input id="promoBuyerLimit" class="field" type="number" min="1" step="1" value="1"></div><div><label for="promoStartsAt">Mulai berlaku</label><input id="promoStartsAt" class="field" type="datetime-local"></div><div><label for="promoEndsAt">Berakhir (opsional)</label><input id="promoEndsAt" class="field" type="datetime-local"></div></div><label class="row" style="gap:8px"><input id="promoActive" type="checkbox" style="width:auto"> Aktifkan setelah dibuat</label><button id="createPromoVoucher" class="btn" type="button">Simpan voucher</button><div id="promoVoucherMessage" class="status" role="status"></div></div><div id="adminPromoVouchers" class="muted">Memuat voucher…</div><h3>📊 Laporan dan statistik marketplace</h3><div class="tile"><div class="formgrid"><div><label for="adminStatsFrom">Dari tanggal</label><input id="adminStatsFrom" class="field" type="date"></div><div><label for="adminStatsTo">Sampai tanggal</label><input id="adminStatsTo" class="field" type="date"></div></div><button id="refreshAdminStats" class="btn secondary" type="button">Tampilkan laporan</button><div id="adminStatsMessage" class="status" role="status"></div><div id="adminStatsSummary" class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;margin:10px 0"><div class="tile">Memuat statistik…</div></div><h4>Aktivitas harian</h4><div id="adminStatsDaily" class="muted">Memuat aktivitas…</div></div><h3>Ringkasan pesanan</h3><p class="muted">Ringkasan status dihitung dari pesanan yang sudah dimuat. Gunakan tombol di bawah untuk menelusuri pesanan yang lebih lama.</p><div id="adminOrderSummary" class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;margin:10px 0"><div class="tile">Memuat ringkasan…</div></div><h3>Pesanan masuk</h3><p class="muted">Daftar pesanan dari seluruh pembeli. Pesanan diperbarui otomatis setiap 45 detik saat halaman aktif.</p><label for="adminOrderSearch">Cari nomor pesanan, alamat, atau nama barang</label><input id="adminOrderSearch" class="field" type="search" placeholder="Ketik kata kunci..." autocomplete="off"><div class="row"><label for="adminOrderStatus" class="muted">Filter status:</label><select id="adminOrderStatus" class="field" style="max-width:240px;margin:0"><option value="">Semua status</option><option value="pending">Menunggu konfirmasi</option><option value="confirmed">Dikonfirmasi</option><option value="ready_for_pickup">Siap dijemput</option><option value="picked_up">Sudah dijemput / diantar</option><option value="delivered">Terkirim</option><option value="cancelled">Dibatalkan</option></select></div><div class="row" style="margin-top:10px"><button class="btn secondary" id="refreshAdminOrders" type="button">↻ Muat ulang pesanan</button><button class="btn secondary" id="exportAdminOrders" type="button">⬇ Unduh laporan CSV</button></div><div class="muted">Laporan berisi maksimal 50 pesanan terbaru yang dapat dibaca admin.</div><div id="adminOrders" class="muted">Memuat pesanan…</div><div class="row" style="margin-top:10px"><button class="btn secondary" id="loadMoreAdminOrders" type="button" hidden>Muat 50 pesanan lebih lama</button></div><p id="adminOrderPaginationStatus" class="muted" aria-live="polite">Memuat daftar pesanan…</p><h3>Pengajuan toko</h3><div id="adminApplications" class="muted">Memuat pengajuan…</div><h3>🚚 Pendaftaran driver</h3><div id="adminDriverApplications" class="muted">Memuat pendaftaran driver…</div><h3>🚦 Status dan ketersediaan driver</h3><p class="muted">Driver standby berarti sedang online dan belum memiliki tugas aktif. Driver yang sedang bertugas tidak dapat menerima penugasan aktif kedua.</p><div id="adminDriverStatusList" class="muted">Memuat status driver…</div><h3>🧾 Tagihan komisi penjual</h3><p class="muted">Komisi dihitung berdasarkan tarif yang berlaku saat pesanan terkirim. Tagihan dibuat bulanan dan diverifikasi admin setelah seller mengirim referensi pembayaran.</p><div class="row"><button class="btn secondary" id="generateCommissionInvoices" type="button">Terbitkan tagihan bulan sebelumnya</button><button class="btn secondary" id="refreshCommissionInvoices" type="button">Muat ulang tagihan</button></div><div id="adminCommissionInvoices" class="muted">Memuat tagihan…</div><h3>Produk menunggu persetujuan</h3><div id="adminProducts" class="muted">Memuat produk…</div><div id="adminMessage" class="status" role="status"></div></section>
-<section id="driverPanel" class="panel hidden"><h2>🚚 Panel Driver</h2><p class="muted">Lihat tugas penjemputan dan pengantaran yang ditugaskan kepada Anda. Tugas diperbarui otomatis setiap 45 detik saat halaman aktif.</p><button class="btn secondary" id="refreshDriverTasks" type="button">↻ Muat ulang tugas</button><div class="notice" style="margin:10px 0"><b>🔔 Pemberitahuan tugas</b><div id="driverNotifications" class="muted" style="margin-top:6px">Belum ada pemberitahuan.</div></div><div id="driverTasks" class="muted">Memuat tugas…</div><div id="driverMessage" class="status" role="status"></div></section>
+<section id="driverPanel" class="panel hidden"><h2>🚚 Panel Driver</h2><p class="muted">Lihat tugas penjemputan dan pengantaran yang ditugaskan kepada Anda. Tugas diperbarui otomatis setiap 45 detik saat halaman aktif.</p><button class="btn secondary" id="refreshDriverTasks" type="button">↻ Muat ulang tugas</button><div class="notice" style="margin:10px 0"><b>🔔 Pemberitahuan tugas</b><div id="driverNotifications" class="muted" style="margin-top:6px">Belum ada pemberitahuan.</div></div><div id="driverTasks" class="muted">Memuat tugas…</div><div class="row" style="margin-top:10px"><button class="btn secondary" id="loadMoreDriverTasks" type="button" hidden>Muat 20 tugas sebelumnya</button></div><p id="driverTaskPaginationStatus" class="muted" aria-live="polite">Memuat daftar tugas…</p><div id="driverMessage" class="status" role="status"></div></section>
 <section id="sellerProducts" class="panel hidden">
 <h2>🏪 Kelola produk toko</h2><p class="muted">Tambahkan barang yang dijual di toko Anda. Produk baru akan berstatus draft dan belum tampil untuk pembeli sampai disetujui admin.</p><section class="ad-seller-card"><div class="ad-section-head"><div><span class="ad-kicker">PROMOSIKAN TOKO</span><h3>📣 Promosi &amp; Iklan</h3><p>Ajukan iklan banner atau produk unggulan agar lebih mudah ditemukan pembeli.</p></div><span class="ad-emoji">✦</span></div><div class="ad-form-grid"><div><label for="adType">Jenis iklan</label><select id="adType" class="field"><option value="banner">Banner utama</option><option value="product">Produk unggulan</option></select></div><div><label for="adProduct">Produk yang dipromosikan</label><select id="adProduct" class="field"><option value="">Pilih produk toko</option></select></div><div><label for="adDuration">Durasi tayang</label><select id="adDuration" class="field"><option value="3">3 hari</option><option value="7" selected>7 hari</option><option value="15">15 hari</option><option value="30">30 hari</option></select></div><div><label for="adCta">Teks tombol</label><input id="adCta" class="field" maxlength="30" value="Lihat Produk" placeholder="Lihat Produk"></div></div><label for="adTitle">Judul promosi</label><input id="adTitle" class="field" maxlength="120" placeholder="Contoh: Promo Sayur Segar Hari Ini"><label for="adCaption">Kalimat promosi</label><textarea id="adCaption" class="field" rows="2" maxlength="240" placeholder="Tulis kalimat singkat yang menarik pembeli"></textarea><div id="adBannerImageField"><label for="adBannerImage">Foto banner promosi (JPG, PNG, atau WebP; maksimal 5 MB)</label><input id="adBannerImage" class="field" type="file" accept="image/jpeg,image/png,image/webp"><p class="muted">Pilih gambar langsung dari galeri HP. Untuk iklan produk, gambar otomatis memakai foto produk.</p></div><button id="submitAdRequest" class="btn" type="button">Kirim pengajuan iklan</button><div id="sellerAdMessage" class="status" role="status"></div><div class="ad-request-note">Pengajuan diperiksa admin. Admin akan mengirim nominal biaya; iklan baru tayang setelah pembayaran dikonfirmasi.</div><h4>Iklan saya</h4><div id="sellerAdList" class="ad-request-list">Memuat pengajuan iklan…</div><div id="sellerAdPaymentMethods" class="tile hidden"><b>🏦 Rekening pembayaran Pasar Hanakau</b><div id="sellerAdPaymentMethodsList" class="muted">Memuat rekening…</div></div></section><div class="tile" id="legacyShopLocationBox"><h3>📍 Titik penjemputan toko</h3><p class="muted">Peta menampilkan titik penjemputan toko yang tersimpan. Ketuk lokasi toko pada peta untuk memilih atau memperbarui titik, lalu tekan Simpan.</p><div id="legacyShopPickupMap" aria-label="Peta titik penjemputan toko dari GPS"></div><button class="btn secondary" id="useLegacyShopGps" type="button">Ambil lokasi GPS HP</button><button class="btn secondary" id="saveLegacyShopLocation" type="button">Simpan titik penjemputan toko</button><div id="shopLocationStatus" class="muted" role="status">Belum ada titik toko tersimpan.</div></div>
 <label for="productName">Nama produk</label><input class="field" id="productName" maxlength="120" placeholder="Contoh: Beras 5 kg"><label for="addProductCategory">Kategori produk <span style="color:#c0392b">*</span></label><select class="field" id="addProductCategory" required><option value="">Pilih kategori yang sesuai</option></select>
@@ -1316,65 +1316,121 @@ $('adminOrders').addEventListener('click',async e=>{
  message('adminMessage','Status pesanan berhasil diperbarui.');
  await loadAdminOrders();
 });
-async function loadDriverTasks(){
- const box=$('driverTasks');if(!box)return;box.textContent='Memuat tugas…';
- const {data:{user}}=await supabase.auth.getUser();if(!user){box.textContent='Silakan masuk kembali.';return}
- const {data,error}=await supabase.from('deliveries').select('id,status,assigned_at,orders(order_number,status,delivery_address,notes,total,delivery_fee,delivery_fee_payment_status,buyer_received_at,driver_fee_confirmed_at,pickup_latitude,pickup_longitude,delivery_latitude,delivery_longitude,order_items(product_name,quantity,shops(name,address)))').eq('driver_id',user.id).order('assigned_at',{ascending:false});
- if(error){box.textContent='Tugas belum dapat dimuat: '+error.message;return}
- const labels={assigned:'Menunggu dijemput',picked_up:'Dalam perjalanan',delivered:'Selesai'};
- const noticeBox=$('driverNotifications');
- if(noticeBox)noticeBox.innerHTML=(data||[]).slice(0,5).map(d=>'<button type="button" class="driver-history-link" data-driver-task-id="'+escapeHtml(d.id)+'" style="display:block;width:100%;text-align:left;padding:8px 4px;border:0;border-bottom:1px solid #e5eee8;background:transparent;color:inherit;cursor:pointer"><b>'+escapeHtml(d.orders?.order_number||'Pesanan')+'</b> • '+escapeHtml(labels[d.status]||d.status)+'<div class="muted">'+(d.assigned_at?new Date(d.assigned_at).toLocaleString('id-ID'):'Tugas terbaru')+'</div><span class="muted">Ketuk untuk melihat rincian tugas ↓</span></button>').join('')||'Belum ada tugas baru.';
- if(!data?.length){box.textContent='Belum ada tugas pengiriman yang ditugaskan kepada Anda.';return}
- box.innerHTML=(data||[]).map(d=>{
-  const o=d.orders||{};
-  const items=o.order_items||[];
-  const pickupShops=[...new Map(items.filter(i=>i.shops?.name).map(i=>[i.shops.name,{name:i.shops.name,address:i.shops.address||''}])).values()];
-  const pickup=pickupShops.map(shop=>shop.name+(shop.address?' — '+shop.address:'')).join(' • ');
-  const rawCoordinates=[o.pickup_latitude,o.pickup_longitude,o.delivery_latitude,o.delivery_longitude];
-  const coordinates=rawCoordinates.map(Number);
-  const validCoordinates=rawCoordinates.every(value=>value!==null&&value!==undefined&&value!=='')
-   &&coordinates.every(Number.isFinite)
-   &&coordinates[0]>=-90&&coordinates[0]<=90
-   &&coordinates[1]>=-180&&coordinates[1]<=180
-   &&coordinates[2]>=-90&&coordinates[2]<=90
-   &&coordinates[3]>=-180&&coordinates[3]<=180;
-  const routeAction=validCoordinates
-   ?'<a class="btn secondary" style="display:inline-block;text-decoration:none;margin:8px 0" href="https://www.google.com/maps/dir/?api=1&origin='+coordinates[0]+','+coordinates[1]+'&destination='+coordinates[2]+','+coordinates[3]+'&travelmode=driving" target="_blank" rel="noopener">Buka rute di Google Maps</a>'
-   :'<p class="muted">Titik GPS belum tersedia untuk pesanan ini. Hubungi admin.</p>';
-  const action=d.status==='assigned'?'<button class="btn" data-delivery-id="'+d.id+'" data-delivery-status="picked_up">Konfirmasi sudah dijemput</button>':d.status==='picked_up'?'<button class="btn" data-delivery-id="'+d.id+'" data-delivery-status="delivered">Konfirmasi sudah diantar</button>':'';
-  const mapHtml=validCoordinates
-   ?'<h4 style="margin:12px 0 6px;color:#244d38">Peta penjemputan dan pengantaran</h4><div id="driver-route-map-'+escapeHtml(d.id)+'" class="driverOrderMap" aria-label="Peta titik penjemputan dan pengantaran"></div><div id="driver-route-status-'+escapeHtml(d.id)+'" class="muted" role="status">Memuat peta tugas…</div>'
-   :'';
-  const feeStatusLabels={unpaid:'Belum dikonfirmasi',buyer_confirmed:'Pembeli sudah konfirmasi',driver_confirmed:'Driver sudah konfirmasi',confirmed:'Pembayaran terkonfirmasi',disputed:'Sedang diperiksa admin',not_required:'Tidak ada ongkir'};
-  const feePanel=Number(o.delivery_fee)>0?'<div class="notice" style="margin-top:10px"><b>Ongkos kirim: '+formatRupiah(o.delivery_fee)+'</b><p class="muted">Status pembayaran: '+escapeHtml(feeStatusLabels[o.delivery_fee_payment_status]||o.delivery_fee_payment_status||'Belum diketahui')+'</p>'+(d.status==='delivered'&&o.buyer_received_at&&!o.driver_fee_confirmed_at&&o.delivery_fee_payment_status!=='confirmed'&&o.delivery_fee_payment_status!=='disputed'?'<label for="fee-method-'+d.id+'">Metode pembayaran yang diterima</label><select class="field" id="fee-method-'+d.id+'" data-fee-method><option value="cash">Tunai</option><option value="transfer">Transfer langsung ke driver</option></select><button class="btn secondary" type="button" data-confirm-driver-fee="'+o.id+'">Konfirmasi ongkir diterima</button>':'')+'</div>':'';
-  return '<article class="tile" id="driver-task-'+escapeHtml(d.id)+'"><b>'+escapeHtml(o.order_number||'Pesanan')+'</b><p class="muted">Status tugas: '+escapeHtml(labels[d.status]||d.status)+'</p><p class="muted"><b>Nama toko / ambil di:</b> '+escapeHtml(pickup||'Informasi toko belum tersedia')+'</p><p class="muted"><b>Antar ke:</b> '+escapeHtml(o.delivery_address||'')+'</p>'+mapHtml+routeAction+items.map(i=>'<div class="muted">'+escapeHtml(i.product_name)+' × '+i.quantity+'</div>').join('')+(o.notes?'<p class="muted"><b>Catatan:</b> '+escapeHtml(o.notes)+'</p>':'')+action+feePanel+'</article>';
- }).join('');
- (data||[]).forEach(d=>{
-  const o=d.orders||{};
-  const coords=[o.pickup_latitude,o.pickup_longitude,o.delivery_latitude,o.delivery_longitude].map(Number);
-  if(coords.every(Number.isFinite)&&coords[0]>=-90&&coords[0]<=90&&coords[1]>=-180&&coords[1]<=180&&coords[2]>=-90&&coords[2]<=90&&coords[3]>=-180&&coords[3]<=180){
-   const mapId='driver-route-map-'+d.id;
-   const map=makePickerMap(mapId,null,{latitude:coords[0],longitude:coords[1]});
-   if(map){
-    if(map._pasarHanakauMarker)map._pasarHanakauMarker.bindPopup('Titik penjemputan');
-    const destination=L.marker([coords[2],coords[3]]).addTo(map).bindPopup('Titik pengantaran');
-    map.fitBounds([[coords[0],coords[1]],[coords[2],coords[3]]],{padding:[24,24],maxZoom:15});
-    // makePickerMap menjadwalkan invalidateSize/panTo setelah inisialisasi.
-    // Atur ulang bounds setelah jadwal tersebut selesai agar kedua titik tetap terlihat.
-    setTimeout(()=>{
-     const mapElement=$(mapId);
-     if(mapElement&&mapElement.isConnected){
-      map.invalidateSize(true);
-      map.fitBounds([[coords[0],coords[1]],[coords[2],coords[3]]],{padding:[30,30],maxZoom:15});
-     }
-    },1300);
-    const status=$('driver-route-status-'+d.id);
-    if(status)status.textContent='Penjemputan dan pengantaran ditandai pada peta. Tombol Google Maps membuka navigasi jalan.';
-   }
+const DRIVER_TASK_PAGE_SIZE=20;
+let driverTasksLoadedCount=0;
+let driverTasksCursor=null;
+let driverTasksHasMore=false;
+let driverTasksLoading=false;
+async function loadDriverTasks({append=false}={}){
+ const box=$('driverTasks');if(!box)return;
+ if(driverTasksLoading)return;
+ if(append&&(!driverTasksHasMore||!driverTasksCursor))return;
+ driverTasksLoading=true;
+ const loadMoreButton=$('loadMoreDriverTasks');
+ const paginationStatus=$('driverTaskPaginationStatus');
+ if(loadMoreButton){loadMoreButton.disabled=true;loadMoreButton.textContent=append?'Memuat tugas…':'Memperbarui tugas…';}
+ const loadedBefore=driverTasksLoadedCount;
+ const queryLimit=append?DRIVER_TASK_PAGE_SIZE:Math.max(DRIVER_TASK_PAGE_SIZE,loadedBefore);
+ if(!append&&loadedBefore===0)box.textContent='Memuat tugas…';
+ try{
+  const {data:{user}}=await supabase.auth.getUser();
+  if(!user){if(!append)box.textContent='Silakan masuk kembali.';return;}
+  const taskQuery=supabase.from('deliveries').select('id,status,assigned_at,orders(order_number,status,delivery_address,notes,total,delivery_fee,delivery_fee_payment_status,buyer_received_at,driver_fee_confirmed_at,pickup_latitude,pickup_longitude,delivery_latitude,delivery_longitude,order_items(product_name,quantity,shops(name,address)))').eq('driver_id',user.id).order('assigned_at',{ascending:false}).order('id',{ascending:false});
+  if(append)taskQuery.or('assigned_at.lt.'+driverTasksCursor.assigned_at+',and(assigned_at.eq.'+driverTasksCursor.assigned_at+',id.lt.'+driverTasksCursor.id+')');
+  const {data,error}=await taskQuery.limit(queryLimit+1);
+  if(error){
+   if(!append)box.textContent='Tugas belum dapat dimuat: '+error.message;
+   message('driverMessage','Tugas belum dapat dimuat: '+error.message,true);
+   return;
   }
- });
+  const fetchedTasks=data||[];
+  const tasks=fetchedTasks.slice(0,queryLimit);
+  driverTasksHasMore=fetchedTasks.length>queryLimit;
+  driverTasksLoadedCount=append?loadedBefore+tasks.length:tasks.length;
+  if(tasks.length){
+   const last=tasks[tasks.length-1];
+   driverTasksCursor={assigned_at:last.assigned_at,id:last.id};
+  }else if(!append){
+   driverTasksCursor=null;
+  }
+  const labels={assigned:'Menunggu dijemput',picked_up:'Dalam perjalanan',delivered:'Selesai'};
+  const noticeBox=$('driverNotifications');
+  if(noticeBox&&!append)noticeBox.innerHTML=tasks.slice(0,5).map(d=>'<button type="button" class="driver-history-link" data-driver-task-id="'+escapeHtml(d.id)+'" style="display:block;width:100%;text-align:left;padding:8px 4px;border:0;border-bottom:1px solid #e5eee8;background:transparent;color:inherit;cursor:pointer"><b>'+escapeHtml(d.orders?.order_number||'Pesanan')+'</b> • '+escapeHtml(labels[d.status]||d.status)+'<div class="muted">'+(d.assigned_at?new Date(d.assigned_at).toLocaleString('id-ID'):'Tugas terbaru')+'</div><span class="muted">Ketuk untuk melihat rincian tugas ↓</span></button>').join('')||'Belum ada tugas baru.';
+  if(!tasks.length&&!append){
+   box.textContent='Belum ada tugas pengiriman yang ditugaskan kepada Anda.';
+  }else{
+   const taskCardsHtml=tasks.map(d=>{
+    const o=d.orders||{};
+    const items=o.order_items||[];
+    const pickupShops=[...new Map(items.filter(i=>i.shops?.name).map(i=>[i.shops.name,{name:i.shops.name,address:i.shops.address||''}])).values()];
+    const pickup=pickupShops.map(shop=>shop.name+(shop.address?' — '+shop.address:'')).join(' • ');
+    const rawCoordinates=[o.pickup_latitude,o.pickup_longitude,o.delivery_latitude,o.delivery_longitude];
+    const coordinates=rawCoordinates.map(Number);
+    const validCoordinates=rawCoordinates.every(value=>value!==null&&value!==undefined&&value!=='')
+     &&coordinates.every(Number.isFinite)
+     &&coordinates[0]>=-90&&coordinates[0]<=90
+     &&coordinates[1]>=-180&&coordinates[1]<=180
+     &&coordinates[2]>=-90&&coordinates[2]<=90
+     &&coordinates[3]>=-180&&coordinates[3]<=180;
+    const routeAction=validCoordinates
+     ?'<a class="btn secondary" style="display:inline-block;text-decoration:none;margin:8px 0" href="https://www.google.com/maps/dir/?api=1&origin='+coordinates[0]+','+coordinates[1]+'&destination='+coordinates[2]+','+coordinates[3]+'&travelmode=driving" target="_blank" rel="noopener">Buka rute di Google Maps</a>'
+     :'<p class="muted">Titik GPS belum tersedia untuk pesanan ini. Hubungi admin.</p>';
+    const action=d.status==='assigned'?'<button class="btn" data-delivery-id="'+d.id+'" data-delivery-status="picked_up">Konfirmasi sudah dijemput</button>':d.status==='picked_up'?'<button class="btn" data-delivery-id="'+d.id+'" data-delivery-status="delivered">Konfirmasi sudah diantar</button>':'';
+    const mapHtml=validCoordinates&&d.status!=='delivered'
+     ?'<h4 style="margin:12px 0 6px;color:#244d38">Peta penjemputan dan pengantaran</h4><div id="driver-route-map-'+escapeHtml(d.id)+'" class="driverOrderMap" aria-label="Peta titik penjemputan dan pengantaran"></div><div id="driver-route-status-'+escapeHtml(d.id)+'" class="muted" role="status">Memuat peta tugas…</div>'
+     :'';
+    const feeStatusLabels={unpaid:'Belum dikonfirmasi',buyer_confirmed:'Pembeli sudah konfirmasi',driver_confirmed:'Driver sudah konfirmasi',confirmed:'Pembayaran terkonfirmasi',disputed:'Sedang diperiksa admin',not_required:'Tidak ada ongkir'};
+    const feePanel=Number(o.delivery_fee)>0?'<div class="notice" style="margin-top:10px"><b>Ongkos kirim: '+formatRupiah(o.delivery_fee)+'</b><p class="muted">Status pembayaran: '+escapeHtml(feeStatusLabels[o.delivery_fee_payment_status]||o.delivery_fee_payment_status||'Belum diketahui')+'</p>'+(d.status==='delivered'&&o.buyer_received_at&&!o.driver_fee_confirmed_at&&o.delivery_fee_payment_status!=='confirmed'&&o.delivery_fee_payment_status!=='disputed'?'<label for="fee-method-'+d.id+'">Metode pembayaran yang diterima</label><select class="field" id="fee-method-'+d.id+'" data-fee-method><option value="cash">Tunai</option><option value="transfer">Transfer langsung ke driver</option></select><button class="btn secondary" type="button" data-confirm-driver-fee="'+o.id+'">Konfirmasi ongkir diterima</button>':'')+'</div>':'';
+    return '<article class="tile" id="driver-task-'+escapeHtml(d.id)+'"><b>'+escapeHtml(o.order_number||'Pesanan')+'</b><p class="muted">Status tugas: '+escapeHtml(labels[d.status]||d.status)+'</p><p class="muted"><b>Nama toko / ambil di:</b> '+escapeHtml(pickup||'Informasi toko belum tersedia')+'</p><p class="muted"><b>Antar ke:</b> '+escapeHtml(o.delivery_address||'')+'</p>'+mapHtml+routeAction+items.map(i=>'<div class="muted">'+escapeHtml(i.product_name)+' × '+i.quantity+'</div>').join('')+(o.notes?'<p class="muted"><b>Catatan:</b> '+escapeHtml(o.notes)+'</p>':'')+action+feePanel+'</article>';
+   }).join('');
+   if(append){if(taskCardsHtml)box.insertAdjacentHTML('beforeend',taskCardsHtml);}
+   else box.innerHTML=taskCardsHtml||'Belum ada tugas pengiriman yang ditugaskan kepada Anda.';
+  }
+  if(paginationStatus){
+   if(!driverTasksLoadedCount)paginationStatus.textContent='Belum ada tugas yang dimuat.';
+   else if(driverTasksHasMore)paginationStatus.textContent='Menampilkan '+driverTasksLoadedCount+' tugas. Masih ada riwayat lebih lama; muat lebih banyak untuk melihatnya.';
+   else paginationStatus.textContent='Menampilkan '+driverTasksLoadedCount+' tugas. Semua tugas sudah dimuat.';
+  }
+  tasks.forEach(d=>{
+   if(d.status==='delivered')return;
+   const o=d.orders||{};
+   const rawCoordinates=[o.pickup_latitude,o.pickup_longitude,o.delivery_latitude,o.delivery_longitude];
+   const coords=rawCoordinates.map(Number);
+   const validCoordinates=rawCoordinates.every(value=>value!==null&&value!==undefined&&value!=='')
+    &&coords.every(Number.isFinite)
+    &&coords[0]>=-90&&coords[0]<=90
+    &&coords[1]>=-180&&coords[1]<=180
+    &&coords[2]>=-90&&coords[2]<=90
+    &&coords[3]>=-180&&coords[3]<=180;
+   if(validCoordinates){
+    const mapId='driver-route-map-'+d.id;
+    const map=makePickerMap(mapId,null,{latitude:coords[0],longitude:coords[1]});
+    if(map){
+     if(map._pasarHanakauMarker)map._pasarHanakauMarker.bindPopup('Titik penjemputan');
+     L.marker([coords[2],coords[3]]).addTo(map).bindPopup('Titik pengantaran');
+     map.fitBounds([[coords[0],coords[1]],[coords[2],coords[3]]],{padding:[24,24],maxZoom:15});
+     setTimeout(()=>{
+      const mapElement=$(mapId);
+      if(mapElement&&mapElement.isConnected){
+       map.invalidateSize(true);
+       map.fitBounds([[coords[0],coords[1]],[coords[2],coords[3]]],{padding:[30,30],maxZoom:15});
+      }
+     },1300);
+     const status=$('driver-route-status-'+d.id);
+     if(status)status.textContent='Penjemputan dan pengantaran ditandai pada peta. Tombol Google Maps membuka navigasi jalan.';
+    }
+   }
+  });
+ }catch(error){
+  if(!append&&loadedBefore===0)box.textContent='Tugas belum dapat dimuat: '+(error?.message||'Terjadi kesalahan.');
+  message('driverMessage','Tugas belum dapat dimuat: '+(error?.message||'Terjadi kesalahan.'),true);
+ }finally{
+  driverTasksLoading=false;
+  if(loadMoreButton){loadMoreButton.hidden=!driverTasksHasMore;loadMoreButton.disabled=false;loadMoreButton.textContent='Muat 20 tugas sebelumnya';}
+ }
 }
 $('refreshDriverTasks').addEventListener('click',loadDriverTasks);
+$('loadMoreDriverTasks').addEventListener('click',()=>loadDriverTasks({append:true}));
 $('driverNotifications').addEventListener('click',e=>{const link=e.target.closest('[data-driver-task-id]');if(!link)return;const card=$('driver-task-'+link.dataset.driverTaskId);if(!card)return;card.scrollIntoView({behavior:'smooth',block:'center'});card.setAttribute('tabindex','-1');card.focus({preventScroll:true});card.style.outline='2px solid #2f855a';card.style.outlineOffset='3px';setTimeout(()=>{card.style.outline='';card.style.outlineOffset='';},2200);});
 $('driverTasks').addEventListener('click',async e=>{const feeBtn=e.target.closest('[data-confirm-driver-fee]');if(feeBtn){const card=feeBtn.closest('.tile'),method=card?.querySelector('[data-fee-method]')?.value||'cash';if(!confirm('Pastikan ongkos kirim sudah benar-benar diterima dari pembeli. Konfirmasi?'))return;feeBtn.disabled=true;const {error}=await supabase.rpc('driver_confirm_delivery_fee',{p_order_id:feeBtn.dataset.confirmDriverFee,p_payment_method:method});if(error){message('driverMessage','Konfirmasi ongkir gagal: '+error.message,true);feeBtn.disabled=false;return;}message('driverMessage','Penerimaan ongkir berhasil dikonfirmasi.');await loadDriverTasks();return;}const btn=e.target.closest('[data-delivery-id][data-delivery-status]');if(!btn)return;btn.disabled=true;message('driverMessage','Memperbarui status pengiriman…');const {error}=await supabase.rpc('driver_update_delivery_status',{p_delivery_id:btn.dataset.deliveryId,p_new_status:btn.dataset.deliveryStatus,p_note:''});if(error){message('driverMessage','Status belum berubah: '+error.message,true);btn.disabled=false;return}message('driverMessage','Status pengiriman berhasil diperbarui.');await loadDriverTasks();});
 

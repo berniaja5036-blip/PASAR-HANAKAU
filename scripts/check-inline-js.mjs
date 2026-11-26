@@ -483,3 +483,37 @@ if (!adminOrderFilter.includes('Muat pesanan lebih lama untuk memperluas pencari
   console.error('Admin order filters and summary must disclose that older, not-yet-loaded orders are outside the current search.');
   process.exit(1);
 }
+
+const driverTaskMarkupStart = html.indexOf('<div id="driverTasks"');
+const driverTaskMarkupEnd = html.indexOf('<div id="driverMessage"', driverTaskMarkupStart);
+const driverTaskMarkup = driverTaskMarkupStart >= 0 && driverTaskMarkupEnd > driverTaskMarkupStart
+  ? html.slice(driverTaskMarkupStart, driverTaskMarkupEnd)
+  : '';
+const driverTaskFunctionStart = html.indexOf('async function loadDriverTasks(');
+const driverTaskFunctionEnd = html.indexOf("$('refreshDriverTasks').addEventListener", driverTaskFunctionStart);
+const driverTaskFunction = driverTaskFunctionStart >= 0 && driverTaskFunctionEnd > driverTaskFunctionStart
+  ? html.slice(driverTaskFunctionStart, driverTaskFunctionEnd)
+  : '';
+if (!driverTaskMarkup.includes('id="loadMoreDriverTasks"') ||
+    !driverTaskMarkup.includes('id="driverTaskPaginationStatus"') ||
+    !driverTaskMarkup.includes('aria-live="polite"')) {
+  console.error('Driver task history must expose an accessible load-more control and pagination status.');
+  process.exit(1);
+}
+if (!html.includes('const DRIVER_TASK_PAGE_SIZE=20;') ||
+    !driverTaskFunction.includes("order('assigned_at',{ascending:false}).order('id',{ascending:false})") ||
+    !driverTaskFunction.includes("taskQuery.or('assigned_at.lt.'+driverTasksCursor.assigned_at") ||
+    !driverTaskFunction.includes('Math.max(DRIVER_TASK_PAGE_SIZE,loadedBefore)') ||
+    !driverTaskFunction.includes('.limit(queryLimit+1)') ||
+    !driverTaskFunction.includes("box.insertAdjacentHTML('beforeend',taskCardsHtml)") ||
+    !driverTaskFunction.includes('driverTasksHasMore=fetchedTasks.length>queryLimit') ||
+    !html.includes("$('loadMoreDriverTasks').addEventListener('click',()=>loadDriverTasks({append:true}));")) {
+  console.error('Driver task history must use stable keyset pagination and preserve loaded tasks when refreshing.');
+  process.exit(1);
+}
+if (!driverTaskFunction.includes("d.status==='delivered'") ||
+    !driverTaskFunction.includes('rawCoordinates.every(value=>value!==null&&value!==undefined&&value!==\'\')')) {
+  console.error('Completed driver history should not create active route maps, and map coordinates must be fully present.');
+  process.exit(1);
+}
+
