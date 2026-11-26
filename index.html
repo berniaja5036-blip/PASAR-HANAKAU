@@ -1339,7 +1339,7 @@ async function loadDriverTasks({append=false}={}){
   if(append)taskQuery.or('assigned_at.lt.'+driverTasksCursor.assigned_at+',and(assigned_at.eq.'+driverTasksCursor.assigned_at+',id.lt.'+driverTasksCursor.id+')');
   const {data,error}=await taskQuery.limit(queryLimit+1);
   if(error){
-   if(!append)box.textContent='Tugas belum dapat dimuat: '+error.message;
+   if(!append&&loadedBefore===0)box.textContent='Tugas belum dapat dimuat: '+error.message;
    message('driverMessage','Tugas belum dapat dimuat: '+error.message,true);
    return;
   }
