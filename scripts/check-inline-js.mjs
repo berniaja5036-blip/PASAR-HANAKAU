@@ -454,6 +454,22 @@ const adminOrderFunctionEnd = html.indexOf("$('refreshAdminOrders').addEventList
 const adminOrderFunction = adminOrderFunctionStart >= 0 && adminOrderFunctionEnd > adminOrderFunctionStart
   ? html.slice(adminOrderFunctionStart, adminOrderFunctionEnd)
   : '';
+const adminExportFunctionStart = html.indexOf("$('exportAdminOrders').addEventListener('click',");
+const adminExportFunctionEnd = html.indexOf("$('adminOrders').addEventListener('click',async e=>{", adminExportFunctionStart);
+const adminExportFunction = adminExportFunctionStart >= 0 && adminExportFunctionEnd > adminExportFunctionStart
+  ? html.slice(adminExportFunctionStart, adminExportFunctionEnd)
+  : '';
+if (!adminOrderMarkup.includes('Laporan mencakup semua pesanan yang sudah dimuat.') ||
+    !html.includes('let adminOrdersExportRows=[];') ||
+    !adminOrderFunction.includes('adminOrdersExportRows=append?adminOrdersExportRows.concat(exportRows):exportRows;') ||
+    !adminExportFunction.includes('const data=adminOrdersExportRows.slice();') ||
+    adminExportFunction.includes("supabase.from('orders')") ||
+    adminExportFunction.includes('.limit(50)') ||
+    !adminExportFunction.includes('pesanan yang sudah dimuat')) {
+  console.error('Admin CSV export must include every loaded order page and clearly disclose that older pages must be loaded before export.');
+  process.exit(1);
+}
+
 const adminOrderFilterStart = html.indexOf('function filterAdminOrders()');
 const adminOrderFilterEnd = html.indexOf("$('adminOrderSearch').addEventListener", adminOrderFilterStart);
 const adminOrderFilter = adminOrderFilterStart >= 0 && adminOrderFilterEnd > adminOrderFilterStart
