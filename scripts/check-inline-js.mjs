@@ -564,7 +564,7 @@ if (!html.includes('const SELLER_ORDER_PAGE_SIZE=50;') ||
   process.exit(1);
 }
 
-if ((html.match(/\\$\\('refreshSellerOrders'\\)\\.addEventListener/g) || []).length !== 1 ||
+if ((html.match(/\$\('refreshSellerOrders'\)\.addEventListener/g) || []).length !== 1 ||
     !html.includes('let sellerOrdersRequestId=0;') ||
     !sellerOrderFunction.includes('const requestId=++sellerOrdersRequestId;') ||
     !sellerOrderFunction.includes('requestId!==sellerOrdersRequestId')) {
