@@ -635,9 +635,12 @@ const SELLER_ORDER_PAGE_SIZE=50;
 let sellerOrdersCursor=null;
 let sellerOrdersHasMore=false;
 let sellerOrdersLoading=false;
+let sellerOrdersRequestId=0;
 let sellerOrdersLoaded=[];
 let sellerOrdersLegacyMode=false;
 function resetSellerOrderPagination(){
+ sellerOrdersRequestId++;
+ sellerOrdersLoading=false;
  sellerOrdersCursor=null;
  sellerOrdersHasMore=false;
  sellerOrdersLoaded=[];
@@ -675,6 +678,7 @@ async function loadSellerOrders({append=false}={}){
  if(!box||!sellerShopId||sellerOrdersLoading)return;
  if(append&&(!sellerOrdersHasMore||!sellerOrdersCursor||sellerOrdersLegacyMode))return;
  const requestShopId=sellerShopId;
+ const requestId=++sellerOrdersRequestId;
  const loadMoreButton=$('loadMoreSellerOrders');
  const paginationStatus=$('sellerOrderPaginationStatus');
  const previousCount=append?0:sellerOrdersLoaded.length;
@@ -691,16 +695,18 @@ async function loadSellerOrders({append=false}={}){
  if(!append&&previousCount===0)box.textContent='Memuat pesanan toko…';
  try{
   while(firstRequest||(!append&&nextRows.length<previousCount&&hasMore)){
-   if(requestShopId!==sellerShopId)return;
+   if(requestId!==sellerOrdersRequestId||requestShopId!==sellerShopId)return;
    const {data,error}=await supabase.rpc('seller_list_orders_page',{
     p_before_created_at:cursor?.created_at??null,
     p_before_id:cursor?.id??null,
     p_page_size:SELLER_ORDER_PAGE_SIZE
    });
+   if(requestId!==sellerOrdersRequestId||requestShopId!==sellerShopId)return;
    if(error){
     const missingPagedRpc=error.code==='PGRST202'||/could not find the function|schema cache/i.test(error.message||'');
     if(!append&&firstRequest&&missingPagedRpc){
      const legacy=await supabase.rpc('seller_list_orders');
+     if(requestId!==sellerOrdersRequestId||requestShopId!==sellerShopId)return;
      if(legacy.error)throw legacy.error;
      nextRows=(legacy.data||[]).filter(o=>(o.order_items||[]).length>0);
      cursor=null;
@@ -727,14 +733,14 @@ async function loadSellerOrders({append=false}={}){
    if(!append&&nextRows.length<previousCount&&hasMore)continue;
    break;
   }
-  if(requestShopId!==sellerShopId)return;
+  if(requestId!==sellerOrdersRequestId||requestShopId!==sellerShopId)return;
   sellerOrdersLoaded=nextRows.filter(o=>(o.order_items||[]).length>0);
   sellerOrdersCursor=cursor;
   sellerOrdersHasMore=hasMore;
   sellerOrdersLegacyMode=legacyMode;
   const orders=sellerOrdersLoaded;
   const driverInfoByOrder=await loadOrderDriverDetails(orders.map(o=>o.id));
-  if(requestShopId!==sellerShopId)return;
+  if(requestId!==sellerOrdersRequestId||requestShopId!==sellerShopId)return;
   const notices=orders.flatMap(o=>(o.order_status_history||[]).map(h=>({order:o.order_number,...h}))).sort((a,b)=>new Date(b.changed_at)-new Date(a.changed_at)).slice(0,5);
   const noticeBox=$('sellerNotifications');
   if(noticeBox)noticeBox.innerHTML=notices.length?notices.map(n=>'<div style="padding:6px 0;border-bottom:1px solid #e5eee8"><b>'+escapeHtml(n.order)+'</b> • '+escapeHtml(orderStatusLabel(n.to_status))+'<div class="muted">'+new Date(n.changed_at).toLocaleString('id-ID')+'</div></div>').join(''):'Belum ada perubahan status pesanan.';
@@ -757,23 +763,25 @@ async function loadSellerOrders({append=false}={}){
    else paginationStatus.textContent='Semua '+orders.length+' pesanan toko sudah dimuat.';
   }
  }catch(error){
+  if(requestId!==sellerOrdersRequestId)return;
   console.warn('Riwayat pesanan toko gagal dimuat:',error);
   if(!sellerOrdersLoaded.length)box.textContent='Pesanan toko belum dapat dimuat: '+(error?.message||'Terjadi kesalahan.');
   if(paginationStatus)paginationStatus.textContent=sellerOrdersLoaded.length
    ?'Penyegaran gagal; '+sellerOrdersLoaded.length+' pesanan yang sudah dimuat tetap ditampilkan.'
    :'Riwayat pesanan belum dapat dimuat.';
  }finally{
-  sellerOrdersLoading=false;
-  if(loadMoreButton){
-   loadMoreButton.disabled=false;
-   loadMoreButton.hidden=!sellerOrdersHasMore||sellerOrdersLegacyMode;
-   loadMoreButton.textContent='Muat 50 pesanan lebih lama';
+  if(requestId===sellerOrdersRequestId){
+   sellerOrdersLoading=false;
+   if(loadMoreButton){
+    loadMoreButton.disabled=false;
+    loadMoreButton.hidden=!sellerOrdersHasMore||sellerOrdersLegacyMode;
+    loadMoreButton.textContent='Muat 50 pesanan lebih lama';
+   }
   }
  }
 }
 $('refreshSellerOrders').addEventListener('click',()=>loadSellerOrders());
 $('loadMoreSellerOrders').addEventListener('click',()=>loadSellerOrders({append:true}));
-$('refreshSellerOrders').addEventListener('click',loadSellerOrders);
 async function loadSellerProducts(){
  if(!sellerShopId)return;
  const {data,error}=await supabase.from('products').select('id,name,price,stock,status,image_path,category_id,categories(name)').eq('shop_id',sellerShopId).order('created_at',{ascending:false});

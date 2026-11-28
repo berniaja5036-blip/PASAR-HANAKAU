@@ -563,3 +563,11 @@ if (!html.includes('const SELLER_ORDER_PAGE_SIZE=50;') ||
   console.error('Seller order history must use stable server-side keyset pagination, preserve loaded pages on refresh, and retain a safe legacy fallback.');
   process.exit(1);
 }
+
+if ((html.match(/\\$\\('refreshSellerOrders'\\)\\.addEventListener/g) || []).length !== 1 ||
+    !sellerOrderFunction.includes('let sellerOrdersRequestId=0;') ||
+    !sellerOrderFunction.includes('const requestId=++sellerOrdersRequestId;') ||
+    !sellerOrderFunction.includes('requestId!==sellerOrdersRequestId')) {
+  console.error('Seller order refresh must have one listener and ignore stale responses after the active shop changes.');
+  process.exit(1);
+}
