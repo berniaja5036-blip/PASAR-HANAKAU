@@ -565,7 +565,7 @@ if (!html.includes('const SELLER_ORDER_PAGE_SIZE=50;') ||
 }
 
 if ((html.match(/\\$\\('refreshSellerOrders'\\)\\.addEventListener/g) || []).length !== 1 ||
-    !sellerOrderFunction.includes('let sellerOrdersRequestId=0;') ||
+    !html.includes('let sellerOrdersRequestId=0;') ||
     !sellerOrderFunction.includes('const requestId=++sellerOrdersRequestId;') ||
     !sellerOrderFunction.includes('requestId!==sellerOrdersRequestId')) {
   console.error('Seller order refresh must have one listener and ignore stale responses after the active shop changes.');
