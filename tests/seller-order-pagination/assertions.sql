@@ -168,10 +168,11 @@ $test$;
 do $test$
 declare
   v_result text;
-  v_proc record;
+  v_is_security_definer boolean;
+  v_settings text[];
 begin
   select pg_get_function_result(p.oid), p.prosecdef, p.proconfig
-    into v_result, v_proc
+    into v_result, v_is_security_definer, v_settings
   from pg_proc p
   join pg_namespace n on n.oid = p.pronamespace
   where n.nspname = 'public'
@@ -180,7 +181,7 @@ begin
   if v_result ilike '%delivery_address%' or v_result ilike '%latitude%' or v_result ilike '%longitude%' then
     raise exception 'Seller pagination RPC exposes buyer delivery location fields.';
   end if;
-  if not v_proc.prosecdef or not ('search_path=""' = any(v_proc.proconfig)) then
+  if not v_is_security_definer or not ('search_path=""' = any(v_settings)) then
     raise exception 'Seller pagination RPC must be SECURITY DEFINER with an empty search_path.';
   end if;
   if has_function_privilege('anon', 'public.seller_list_orders_page(timestamp with time zone,uuid,integer)', 'EXECUTE') then
