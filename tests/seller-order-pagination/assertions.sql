@@ -66,11 +66,9 @@ declare
   v_page2_cursor_id uuid;
   v_count integer;
   v_has_more boolean;
-  v_first_id uuid;
-  v_last_id uuid;
 begin
-  select count(*), bool_and(has_more), min(id), max(id)
-    into v_count, v_has_more, v_first_id, v_last_id
+  select count(*), bool_and(has_more)
+    into v_count, v_has_more
   from public.seller_list_orders_page(null, null, 50);
   if v_count <> 50 or not v_has_more then
     raise exception 'Page 1 should return 50 rows and has_more=true; got count %, has_more %.', v_count, v_has_more;
