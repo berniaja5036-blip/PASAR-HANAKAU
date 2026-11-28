@@ -1,0 +1,53 @@
+name: Test seller order pagination and privacy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/20261128022600_seller_order_keyset_pagination.sql'
+      - 'tests/seller-order-pagination/**'
+      - '.github/workflows/test-seller-order-pagination.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/20261128022600_seller_order_keyset_pagination.sql'
+      - 'tests/seller-order-pagination/**'
+      - '.github/workflows/test-seller-order-pagination.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-17:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Bootstrap isolated PostgreSQL fixture
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/seller-order-pagination/bootstrap.sql
+      - name: Apply seller pagination migration
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20261128022600_seller_order_keyset_pagination.sql
+      - name: Assert pagination, shop isolation, privacy, and grants
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/seller-order-pagination/assertions.sql
