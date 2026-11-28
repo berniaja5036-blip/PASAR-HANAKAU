@@ -244,10 +244,12 @@ body:not(.ph-guest-mode) .market-header-actions{display:none}
 <button class="btn" id="addProduct">Simpan produk</button><div id="productMessage" class="status" role="status"></div>
 <div id="sellerProductList"></div>
 <h3>🧾 Tagihan komisi toko</h3><p class="muted">Komisi dihitung berdasarkan tarif yang berlaku saat pesanan terkirim. Pembayaran ditagihkan setiap bulan.</p><button class="btn secondary" id="refreshSellerCommission" type="button">Muat ulang tagihan komisi</button><div id="sellerCommissionInvoices" class="muted">Memuat tagihan…</div><h3>📦 Pesanan barang saya</h3>
-<p class="muted">Lihat pesanan pembeli yang berisi barang dari toko Anda. Daftar diperbarui otomatis setiap 45 detik saat halaman aktif.</p>
+<p class="muted">Lihat pesanan pembeli yang berisi barang dari toko Anda. Daftar diperbarui otomatis setiap 45 detik; riwayat lama dapat dimuat bertahap.</p>
 <button class="btn secondary" id="refreshSellerOrders" type="button">↻ Muat ulang pesanan</button>
 <div class="notice" style="margin:10px 0"><b>🔔 Pemberitahuan pesanan toko</b><div id="sellerNotifications" class="muted" style="margin-top:6px">Belum ada pemberitahuan.</div></div>
 <div id="sellerOrders" class="muted">Memuat pesanan toko…</div>
+<div class="row" style="margin-top:10px"><button class="btn secondary" id="loadMoreSellerOrders" type="button" hidden>Muat 50 pesanan lebih lama</button></div>
+<p id="sellerOrderPaginationStatus" class="muted" aria-live="polite">Memuat riwayat pesanan toko…</p>
 <div class="tile" id="sellerChatBox" style="margin-top:14px"><h3>💬 Pesan dari pembeli</h3><p class="muted">Balas pertanyaan pembeli. Anda dapat mengirim teks, foto, dan dokumen.</p><div id="sellerChatConversations" class="muted">Memuat percakapan…</div><div id="sellerChatMessages" class="chat-messages muted">Pilih percakapan untuk melihat pesan.</div><textarea id="sellerChatBody" class="field" rows="2" maxlength="5000" placeholder="Tulis balasan untuk pembeli…"></textarea><input id="sellerChatFile" class="field" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,text/plain,text/csv,.doc,.docx,.xls,.xlsx"><button id="sellerChatSend" class="btn" type="button">Kirim pesan</button><div id="sellerChatStatus" class="status" role="status"></div></div>
 </section>
 <section id="catalogPanel" class="hidden guest-catalog">
@@ -629,11 +631,24 @@ $('submitSeller').addEventListener('click',async()=>{
  else{message('sellerMessage','Pengajuan terkirim. Tunggu pemeriksaan admin.');}
 });
 let sellerShopId=null;
+const SELLER_ORDER_PAGE_SIZE=50;
+let sellerOrdersCursor=null;
+let sellerOrdersHasMore=false;
+let sellerOrdersLoading=false;
+let sellerOrdersLoaded=[];
+let sellerOrdersLegacyMode=false;
+function resetSellerOrderPagination(){
+ sellerOrdersCursor=null;
+ sellerOrdersHasMore=false;
+ sellerOrdersLoaded=[];
+ sellerOrdersLegacyMode=false;
+}
 async function loadSellerShop(){
  const {data:{session}}=await supabase.auth.getSession();if(!session)return;
  const {data:shop,error}=await supabase.from('shops').select('id,name,status,pickup_latitude,pickup_longitude').eq('owner_id',session.user.id).maybeSingle();
  if(error){message('productMessage','Gagal memeriksa toko: '+error.message,true);return}
  if(!shop){
+  if(sellerShopId!==null){sellerShopId=null;resetSellerOrderPagination();}
   $('sellerPanel').classList.remove('hidden');
   $('sellerProducts').classList.add('hidden');
   const {data:profile}=await supabase.from('profiles').select('full_name,phone,full_address').eq('id',session.user.id).maybeSingle();
@@ -650,30 +665,126 @@ async function loadSellerShop(){
   return;
 }
 $('sellerPanel').classList.add('hidden');
- if(shop.status!=='approved'){message('productMessage','Status toko: '+shop.status+'. Produk dapat dikelola setelah toko disetujui admin.');return}
- sellerShopId=shop.id;$('accountEmail').textContent=shop.name||$('accountEmail').textContent;message('productMessage','Toko aktif: '+shop.name);const loc=$('shopLocationStatus');legacyShopPickupPoint=shop.pickup_latitude!=null&&shop.pickup_longitude!=null?{latitude:Number(shop.pickup_latitude),longitude:Number(shop.pickup_longitude),accuracy:null}:null;$('legacyShopLocationBox').classList.remove('hidden');if(loc)loc.textContent=legacyShopPickupPoint?'Titik penjemputan tersimpan. Ketuk lokasi baru pada peta jika ingin memindahkannya.':'Titik penjemputan belum tersimpan. Ketuk lokasi toko pada peta.';initLegacyShopMap(legacyShopPickupPoint);
+ if(sellerShopId!==shop.id)resetSellerOrderPagination();
+ sellerShopId=shop.id;
+ if(shop.status!=='approved'){message('productMessage','Status toko: '+shop.status+'. Produk dapat dikelola setelah toko disetujui admin.');return}$('accountEmail').textContent=shop.name||$('accountEmail').textContent;message('productMessage','Toko aktif: '+shop.name);const loc=$('shopLocationStatus');legacyShopPickupPoint=shop.pickup_latitude!=null&&shop.pickup_longitude!=null?{latitude:Number(shop.pickup_latitude),longitude:Number(shop.pickup_longitude),accuracy:null}:null;$('legacyShopLocationBox').classList.remove('hidden');if(loc)loc.textContent=legacyShopPickupPoint?'Titik penjemputan tersimpan. Ketuk lokasi baru pada peta jika ingin memindahkannya.':'Titik penjemputan belum tersimpan. Ketuk lokasi toko pada peta.';initLegacyShopMap(legacyShopPickupPoint);
  await loadProductCategories();await loadSellerProducts();await loadSellerAds();await loadSellerOrders();await loadSellerCommissionInvoices();await loadSellerChatConversations();
 }
-async function loadSellerOrders(){
- const box=$('sellerOrders');if(!box||!sellerShopId)return;
- box.textContent='Memuat pesanan toko…';
- const {data,error}=await supabase.rpc('seller_list_orders');
- if(error){box.textContent='Pesanan toko belum dapat dimuat: '+error.message;return}
- const orders=(data||[]).filter(o=>(o.order_items||[]).length>0);
- const driverInfoByOrder=await loadOrderDriverDetails(orders.map(o=>o.id));
- const notices=orders.flatMap(o=>(o.order_status_history||[]).map(h=>({order:o.order_number,...h}))).sort((a,b)=>new Date(b.changed_at)-new Date(a.changed_at)).slice(0,5);
- const noticeBox=$('sellerNotifications');
- if(noticeBox)noticeBox.innerHTML=notices.length?notices.map(n=>'<div style="padding:6px 0;border-bottom:1px solid #e5eee8"><b>'+escapeHtml(n.order)+'</b> • '+escapeHtml(orderStatusLabel(n.to_status))+'<div class="muted">'+new Date(n.changed_at).toLocaleString('id-ID')+'</div></div>').join(''):'Belum ada perubahan status pesanan.';
- if(!orders.length){box.textContent='Belum ada pesanan yang berisi barang dari toko Anda.';return}
- const labels={pending:'Menunggu konfirmasi admin',confirmed:'Pesanan dikonfirmasi',ready_for_pickup:'Siap dijemput driver',picked_up:'Sudah dijemput driver',delivered:'Terkirim',cancelled:'Dibatalkan'};
- box.innerHTML=orders.map(o=>{
-  const shopTotal=(o.order_items||[]).reduce((sum,item)=>sum+Number(item.line_total||0),0);
-  const items=(o.order_items||[]).map(i=>'<div class="cartline"><span>'+escapeHtml(i.product_name)+' × '+Number(i.quantity)+'<br><span class="muted">'+formatRupiah(i.unit_price)+' per barang</span></span><b>'+formatRupiah(i.line_total)+'</b></div>').join('');
-  const notes=o.notes?'<div class="notice" style="margin-top:10px"><b>Catatan pembeli:</b><br>'+escapeHtml(o.notes)+'</div>':'<p class="muted">Tidak ada catatan dari pembeli.</p>';
-  const history=(o.order_status_history||[]).slice().sort((a,b)=>new Date(a.changed_at)-new Date(b.changed_at)).map(h=>'<div class="muted" style="padding:5px 0">'+(h.from_status?escapeHtml(orderStatusLabel(h.from_status))+' → ':'')+escapeHtml(orderStatusLabel(h.to_status))+' • '+new Date(h.changed_at).toLocaleString('id-ID')+'</div>').join('');
-  return '<article class="tile"><div class="row" style="justify-content:space-between"><b>'+escapeHtml(o.order_number)+'</b><b class="price">'+escapeHtml(labels[o.status]||o.status)+'</b></div><p class="muted">'+new Date(o.created_at).toLocaleString('id-ID')+'</p>'+renderOrderDriverInfo(driverInfoByOrder.get(o.id))+'<details><summary style="cursor:pointer;color:#176b45;font-weight:700;padding:8px 0">Lihat rincian barang dan catatan</summary>'+items+notes+'</details><details><summary style="cursor:pointer;color:#176b45;font-weight:700;padding:8px 0">Riwayat status pesanan</summary>'+(history||'<p class="muted">Belum ada riwayat status.</p>')+'</details><p class="price" style="margin-bottom:0">Total barang toko: '+formatRupiah(shopTotal)+'</p></article>';
- }).join('');
+const SELLER_ORDER_PAGE_SIZE=50;
+let sellerOrdersCursor=null;
+let sellerOrdersHasMore=false;
+let sellerOrdersLoading=false;
+let sellerOrdersLoaded=[];
+let sellerOrdersLegacyMode=false;
+function resetSellerOrderPagination(){
+ sellerOrdersCursor=null;
+ sellerOrdersHasMore=false;
+ sellerOrdersLoaded=[];
+ sellerOrdersLegacyMode=false;
 }
+async function loadSellerOrders({append=false}={}){
+ const box=$('sellerOrders');
+ if(!box||!sellerShopId||sellerOrdersLoading)return;
+ if(append&&(!sellerOrdersHasMore||!sellerOrdersCursor||sellerOrdersLegacyMode))return;
+ const requestShopId=sellerShopId;
+ const loadMoreButton=$('loadMoreSellerOrders');
+ const paginationStatus=$('sellerOrderPaginationStatus');
+ const previousCount=append?0:sellerOrdersLoaded.length;
+ let nextRows=append?[...sellerOrdersLoaded]:[];
+ let cursor=append?sellerOrdersCursor:null;
+ let hasMore=append?sellerOrdersHasMore:false;
+ let legacyMode=false;
+ let firstRequest=true;
+ sellerOrdersLoading=true;
+ if(loadMoreButton){
+  loadMoreButton.disabled=true;
+  loadMoreButton.textContent=append?'Memuat pesanan…':'Memperbarui pesanan…';
+ }
+ if(!append&&previousCount===0)box.textContent='Memuat pesanan toko…';
+ try{
+  while(firstRequest||(!append&&nextRows.length<previousCount&&hasMore)){
+   if(requestShopId!==sellerShopId)return;
+   const {data,error}=await supabase.rpc('seller_list_orders_page',{
+    p_before_created_at:cursor?.created_at??null,
+    p_before_id:cursor?.id??null,
+    p_page_size:SELLER_ORDER_PAGE_SIZE
+   });
+   if(error){
+    const missingPagedRpc=error.code==='PGRST202'||/could not find the function|schema cache/i.test(error.message||'');
+    if(!append&&firstRequest&&missingPagedRpc){
+     const legacy=await supabase.rpc('seller_list_orders');
+     if(legacy.error)throw legacy.error;
+     nextRows=(legacy.data||[]).filter(o=>(o.order_items||[]).length>0);
+     cursor=null;
+     hasMore=false;
+     legacyMode=true;
+     break;
+    }
+    throw error;
+   }
+   const page=Array.isArray(data)?data:[];
+   const pageHasMore=page.some(row=>row.has_more===true);
+   const rows=page.map(({has_more,...order})=>order);
+   if(rows.length){
+    cursor={created_at:rows[rows.length-1].created_at,id:rows[rows.length-1].id};
+   }
+   if(append){
+    const knownIds=new Set(nextRows.map(order=>order.id));
+    nextRows.push(...rows.filter(order=>!knownIds.has(order.id)));
+   }else{
+    nextRows.push(...rows);
+   }
+   hasMore=pageHasMore;
+   firstRequest=false;
+   if(!append&&nextRows.length<previousCount&&hasMore)continue;
+   break;
+  }
+  if(requestShopId!==sellerShopId)return;
+  sellerOrdersLoaded=nextRows.filter(o=>(o.order_items||[]).length>0);
+  sellerOrdersCursor=cursor;
+  sellerOrdersHasMore=hasMore;
+  sellerOrdersLegacyMode=legacyMode;
+  const orders=sellerOrdersLoaded;
+  const driverInfoByOrder=await loadOrderDriverDetails(orders.map(o=>o.id));
+  if(requestShopId!==sellerShopId)return;
+  const notices=orders.flatMap(o=>(o.order_status_history||[]).map(h=>({order:o.order_number,...h}))).sort((a,b)=>new Date(b.changed_at)-new Date(a.changed_at)).slice(0,5);
+  const noticeBox=$('sellerNotifications');
+  if(noticeBox)noticeBox.innerHTML=notices.length?notices.map(n=>'<div style="padding:6px 0;border-bottom:1px solid #e5eee8"><b>'+escapeHtml(n.order)+'</b> • '+escapeHtml(orderStatusLabel(n.to_status))+'<div class="muted">'+new Date(n.changed_at).toLocaleString('id-ID')+'</div></div>').join(''):'Belum ada perubahan status pesanan.';
+  if(!orders.length){
+   box.textContent='Belum ada pesanan yang berisi barang dari toko Anda.';
+  }else{
+   const labels={pending:'Menunggu konfirmasi admin',confirmed:'Pesanan dikonfirmasi',ready_for_pickup:'Siap dijemput driver',picked_up:'Sudah dijemput driver',delivered:'Terkirim',cancelled:'Dibatalkan'};
+   box.innerHTML=orders.map(o=>{
+    const shopTotal=(o.order_items||[]).reduce((sum,item)=>sum+Number(item.line_total||0),0);
+    const items=(o.order_items||[]).map(i=>'<div class="cartline"><span>'+escapeHtml(i.product_name)+' × '+Number(i.quantity)+'<br><span class="muted">'+formatRupiah(i.unit_price)+' per barang</span></span><b>'+formatRupiah(i.line_total)+'</b></div>').join('');
+    const notes=o.notes?'<div class="notice" style="margin-top:10px"><b>Catatan pembeli:</b><br>'+escapeHtml(o.notes)+'</div>':'<p class="muted">Tidak ada catatan dari pembeli.</p>';
+    const history=(o.order_status_history||[]).slice().sort((a,b)=>new Date(a.changed_at)-new Date(b.changed_at)).map(h=>'<div class="muted" style="padding:5px 0">'+(h.from_status?escapeHtml(orderStatusLabel(h.from_status))+' → ':'')+escapeHtml(orderStatusLabel(h.to_status))+' • '+new Date(h.changed_at).toLocaleString('id-ID')+'</div>').join('');
+    return '<article class="tile"><div class="row" style="justify-content:space-between"><b>'+escapeHtml(o.order_number)+'</b><b class="price">'+escapeHtml(labels[o.status]||o.status)+'</b></div><p class="muted">'+new Date(o.created_at).toLocaleString('id-ID')+'</p>'+renderOrderDriverInfo(driverInfoByOrder.get(o.id))+'<details><summary style="cursor:pointer;color:#176b45;font-weight:700;padding:8px 0">Lihat rincian barang dan catatan</summary>'+items+notes+'</details><details><summary style="cursor:pointer;color:#176b45;font-weight:700;padding:8px 0">Riwayat status pesanan</summary>'+(history||'<p class="muted">Belum ada riwayat status.</p>')+'</details><p class="price" style="margin-bottom:0">Total barang toko: '+formatRupiah(shopTotal)+'</p></article>';
+   }).join('');
+  }
+  if(paginationStatus){
+   if(legacyMode)paginationStatus.textContent='Menampilkan '+orders.length+' pesanan terbaru. Riwayat lebih lama belum tersedia sampai RPC pagination diperbarui.';
+   else if(!orders.length)paginationStatus.textContent='Belum ada riwayat pesanan toko.';
+   else if(sellerOrdersHasMore)paginationStatus.textContent='Menampilkan '+orders.length+' pesanan toko. Masih ada pesanan yang lebih lama.';
+   else paginationStatus.textContent='Semua '+orders.length+' pesanan toko sudah dimuat.';
+  }
+ }catch(error){
+  console.warn('Riwayat pesanan toko gagal dimuat:',error);
+  if(!sellerOrdersLoaded.length)box.textContent='Pesanan toko belum dapat dimuat: '+(error?.message||'Terjadi kesalahan.');
+  if(paginationStatus)paginationStatus.textContent=sellerOrdersLoaded.length
+   ?'Penyegaran gagal; '+sellerOrdersLoaded.length+' pesanan yang sudah dimuat tetap ditampilkan.'
+   :'Riwayat pesanan belum dapat dimuat.';
+ }finally{
+  sellerOrdersLoading=false;
+  if(loadMoreButton){
+   loadMoreButton.disabled=false;
+   loadMoreButton.hidden=!sellerOrdersHasMore||sellerOrdersLegacyMode;
+   loadMoreButton.textContent='Muat 50 pesanan lebih lama';
+  }
+ }
+}
+$('refreshSellerOrders').addEventListener('click',()=>loadSellerOrders());
+$('loadMoreSellerOrders').addEventListener('click',()=>loadSellerOrders({append:true}));
 $('refreshSellerOrders').addEventListener('click',loadSellerOrders);
 async function loadSellerProducts(){
  if(!sellerShopId)return;

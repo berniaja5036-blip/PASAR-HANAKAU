@@ -533,3 +533,33 @@ if (!driverTaskFunction.includes("d.status==='delivered'") ||
   process.exit(1);
 }
 
+
+const sellerOrderMarkupStart = html.indexOf('<div id="sellerOrders"');
+const sellerOrderMarkupEnd = html.indexOf('<div class="tile" id="sellerChatBox"', sellerOrderMarkupStart);
+const sellerOrderMarkup = sellerOrderMarkupStart >= 0 && sellerOrderMarkupEnd > sellerOrderMarkupStart
+  ? html.slice(sellerOrderMarkupStart, sellerOrderMarkupEnd)
+  : '';
+const sellerOrderFunctionStart = html.indexOf('async function loadSellerOrders(');
+const sellerOrderFunctionEnd = html.indexOf("$('refreshSellerOrders').addEventListener", sellerOrderFunctionStart);
+const sellerOrderFunction = sellerOrderFunctionStart >= 0 && sellerOrderFunctionEnd > sellerOrderFunctionStart
+  ? html.slice(sellerOrderFunctionStart, sellerOrderFunctionEnd)
+  : '';
+if (!sellerOrderMarkup.includes('id="loadMoreSellerOrders"') ||
+    !sellerOrderMarkup.includes('id="sellerOrderPaginationStatus"') ||
+    !sellerOrderMarkup.includes('aria-live="polite"')) {
+  console.error('Seller order history must expose an accessible load-more control and pagination status.');
+  process.exit(1);
+}
+if (!html.includes('const SELLER_ORDER_PAGE_SIZE=50;') ||
+    !sellerOrderFunction.includes("supabase.rpc('seller_list_orders_page'") ||
+    !sellerOrderFunction.includes('p_before_created_at:cursor?.created_at??null') ||
+    !sellerOrderFunction.includes('p_before_id:cursor?.id??null') ||
+    !sellerOrderFunction.includes('p_page_size:SELLER_ORDER_PAGE_SIZE') ||
+    !sellerOrderFunction.includes('page.some(row=>row.has_more===true)') ||
+    !sellerOrderFunction.includes('nextRows.length<previousCount&&hasMore') ||
+    !sellerOrderFunction.includes("supabase.rpc('seller_list_orders')") ||
+    !sellerOrderFunction.includes('sellerOrdersLoaded=nextRows.filter') ||
+    !html.includes("$('loadMoreSellerOrders').addEventListener('click',()=>loadSellerOrders({append:true}));")) {
+  console.error('Seller order history must use stable server-side keyset pagination, preserve loaded pages on refresh, and retain a safe legacy fallback.');
+  process.exit(1);
+}
