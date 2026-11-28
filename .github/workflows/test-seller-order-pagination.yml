@@ -4,13 +4,13 @@ on:
   push:
     branches: [main]
     paths:
-      - 'supabase/migrations/20261128022600_seller_order_keyset_pagination.sql'
+      - 'supabase/migrations/20261128023108_seller_order_keyset_pagination.sql'
       - 'tests/seller-order-pagination/**'
       - '.github/workflows/test-seller-order-pagination.yml'
   pull_request:
     branches: [main]
     paths:
-      - 'supabase/migrations/20261128022600_seller_order_keyset_pagination.sql'
+      - 'supabase/migrations/20261128023108_seller_order_keyset_pagination.sql'
       - 'tests/seller-order-pagination/**'
       - '.github/workflows/test-seller-order-pagination.yml'
 
@@ -46,7 +46,7 @@ jobs:
       - name: Apply seller pagination migration
         env:
           PGPASSWORD: postgres
-        run: psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20261128022600_seller_order_keyset_pagination.sql
+        run: psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20261128023108_seller_order_keyset_pagination.sql
       - name: Assert pagination, shop isolation, privacy, and grants
         env:
           PGPASSWORD: postgres
