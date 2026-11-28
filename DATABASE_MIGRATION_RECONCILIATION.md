@@ -4,7 +4,7 @@ Last reviewed: 2026-11-22.
 
 ## Current production status (22 November 2026)
 
-The live Supabase project reports **89 applied migration records**. The active `supabase/migrations/` directory on this branch contains **89 SQL files** after the public table privilege-hardening migration was applied. A direct comparison of every 14-digit version and migration name reports **89 exact matches, zero missing versions, zero extra files, and zero duplicate version prefixes**.
+The live Supabase project reports **90 applied migration records**. The active `supabase/migrations/` directory on this branch contains **90 SQL files** after the seller order pagination migration was applied. A direct comparison of every 14-digit version and migration name reports **90 exact matches, zero missing versions, zero extra files, and zero duplicate version prefixes**.
 
 The seven migration source files that were absent from the repository have been restored from the authoritative `statements[1]` values stored in production's `supabase_migrations.schema_migrations` table:
 
@@ -40,6 +40,8 @@ No SQL was re-applied and no Edge Function was redeployed in this source-recover
 ## 22 November 2026 — Public table privilege hardening
 
 The 89th migration, `20261122053642_revoke_unneeded_public_table_maintenance_privileges`, was applied through the reviewed migration API after the PostgreSQL 17 regression workflow passed. It removes `TRUNCATE`, `REFERENCES`, `TRIGGER`, and `MAINTAIN` from `anon` and `authenticated` on all existing public tables, and removes those privileges from future public tables created by `postgres`. Ordinary `SELECT`, `INSERT`, `UPDATE`, and `DELETE` grants and all RLS policies remain unchanged. Post-apply verification found zero remaining extra grants, no matching default privileges for `postgres`, and RLS enabled on all 34 public tables. No row data, orders, payments, stock, or account status was changed.
+
+The 90th migration, `20261128023108_seller_order_keyset_pagination`, adds `public.seller_list_orders_page(...)` as an additive, read-only keyset-paginated RPC for the seller dashboard. The PostgreSQL 17 workflow verifies page boundaries, stable timestamp/UUID ordering, no duplicate or missing rows across pages, per-shop item filtering for multi-shop orders, active-seller checks, empty `search_path`, and grants (`authenticated` only; no `anon`). The RPC returns no buyer delivery address or GPS columns and leaves the legacy `seller_list_orders()` function unchanged. It was applied through the Supabase migration connector after the isolated database test passed. It changes no existing rows, orders, stock, payments, profiles, or Storage objects.
 
 All 34 current public tables are owned by `postgres`. The separate default ACL owned by `supabase_admin` remains platform-managed because the migration executor is not a member of that superuser role; no current public table is owned by `supabase_admin`. No role membership or privilege escalation was attempted. The CI regression test simulates the non-superuser `postgres` migration owner and verifies existing and future `postgres`-owned tables.
 
