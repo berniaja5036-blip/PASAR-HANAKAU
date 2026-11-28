@@ -155,3 +155,8 @@ Supabase CLI v3 changed database commands to target the local stack by default; 
 - The five archived-but-applied SQL effects were checked in the live catalog: helper ACLs and `search_path`, profile column grants, rating-summary function definitions, and product/shop status grants plus guard triggers.
 - The two old bootstrap table names were confirmed absent from the current public schema.
 - The 65th migration changes only the `driver_profiles_read_scoped` SELECT policy; no user, order, stock, payment, or Storage data was changed. The 72nd migration only replaces the admin statistics function; it does not modify transactional rows.
+
+
+## Draft migration status
+
+The branch `multi-role-foundation` additionally contains `20261115100000_create_profile_roles_and_backfill.sql`. This is a **draft, unapplied migration** tested only against an isolated PostgreSQL 17 service. It is intentionally not included in the 87/87 production parity count and has not been run against Supabase.

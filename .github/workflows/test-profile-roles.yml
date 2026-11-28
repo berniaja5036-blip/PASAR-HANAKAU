@@ -1,0 +1,49 @@
+name: Test multi-role foundation migration
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'tests/profile-roles/**'
+      - '.github/workflows/test-profile-roles.yml'
+  push:
+    branches: [multi-role-foundation]
+    paths:
+      - 'supabase/migrations/**'
+      - 'tests/profile-roles/**'
+      - '.github/workflows/test-profile-roles.yml'
+
+jobs:
+  postgres-17:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Bootstrap isolated PostgreSQL fixture
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/profile-roles/bootstrap.sql
+      - name: Apply draft role foundation migration to isolated database
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20261115100000_create_profile_roles_and_backfill.sql
+      - name: Assert backfill, triggers, RLS and grants
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/profile-roles/assertions.sql
