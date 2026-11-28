@@ -670,18 +670,6 @@ $('sellerPanel').classList.add('hidden');
  if(shop.status!=='approved'){message('productMessage','Status toko: '+shop.status+'. Produk dapat dikelola setelah toko disetujui admin.');return}$('accountEmail').textContent=shop.name||$('accountEmail').textContent;message('productMessage','Toko aktif: '+shop.name);const loc=$('shopLocationStatus');legacyShopPickupPoint=shop.pickup_latitude!=null&&shop.pickup_longitude!=null?{latitude:Number(shop.pickup_latitude),longitude:Number(shop.pickup_longitude),accuracy:null}:null;$('legacyShopLocationBox').classList.remove('hidden');if(loc)loc.textContent=legacyShopPickupPoint?'Titik penjemputan tersimpan. Ketuk lokasi baru pada peta jika ingin memindahkannya.':'Titik penjemputan belum tersimpan. Ketuk lokasi toko pada peta.';initLegacyShopMap(legacyShopPickupPoint);
  await loadProductCategories();await loadSellerProducts();await loadSellerAds();await loadSellerOrders();await loadSellerCommissionInvoices();await loadSellerChatConversations();
 }
-const SELLER_ORDER_PAGE_SIZE=50;
-let sellerOrdersCursor=null;
-let sellerOrdersHasMore=false;
-let sellerOrdersLoading=false;
-let sellerOrdersLoaded=[];
-let sellerOrdersLegacyMode=false;
-function resetSellerOrderPagination(){
- sellerOrdersCursor=null;
- sellerOrdersHasMore=false;
- sellerOrdersLoaded=[];
- sellerOrdersLegacyMode=false;
-}
 async function loadSellerOrders({append=false}={}){
  const box=$('sellerOrders');
  if(!box||!sellerShopId||sellerOrdersLoading)return;
