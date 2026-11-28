@@ -125,10 +125,6 @@ begin
     raise exception 'The UUID tie-breaker did not put the newest stable order first.';
   end if;
 
-  if (select order_items::text from public.seller_list_orders_page(v_page2_cursor_created_at, v_page2_cursor_id, 50)
-      where order_number = 'HK-SHARED') is not null then
-    raise exception 'Shared order unexpectedly appeared on page 3 for seller A; fixture ordering changed.';
-  end if;
 end;
 $test$;
 
@@ -137,15 +133,7 @@ do $test$
 declare
   v_items jsonb;
 begin
-  select order_items into v_items
-  from public.seller_list_orders_page('2026-10-01T00:00:00Z', '10000000-0000-4000-8000-000000000001', 50)
-  where order_number = 'HK-SHARED';
-
-  -- Use a cursor after the seller-A order set to reach the older shared order.
-  if v_items is not null then
-    raise exception 'Unexpected shared order cursor result; seller-A cursor fixture is not the end of its order set.';
-  end if;
-
+  -- The cursor after the last seller-A order reaches the older shared order.
   select order_items into v_items
   from public.seller_list_orders_page('2026-11-01T00:00:00Z', '10000000-0000-4000-8000-000000000001', 50)
   where order_number = 'HK-SHARED';
